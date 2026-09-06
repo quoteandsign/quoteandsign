@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { Buffer } from "node:buffer";
-import { eq, inArray, notInArray, and, like, sql, gt, isNull } from "drizzle-orm";
+import { eq, inArray, notInArray, and, or, like, sql, gt, isNull } from "drizzle-orm";
 import type { AppEnv } from "../env";
 import { clientIp } from "../env";
 import { getDb, schema } from "../lib/db";
@@ -80,6 +80,12 @@ accountRoutes.delete("/", async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as { code?: string };
   const code = String(body.code ?? "").replace(/\D/g, "");
   if (code.length !== 6) return c.json({ error: "Enter the six-digit code from the email." }, 400);
+  // A six-digit code is only as good as the guess limit: five tries, then every code is void.
+  const tries = await rateLimit(db, `delverify:${user.id}`, 5, 15 * 60_000);
+  if (!tries.allowed) {
+    await db.update(schema.magicTokens).set({ usedAt: new Date() }).where(and(eq(schema.magicTokens.email, user.email), isNull(schema.magicTokens.usedAt)));
+    return c.json({ error: "Too many wrong codes. Ask for a new one in a few minutes." }, 429);
+  }
   const used = await db
     .update(schema.magicTokens)
     .set({ usedAt: new Date() })
@@ -97,6 +103,8 @@ accountRoutes.delete("/", async (c) => {
   await db.delete(schema.userTemplates).where(eq(schema.userTemplates.userId, user.id));
   await db.delete(schema.sessions).where(eq(schema.sessions.userId, user.id));
   await db.delete(schema.files).where(eq(schema.files.userId, user.id));
+  // Out of every team, and no more copies of anyone's signed proposals to this address.
+  await db.delete(schema.teamMembers).where(or(eq(schema.teamMembers.memberId, user.id), eq(schema.teamMembers.email, user.email)));
   const now = new Date();
   await db
     .update(schema.users)

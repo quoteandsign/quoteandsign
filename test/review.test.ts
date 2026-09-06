@@ -136,6 +136,8 @@ describe("hardening", () => {
   });
 
   it("rate limits public PDF downloads and ignores unknown engagement sections", async () => {
+    // Unsigned PDFs are a paid feature for everyone with the link; this account pays.
+    await env.DB.prepare("UPDATE users SET plan = ? WHERE id = ?").bind("pro", userId).run();
     const id = (await (await json("/api/proposals", "POST", { template: "blank" })).json()).id;
     await json(`/api/proposals/${id}/send`, "POST");
     const pub = (await (await req(`/api/proposals/${id}`)).json()).proposal.publicId;

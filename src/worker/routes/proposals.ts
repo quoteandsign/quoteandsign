@@ -44,16 +44,17 @@ const itemSchema = z.object({
   message: "A minimum quantity needs a maximum.",
 });
 
+const flat = (s: string) => s.replace(/[\r\n\t]+/g, " ").trim();
 const updateSchema = z.object({
-  title: z.string().trim().min(1).max(200).optional(),
-  clientName: z.string().trim().max(200).nullish(),
+  title: z.string().trim().min(1).max(200).transform(flat).optional(),
+  clientName: z.string().trim().max(200).transform(flat).nullish(),
   clientEmail: z.string().trim().toLowerCase().email().max(254).or(z.literal("")).nullish(),
   currency: z.enum(SUPPORTED_CURRENCIES).optional(),
   content: z.array(z.record(z.string(), z.unknown())).optional(),
   expiresAt: z.number().int().positive().nullish(),
   taxRateBps: z.number().int().min(0).max(10_000).optional(),
-  taxLabel: z.string().trim().max(40).nullish(),
-  senderName: z.string().trim().max(120).nullish(),
+  taxLabel: z.string().trim().max(40).transform(flat).nullish(),
+  senderName: z.string().trim().max(120).transform(flat).nullish(),
   accentColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullish(),
   ccEmails: z.array(z.string().trim().toLowerCase().email().max(254)).max(10).optional(),
   remind: z.boolean().optional(),
@@ -61,7 +62,7 @@ const updateSchema = z.object({
   notifyEmails: z.array(z.string().trim().toLowerCase().email().max(254)).max(10).optional(),
   style: z.enum(STYLE_IDS).optional(),
   paymentUrl: z.string().trim().max(500).refine((v) => v === "" || /^https:\/\/[^\s]+$/i.test(v), "Payment links must start with https://").nullish(),
-  paymentLabel: z.string().trim().max(40).nullish(),
+  paymentLabel: z.string().trim().max(40).transform(flat).nullish(),
   countersign: z.boolean().optional(),
   // undefined = unchanged, "" = remove, string = set
   password: z.string().max(200).optional(),
@@ -80,6 +81,13 @@ function withIds(blocks: unknown): unknown {
     const block = b as Record<string, unknown>;
     return { ...block, id: typeof block.id === "string" ? block.id : uuid(), ...(Array.isArray(block.children) ? { children: withIds(block.children) } : {}) };
   });
+}
+
+// D1 allows 100 bound variables per statement; a pricing row has 13 columns.
+const ITEM_CHUNK = 7;
+const chunk = <T,>(list: T[], size: number): T[][] => Array.from({ length: Math.ceil(list.length / size) }, (_, i) => list.slice(i * size, i * size + size));
+async function insertItems(db: ReturnType<typeof getDb>, rows: (typeof schema.pricingItems.$inferInsert)[]) {
+  for (const part of chunk(rows, ITEM_CHUNK)) await db.insert(schema.pricingItems).values(part);
 }
 
 function ownerProposal(db: ReturnType<typeof getDb>, id: string, userId: string) {
@@ -171,7 +179,7 @@ proposalRoutes.post("/", async (c) => {
     updatedAt: now,
   });
   if (template.items.length) {
-    await db.insert(schema.pricingItems).values(
+    await insertItems(db,
       template.items.map((it, i) => ({
         id: uuid(),
         proposalId: id,
@@ -309,7 +317,7 @@ proposalRoutes.put("/:id/items", async (c) => {
 
   await db.batch([
     db.delete(schema.pricingItems).where(eq(schema.pricingItems.proposalId, proposal.id)),
-    ...(rows.length ? [db.insert(schema.pricingItems).values(rows)] : []),
+    ...chunk(rows, ITEM_CHUNK).map((part) => db.insert(schema.pricingItems).values(part)),
     db.update(schema.proposals).set({ updatedAt: new Date() }).where(eq(schema.proposals.id, proposal.id)),
   ] as any);
   return c.json({ ok: true, items: rows });
@@ -410,7 +418,7 @@ proposalRoutes.post("/:id/duplicate", async (c) => {
     updatedAt: now,
   });
   if (items.length) {
-    await db.insert(schema.pricingItems).values(items.map((it) => ({ ...it, id: uuid(), proposalId: id })));
+    await insertItems(db, items.map((it) => ({ ...it, id: uuid(), proposalId: id })));
   }
   await audit(db, { userId: actor.id, proposalId: id, event: "proposal.created", meta: { duplicatedFrom: proposal.id } });
   return c.json({ id }, 201);
@@ -463,7 +471,7 @@ proposalRoutes.post("/:id/countersign", async (c) => {
     await sendEmail(c.env, {
       to: acceptance.signerEmail,
       replyTo: user.email,
-      subject: `Countersigned: ${proposal.title}`,
+      subject: `Countersigned: ${flat(proposal.title)}`,
       brand,
       accent: proposal.accentColor ?? user.brandColor,
       heading: "Both signatures are on the record",

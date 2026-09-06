@@ -129,11 +129,10 @@ export async function applyPolarEvent(env: Bindings, ev: PolarEvent): Promise<{ 
   const interval: Interval | null = known ? known.interval : d.metadata?.interval === "year" || d.metadata?.interval === "month" ? d.metadata.interval : null;
   const customerId = d.customer_id ?? d.customer?.id ?? null;
   const userId = d.metadata?.userId;
-  const email = d.customer?.email?.toLowerCase();
-
+  // Only two ways to find the account: the userId our own checkout put in the metadata, or the
+  // customer id a previous event linked. Never the buyer's typed email: anyone can type anyone's.
   let user = userId ? await db.select().from(schema.users).where(eq(schema.users.id, userId)).get() : undefined;
   if (!user && customerId) user = await db.select().from(schema.users).where(eq(schema.users.polarCustomerId, customerId)).get();
-  if (!user && email) user = await db.select().from(schema.users).where(eq(schema.users.email, email)).get();
   if (!user) return null;
 
   const active = new Set(["subscription.active", "subscription.updated", "subscription.created", "order.paid", "checkout.updated"]);
@@ -145,7 +144,8 @@ export async function applyPolarEvent(env: Bindings, ev: PolarEvent): Promise<{ 
   if (ev.type === "checkout.updated") plan = null; // informational only
 
   const set: Partial<typeof schema.users.$inferInsert> = {};
-  if (customerId && customerId !== user.polarCustomerId) set.polarCustomerId = customerId;
+  // A linked account only changes customer when the event carries its own userId.
+  if (customerId && customerId !== user.polarCustomerId && (!user.polarCustomerId || userId === user.id)) set.polarCustomerId = customerId;
   if (plan && plan !== user.plan) set.plan = plan;
   if (plan && plan !== "free" && interval && interval !== user.billingInterval) set.billingInterval = interval;
   if (plan === "free") set.billingInterval = null;
@@ -168,6 +168,11 @@ billingWebhook.post("/", async (c) => {
   // Same id again inside the signature window: already applied, nothing to do.
   const first = await getDb(c.env.DB).insert(schema.webhookEvents).values({ id: c.req.header("webhook-id")!, seenAt: new Date() }).onConflictDoNothing().returning({ id: schema.webhookEvents.id }).get();
   if (!first) return c.json({ ok: true, duplicate: true });
-  await applyPolarEvent(c.env, ev);
+  try {
+    await applyPolarEvent(c.env, ev);
+  } catch (e) {
+    await getDb(c.env.DB).delete(schema.webhookEvents).where(eq(schema.webhookEvents.id, first.id));
+    throw e;
+  }
   return c.json({ ok: true });
 });

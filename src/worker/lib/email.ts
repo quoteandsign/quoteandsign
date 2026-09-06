@@ -15,6 +15,8 @@ export type Mail = {
   heading?: string;
   /** Buttons under the body. Links on our own origin, or a payment link the sender configured. */
   buttons?: { label: string; url: string }[];
+  /** Text a visitor wrote (a question, a reason). Shown as a quoted block, never made clickable. */
+  quote?: string;
 };
 
 function base64(bytes: Uint8Array): string {
@@ -117,9 +119,14 @@ export function renderHtml(mail: Mail, appUrl: string): string {
     if (/^content hash:/i.test(t)) return `<span style="font-size:12px;color:#8a857d;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-all">${escape(t)}</span>`;
     return linkify(t);
   };
-  const paragraphs = mail.text
+  // Visitor-written text is lifted out before any linkifying and shown as a quoted block.
+  const QUOTE = "\u0000quote\u0000";
+  const source = mail.quote && mail.text.includes(mail.quote) ? mail.text.replace(mail.quote, QUOTE) : mail.text;
+  const quoteHtml = mail.quote ? `<blockquote style="margin:4px 0 14px;padding:10px 14px;border-left:3px solid ${accent};background:#f7f6f2;border-radius:0 10px 10px 0;color:#2a2826;white-space:pre-wrap">${escape(mail.quote)}</blockquote>` : "";
+  const paragraphs = source
     .split(/\n{2,}/)
     .map((p) => {
+      if (p.includes(QUOTE)) return QUOTE;
       const raw = p.split("\n").map((l) => l.trim());
       const kept = raw.filter((l, i) => !(l.endsWith(":") && raw[i + 1] !== undefined && buttonUrls.has(raw[i + 1]!)));
       return kept.map(line).filter((x): x is string => x !== null).join("<br>");
@@ -138,7 +145,7 @@ export function renderHtml(mail: Mail, appUrl: string): string {
 <tr><td style="height:5px;background:${accent};font-size:0;line-height:0">&nbsp;</td></tr>
 <tr><td style="padding:28px 32px 0;font-size:13px;font-weight:600;letter-spacing:.02em;color:#5f5b55">${escape(brand)}</td></tr>
 ${mail.heading ? `<tr><td style="padding:10px 32px 0;font-size:24px;line-height:1.25;font-weight:700;letter-spacing:-.01em">${escape(mail.heading)}</td></tr>` : ""}
-<tr><td style="padding:16px 32px 0;font-size:15.5px;line-height:1.65;color:#2a2826">${paragraphs.map((p) => `<p style="margin:0 0 14px">${p}</p>`).join("")}</td></tr>
+<tr><td style="padding:16px 32px 0;font-size:15.5px;line-height:1.65;color:#2a2826">${paragraphs.map((p) => (p === QUOTE ? quoteHtml : `<p style="margin:0 0 14px">${p}</p>`)).join("")}</td></tr>
 ${buttons ? `<tr><td style="padding:8px 32px 0">${buttons}</td></tr><tr><td style="padding:14px 32px 0;font-size:12.5px;line-height:1.6;color:#8a857d">${(mail.buttons ?? []).filter((b) => /^https?:\/\//.test(b.url)).map((b) => `${escape(b.label)}: <a href="${escape(b.url)}" style="color:#8a857d;word-break:break-all">${escape(b.url)}</a>`).join("<br>")}</td></tr>` : ""}
 <tr><td style="padding:28px 32px 26px;font-size:12.5px;line-height:1.6;color:#8a857d;border-top:1px solid #efece5;margin-top:24px">${mail.brand && mail.brand.trim() ? `Sent by ${escape(mail.brand.trim())} with ` : "Sent with "}<a href="${escape(appUrl)}" style="color:#8a857d">Quote and Sign</a></td></tr>
 </table>

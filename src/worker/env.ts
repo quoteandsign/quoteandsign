@@ -1,7 +1,13 @@
 import type { User } from "./lib/db";
 
+/** Cloudflare's rate-limit binding. Absent locally and in tests; present in production. */
+export type EdgeLimiter = { limit: (o: { key: string }) => Promise<{ success: boolean }> };
+
 export type Bindings = {
   DB: D1Database;
+  BURST?: EdgeLimiter; // 60 requests a minute per IP on public pages
+  ONCE?: EdgeLimiter; // one a minute per key: view counting
+  BEACON?: EdgeLimiter; // four a minute per IP: reading-time beacons
   ASSETS: Fetcher;
   APP_URL: string;
   ENVIRONMENT: string;

@@ -112,8 +112,9 @@ rather than a public issue, and give us a few days to fix it before writing abou
 
 ## Contributing
 
-Issues and pull requests are welcome. Keep changes small and run `npm run check` and `npm test`
-before opening one. Anything that touches the accept flow, the hash, or the emails needs a test.
+Issues and pull requests are welcome; see [CONTRIBUTING.md](./CONTRIBUTING.md) for the sign-off
+rule. Issues are for bugs in the software. Help with running your own copy is not offered.
+Security problems go to [SECURITY.md](./SECURITY.md), not a public issue.
 
 ## License
 

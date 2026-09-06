@@ -170,7 +170,7 @@ export function Dashboard() {
   const answerInvite = async (accept: boolean) => {
     setInviteBusy(true);
     try {
-      await api(accept ? "/api/team/join" : "/api/team/decline", { method: "POST" });
+      await api(accept ? "/api/team/join" : "/api/team/decline", { method: "POST", json: accept ? { inviteId: user?.pendingInvite?.id } : undefined });
       location.reload();
     } catch (e) {
       setError((e as Error).message);

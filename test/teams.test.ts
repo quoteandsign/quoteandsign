@@ -59,10 +59,10 @@ describe("teams", () => {
     expect((await owner("/api/team/invite", "POST", { email: "boss@agency.example" })).status).toBe(400);
 
     const me = (await (await member("/auth/me")).json()).user;
-    expect(me.pendingInvite).toEqual({ ownerName: "Agency Co" });
+    expect(me.pendingInvite).toMatchObject({ ownerName: "Agency Co" });
     expect(me.workspace).toBeNull();
 
-    expect((await member("/api/team/join", "POST")).status).toBe(200);
+    expect((await member("/api/team/join", "POST", { inviteId: me.pendingInvite.id })).status).toBe(200);
     const joined = (await (await member("/auth/me")).json()).user;
     expect(joined.workspace).toEqual({ ownerName: "Agency Co" });
     expect(joined.brandName).toBe("Agency Co");

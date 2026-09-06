@@ -349,7 +349,7 @@ export function Profile() {
         {tab === "notifications" && (
           <div id="settings-panel-notifications" role="tabpanel" aria-labelledby="settings-tab-notifications" className="mt-6 grid gap-4">
             <section className={panel} data-test="team">
-              <SectionTitle hint="These addresses are emailed, along with you, whenever a client opens, signs or asks a question. Clients never see them.">Who else hears from us</SectionTitle>
+              <SectionTitle hint="These addresses are emailed, along with you, whenever a client opens, signs or asks a question. Clients never see them. Extra addresses take effect on a paid plan.">Who else hears from us</SectionTitle>
               <div className="grid max-w-md gap-2">
                 {team.map((e, i) => (
                   <div key={i} className="flex gap-1.5">

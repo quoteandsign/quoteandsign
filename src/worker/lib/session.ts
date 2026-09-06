@@ -60,6 +60,8 @@ export async function getSessionUser(c: Context<AppEnv>): Promise<User | null> {
  */
 export async function workspaceOwner(c: Context<AppEnv>, user: User): Promise<User> {
   const db = getDb(c.env.DB);
+  const owns = await db.select({ id: schema.teamMembers.id }).from(schema.teamMembers).where(eq(schema.teamMembers.ownerId, user.id)).get();
+  if (owns) return user;
   const m = await db
     .select({ owner: schema.users })
     .from(schema.teamMembers)

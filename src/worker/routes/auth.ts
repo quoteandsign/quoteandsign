@@ -52,7 +52,8 @@ authRoutes.post("/request", async (c) => {
 
   const byIp = await rateLimit(db, `login:ip:${ip}`, 10, 15 * 60_000);
   const byEmail = await rateLimit(db, `login:email:${await sha256Hex(email)}`, 4, 15 * 60_000);
-  if (!byIp.allowed || !byEmail.allowed) {
+  const byEmailDay = await rateLimit(db, `login:email:day:${await sha256Hex(email)}`, 12, 24 * 60 * 60_000);
+  if (!byIp.allowed || !byEmail.allowed || !byEmailDay.allowed) {
     return c.json({ error: "Too many attempts. Try again in a few minutes." }, 429);
   }
 
@@ -165,7 +166,7 @@ authRoutes.get("/me", async (c) => {
   const db = getDb(c.env.DB);
   const owner = await workspaceOwner(c, user);
   const eff = effectivePlan(owner);
-  const invite = owner.id === user.id ? await db.select({ owner: schema.users }).from(schema.teamMembers).innerJoin(schema.users, eq(schema.users.id, schema.teamMembers.ownerId)).where(and(eq(schema.teamMembers.email, user.email), isNull(schema.teamMembers.joinedAt))).get() : null;
+  const invite = owner.id === user.id ? await db.select({ id: schema.teamMembers.id, owner: schema.users }).from(schema.teamMembers).innerJoin(schema.users, eq(schema.users.id, schema.teamMembers.ownerId)).where(and(eq(schema.teamMembers.email, user.email), isNull(schema.teamMembers.joinedAt))).get() : null;
   // A member sees the owner's brand everywhere; their own profile fields are not what the client sees.
   const shown = owner.id === user.id ? user : owner;
   return c.json({
@@ -181,7 +182,7 @@ authRoutes.get("/me", async (c) => {
       isAdmin: isAdmin(c.env, user.email),
       marketingOptIn: user.marketingOptIn,
       workspace: owner.id === user.id ? null : { ownerName: businessName(owner.brandName, owner.name, "your team") },
-      pendingInvite: invite && invite.owner.plan === "business" && !invite.owner.deletedAt ? { ownerName: businessName(invite.owner.brandName, invite.owner.name, invite.owner.email) } : null,
+      pendingInvite: invite && invite.owner.plan === "business" && !invite.owner.deletedAt ? { id: invite.id, ownerName: businessName(invite.owner.brandName, invite.owner.name, invite.owner.email) } : null,
     },
   });
 });
@@ -194,7 +195,7 @@ authRoutes.put("/me", async (c) => {
   const parsed = z
     .object({
       name: z.string().trim().max(120).nullish(),
-      brandName: z.string().trim().max(120).nullish(),
+      brandName: z.string().trim().max(120).transform((s) => s.replace(/[\r\n\t]+/g, " ").trim()).nullish(),
       brandColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullish(),
       defaultStyle: z.enum(STYLE_IDS).nullish(),
       notifyEmails: z.array(z.string().trim().toLowerCase().email().max(254)).max(10).optional(),

@@ -326,7 +326,7 @@ export function MoreOptions({
                 )}
               </div>
             ))}
-            {details.notifyEmails.length === 0 && <p className="pb-1 text-[12px] text-stone-500">Anyone else who should hear about this one. Clients never see them.</p>}
+            {details.notifyEmails.length === 0 && <p className="pb-1 text-[12px] text-stone-500">Anyone else who should hear about this one. Clients never see them. Takes effect on a paid plan.</p>}
           </div>
         </Disclosure>
       </div>

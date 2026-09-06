@@ -20,7 +20,7 @@ export type Me = {
   trial: boolean;
   trialDaysLeft: number;
   workspace: { ownerName: string } | null; // set when working inside someone else's Business team
-  pendingInvite: { ownerName: string } | null;
+  pendingInvite: { id: string; ownerName: string } | null;
 };
 
 type AuthState = { user: Me | null; loading: boolean; refresh: () => Promise<void>; logout: () => Promise<void> };

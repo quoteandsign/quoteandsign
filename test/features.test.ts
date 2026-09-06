@@ -258,6 +258,8 @@ describe("team notifications", () => {
   it("tells the owner, the profile team and the proposal extras when a client signs or asks", async () => {
     expect((await json("/auth/me", "PUT", { notifyEmails: ["ops@northwind.example", "owner@example.com", "ops@northwind.example"] })).status).toBe(200);
     expect((await (await req("/auth/me")).json()).user.notifyEmails).toEqual(["ops@northwind.example"]);
+    // Extra addresses are honoured on paid plans only; this account pays.
+    await env.DB.prepare("UPDATE users SET plan = ? WHERE email = ?").bind("pro", "owner@example.com").run();
     const c = await json("/api/proposals", "POST", { template: "retainer" });
     const { id: pid } = await c.json();
     await json(`/api/proposals/${pid}`, "PUT", { clientEmail: "buyer@client.example", notifyEmails: ["accounts@northwind.example"] });

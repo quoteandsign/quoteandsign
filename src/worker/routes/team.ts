@@ -71,8 +71,20 @@ teamRoutes.delete("/:id", requireOwner, async (c) => {
 teamRoutes.post("/join", async (c) => {
   const user = c.get("user");
   const db = getDb(c.env.DB);
-  const invite = await db.select().from(schema.teamMembers).where(and(eq(schema.teamMembers.email, user.email), isNull(schema.teamMembers.joinedAt))).get();
-  if (!invite) return c.json({ error: "No open invitation for this email." }, 404);
+  const body = (await c.req.json().catch(() => ({}))) as { inviteId?: string };
+  if (typeof body.inviteId !== "string" || !body.inviteId) return c.json({ error: "Which invitation?" }, 400);
+  // The exact invitation shown, for this email, from an owner who can still have a team.
+  const row = await db
+    .select({ invite: schema.teamMembers, owner: schema.users })
+    .from(schema.teamMembers)
+    .innerJoin(schema.users, eq(schema.users.id, schema.teamMembers.ownerId))
+    .where(and(eq(schema.teamMembers.id, body.inviteId), eq(schema.teamMembers.email, user.email), isNull(schema.teamMembers.joinedAt)))
+    .get();
+  if (!row || row.owner.deletedAt || row.owner.plan !== "business") return c.json({ error: "No open invitation for this email." }, 404);
+  const invite = row.invite;
+  // Someone who runs a team keeps their own account; joining another would lock them out of it.
+  const owns = await db.select({ id: schema.teamMembers.id }).from(schema.teamMembers).where(eq(schema.teamMembers.ownerId, user.id)).get();
+  if (owns) return c.json({ error: "You run a team of your own. Remove your members first if you want to join another." }, 409);
   // One workspace at a time: leave any other team first.
   await db.delete(schema.teamMembers).where(and(eq(schema.teamMembers.memberId, user.id), isNotNull(schema.teamMembers.joinedAt)));
   await db.update(schema.teamMembers).set({ memberId: user.id, joinedAt: new Date() }).where(eq(schema.teamMembers.id, invite.id));
