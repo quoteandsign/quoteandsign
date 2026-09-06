@@ -61,7 +61,7 @@ describe("recipients and sending", () => {
     const mail = since(n);
     expect(mail).toContain("To:      cfo@client.example, ops@client.example");
     expect(mail).toContain("Reply-to: owner@example.com");
-    expect(mail).toContain("Northwind Studio sent you a proposal.");
+    expect(mail).toContain("Northwind Studio sent you a proposal:");
   });
 
   it("uses a per-proposal sender name when set", async () => {
