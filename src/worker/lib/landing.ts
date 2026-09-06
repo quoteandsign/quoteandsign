@@ -14,6 +14,7 @@ const DEMO_ITEMS = [
 
 const LANDING_CSS = `
 html,body{overflow-x:hidden}
+nav.main .brand,footer.site-foot .foot-brand{color:var(--accent)}
 .brand .and,.foot-brand .and{font-weight:300}
 .site{max-width:1160px;margin:0 auto;padding:0 24px}
 nav.main{display:flex;align-items:center;justify-content:space-between;height:76px}

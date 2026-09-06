@@ -20,7 +20,7 @@ await og.setContent(`<!doctype html><html><head><style>
 @font-face{font-family:Geist;src:url(data:font/woff2;base64,${font}) format("woff2");font-weight:100 900}
 html,body{margin:0;width:1200px;height:630px;background:#fbfaf7;font-family:Geist,system-ui,sans-serif;color:#191816}
 .wrap{position:absolute;inset:0;padding:72px 84px;display:flex;flex-direction:column;justify-content:space-between}
-.brand{display:flex;align-items:center;gap:16px;font-size:30px;font-weight:600;letter-spacing:-.01em}
+.brand{display:flex;align-items:center;gap:16px;font-size:30px;font-weight:600;letter-spacing:-.01em;color:#2b3f8c}
 .brand i{width:22px;height:22px;border-radius:50%;background:#2b3f8c}
 h1{font-size:84px;line-height:1.02;letter-spacing:-.045em;font-weight:650;margin:0;max-width:14ch}
 h1 span{color:#2b3f8c}

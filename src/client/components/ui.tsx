@@ -173,7 +173,7 @@ export function Wordmark({ className, href = "/" }: { className?: string; href?:
       <span>Quote <span className="font-light">and</span> Sign</span>
     </>
   );
-  const cls = cn("inline-flex items-center gap-2 whitespace-nowrap font-semibold tracking-tight text-ink dark:text-stone-50", className);
+  const cls = cn("inline-flex items-center gap-2 whitespace-nowrap font-semibold tracking-tight text-brand dark:text-indigo-300", className);
   return href ? (
     <a href={href} className={cls} aria-label="Quote and Sign home">
       {inner}
