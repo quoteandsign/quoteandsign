@@ -64,7 +64,7 @@ nav.main .links a.cta{background:var(--fg);color:var(--bg);padding:10px 18px;bor
 .try{position:absolute;right:-8px;top:8px;transform:rotate(3deg);background:var(--fg);color:var(--bg);font-size:12.5px;font-weight:600;padding:7px 12px;border-radius:999px;z-index:2}
 @media(max-width:979px){.stage{order:2;overflow:hidden;margin:0 -20px;padding:16px 20px}.try{right:8px}.phone{transform:none;transition:none}.stage .halo{width:100%;max-width:520px}
 /* On a phone the mock is a picture, not a second page: it does not scroll or catch taps. */
-.screen{height:min(560px,64svh);min-height:0}.scroll{overflow:hidden;pointer-events:none;touch-action:pan-y}}
+.screen{height:auto;min-height:0;aspect-ratio:9/19}.scroll{overflow:hidden;pointer-events:none;touch-action:pan-y}}
 .cur{position:relative;z-index:1;display:flex;gap:6px;align-items:center;margin-top:18px;font-size:13px;color:var(--muted)}
 .cur span{margin-right:4px}
 .cur button{font:inherit;font-size:13px;font-weight:600;padding:6px 11px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer;transition:background-color .15s,border-color .15s}
