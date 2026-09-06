@@ -89,7 +89,7 @@ export function Profile() {
     setBusy(plan);
     setMessage(null);
     try {
-      const r = await api<{ url: string }>("/api/billing/checkout", { method: "POST", json: { plan } });
+      const r = await api<{ url: string }>("/api/billing/checkout", { method: "POST", json: { plan, interval: billedInterval } });
       location.href = r.url;
     } catch (e) {
       setMessage((e as Error).message);

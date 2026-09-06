@@ -67,6 +67,20 @@ try {
   await page.getByLabel("Payment link").blur();
   await page.waitForTimeout(900);
   ok("a brand payment link is saved from the Brand page", (await get("/auth/me")).user.paymentUrl === "https://pay.northwind.example/deposit");
+  // Plans: the interval the person picked is the one sent to checkout (monthly must not become yearly).
+  const sentIntervals = [];
+  await page.route("**/api/billing/checkout", async (route) => {
+    sentIntervals.push(route.request().postDataJSON());
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ url: "/app/brand" }) });
+  });
+  await page.getByRole("radio", { name: "Monthly" }).click();
+  await page.getByRole("button", { name: "Choose Pro" }).click();
+  await page.waitForTimeout(400);
+  await page.getByRole("radio", { name: /Yearly/ }).click();
+  await page.getByRole("button", { name: "Choose Business" }).click();
+  await page.waitForTimeout(400);
+  await page.unroute("**/api/billing/checkout");
+  ok("choosing Monthly sends a monthly checkout and Yearly a yearly one", JSON.stringify(sentIntervals) === JSON.stringify([{ plan: "pro", interval: "month" }, { plan: "business", interval: "year" }]), JSON.stringify(sentIntervals));
   // Logo: a real PNG goes up and shows on the client page; the plan and data sections are there.
   const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
   await page.locator("[data-test=logo] input[type=file]").setInputFiles({ name: "logo.png", mimeType: "image/png", buffer: png });

@@ -42,7 +42,7 @@ billingRoutes.get("/", (c) => {
 // Start a checkout. Polar hosts the page; we only hand over which product and who is buying.
 billingRoutes.post("/checkout", requireOwner, async (c) => {
   const user = c.get("user");
-  const parsed = z.object({ plan: z.enum(["pro", "business"]), interval: z.enum(["month", "year"]).default("year") }).safeParse(await c.req.json().catch(() => null));
+  const parsed = z.object({ plan: z.enum(["pro", "business"]), interval: z.enum(["month", "year"]).default("month") }).safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json({ error: "Pick a plan." }, 400);
   if (!configured(c.env)) return c.json({ error: "Upgrades open soon. Nothing to pay yet." }, 503);
   if (!productFor(c.env, parsed.data.plan, parsed.data.interval)) return c.json({ error: "Yearly billing is not set up yet. Choose monthly for now." }, 503);
