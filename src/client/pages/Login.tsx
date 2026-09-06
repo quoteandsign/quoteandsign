@@ -98,8 +98,8 @@ export function Login() {
         </header>
 
         <div className="grid gap-12 py-8 lg:grid-cols-[1.1fr_1fr] lg:items-start lg:gap-x-20 lg:gap-y-8 lg:py-20">
-          {/* On a phone: headline, then the form, then the three facts. On desktop: pitch left, form right. */}
-          <section className="order-1">
+          {/* On a phone: the form, then the three facts. The headline is desktop only. On desktop: pitch left, form right. */}
+          <section className="order-1 hidden lg:block">
             <h1 className="max-w-[14ch] text-[36px] font-[650] leading-[1.04] tracking-[-0.035em] text-ink sm:text-[56px] dark:text-stone-50">
               Proposals your clients accept{" "}
               <span className="relative inline-block whitespace-nowrap text-brand dark:text-indigo-300">
