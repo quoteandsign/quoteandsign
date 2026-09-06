@@ -204,7 +204,7 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
     initialContent: proposal.content.length ? (proposal.content as any) : undefined,
     dictionary: { ...bnEn, placeholders: { ...bnEn.placeholders, emptyDocument: "Type / to add pricing, headings, cards…", default: "Type / for blocks, or just write" } },
     uploadFile: async (file: File) => {
-      const small = await shrinkImage(file, 1600);
+      const small = await shrinkImage(file, 1400);
       const fd = new FormData();
       fd.append("file", small);
       const r = await fetch("/api/account/images", { method: "POST", body: fd, credentials: "same-origin" });

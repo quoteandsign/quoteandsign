@@ -14,6 +14,7 @@ POLAR_PRODUCT_BUSINESS=
 POLAR_PRODUCT_PRO_YEAR=
 POLAR_PRODUCT_BUSINESS_YEAR=
 # Cloudflare Turnstile keeps bots off the sign-in form. Leave empty locally.
+# Locally, use the published test keys: site 1x00000000000000000000AA, secret 1x0000000000000000000000000000000AA.
 TURNSTILE_SITE_KEY=
 TURNSTILE_SECRET=
 # Who may open the admin area, and where contact-form messages go.

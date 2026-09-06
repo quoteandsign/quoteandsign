@@ -31,7 +31,7 @@ Everything runs in the foreground. Nothing is installed globally, nothing runs i
 
 ## Stack
 
-React + Vite on Cloudflare Workers · D1 · R2 · Tailwind v4 · BlockNote · pdf-lib · Hono · Drizzle ·
+React + Vite on Cloudflare Workers · D1 · Tailwind v4 · BlockNote · pdf-lib · Hono · Drizzle ·
 Polar (Merchant of Record) · Resend.
 
 ## License

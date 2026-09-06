@@ -28,7 +28,12 @@ const get = async (path) => (await ctx.request.get(BASE + path)).json();
 try {
   // ---- Sign in through the real flow --------------------------------------------------
   const page = await ctx.newPage();
-  await page.goto(BASE + "/login", { waitUntil: "networkidle" });
+  // The Turnstile widget keeps a connection open, so "network idle" never comes on the login page.
+  await page.goto(BASE + "/login", { waitUntil: "load" });
+  await page.waitForSelector("#email", { timeout: 15000 });
+  // With a site key configured the form waits for the widget token; the local test key answers at once.
+  const challenge = (await (await ctx.request.get(BASE + "/auth/config")).json()).turnstileSiteKey;
+  if (challenge) await page.waitForFunction(() => document.querySelector('input[name="cf-turnstile-response"]')?.value, null, { timeout: 30000 });
   await page.fill("#email", "e2e@example.com");
   await page.getByRole("button", { name: /email me a sign-in link/i }).click();
   const link = page.getByRole("link", { name: /open the sign-in link/i });
@@ -220,11 +225,15 @@ try {
   await rowA.getByText(/Sent again to cfo@bramble.example/).waitFor({ timeout: 10000 });
   await page.waitForTimeout(400);
   ok("resending from the row emails the client again and the row counts it", /Sent 2×/.test(await rowA.locator("[data-test=journey]").innerText()), await rowA.locator("[data-test=journey]").innerText());
+  // A second, unrelated proposal so the search has something to hide.
+  const other = await (await ctx.request.post(BASE + "/api/proposals", { data: { template: "retainer" } })).json();
+  await page.reload({ waitUntil: "networkidle" });
   await page.fill("[aria-label='Search proposals']", "bramble");
   await page.waitForTimeout(300);
   const shown = await page.locator("main > ul > li[data-row-menu]").count();
   const all = (await get("/api/proposals")).proposals.filter((p) => p.status !== "archived").length;
   ok("search narrows the list to the client", shown >= 1 && (await rowA.count()) === 1 && shown < all, JSON.stringify({ shown, all, rowA: await rowA.count(), toolbar: await page.locator("[data-test=toolbar]").count(), value: await page.locator("[aria-label='Search proposals']").inputValue().catch(() => "n/a") }));
+  await ctx.request.delete(BASE + "/api/proposals/" + other.id);
   await page.getByRole("radio", { name: /^Declined/ }).click();
   ok("a filter with no matches explains itself", (await page.getByText("Nothing matches").count()) === 1);
   await page.getByRole("button", { name: /show everything/i }).click();

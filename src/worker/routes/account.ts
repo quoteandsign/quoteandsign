@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { Buffer } from "node:buffer";
 import { eq, inArray, notInArray, and, like, sql } from "drizzle-orm";
 import type { AppEnv } from "../env";
 import { clientIp } from "../env";
@@ -64,7 +65,7 @@ accountRoutes.delete("/", async (c) => {
   if (keep.size) await db.update(schema.proposals).set({ status: "archived", clientEmail: null, ccEmails: null, notifyEmails: null }).where(and(eq(schema.proposals.userId, user.id), inArray(schema.proposals.id, signed)));
   await db.delete(schema.userTemplates).where(eq(schema.userTemplates.userId, user.id));
   await db.delete(schema.sessions).where(eq(schema.sessions.userId, user.id));
-  if (user.brandLogoKey) await c.env.FILES.delete(user.brandLogoKey).catch(() => {});
+  await db.delete(schema.files).where(eq(schema.files.userId, user.id));
   const now = new Date();
   await db
     .update(schema.users)
@@ -76,7 +77,10 @@ accountRoutes.delete("/", async (c) => {
 });
 
 // ---- Logo -------------------------------------------------------------------------------------
-const MAX_LOGO = 1_000_000;
+// The browser shrinks every upload to WebP first (a logo to 512px, an image to 1400px), so real
+// files arrive at a few tens of kilobytes. The caps below are a backstop, not a target.
+const MAX_LOGO = 300_000;
+const sha = async (b: Uint8Array<ArrayBuffer>) => Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", b))).map((x) => x.toString(16).padStart(2, "0")).join("");
 const SNIFF: { mime: string; ext: string; test: (b: Uint8Array) => boolean }[] = [
   { mime: "image/png", ext: "png", test: (b) => b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47 },
   { mime: "image/jpeg", ext: "jpg", test: (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff },
@@ -87,23 +91,18 @@ accountRoutes.post("/logo", async (c) => {
   const user = c.get("user");
   const db = getDb(c.env.DB);
   const len = Number(c.req.header("content-length") ?? "0");
-  if (len > MAX_LOGO * 1.05) return c.json({ error: "Logos are limited to 1 MB." }, 413);
+  if (len > MAX_LOGO * 1.05) return c.json({ error: "Logos are limited to 300 KB." }, 413);
   const form = await c.req.formData().catch(() => null);
   const file = form?.get("file");
   if (!(file instanceof File)) return c.json({ error: "Choose an image file." }, 400);
-  if (file.size > MAX_LOGO) return c.json({ error: "Logos are limited to 1 MB." }, 413);
+  if (file.size > MAX_LOGO) return c.json({ error: "Logos are limited to 300 KB." }, 413);
   if (!capsOf(user).brand) return c.json({ error: "A logo on every page is part of Pro.", code: "plan" }, 402);
   const bytes = new Uint8Array(await file.arrayBuffer());
   const kind = SNIFF.find((s) => s.test(bytes));
   if (!kind) return c.json({ error: "Use a PNG, JPEG or WebP image." }, 415);
   const key = `logos/${user.id}/${uuid()}.${kind.ext}`;
-  await c.env.FILES.put(key, bytes, { httpMetadata: { contentType: kind.mime, cacheControl: "public, max-age=31536000, immutable" } });
-  const digest = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))).map((x) => x.toString(16).padStart(2, "0")).join("");
-  await db.insert(schema.files).values({ id: uuid(), userId: user.id, key, mime: kind.mime, bytes: bytes.length, sha256: digest, createdAt: new Date() });
-  if (user.brandLogoKey) {
-    await c.env.FILES.delete(user.brandLogoKey).catch(() => {});
-    await db.delete(schema.files).where(eq(schema.files.key, user.brandLogoKey));
-  }
+  await db.insert(schema.files).values({ id: uuid(), userId: user.id, key, mime: kind.mime, bytes: bytes.length, sha256: await sha(bytes), data: Buffer.from(bytes), createdAt: new Date() });
+  if (user.brandLogoKey) await db.delete(schema.files).where(eq(schema.files.key, user.brandLogoKey));
   await db.update(schema.users).set({ brandLogoKey: key }).where(eq(schema.users.id, user.id));
   return c.json({ key, url: `/files/${key}` });
 });
@@ -111,10 +110,7 @@ accountRoutes.post("/logo", async (c) => {
 accountRoutes.delete("/logo", async (c) => {
   const user = c.get("user");
   const db = getDb(c.env.DB);
-  if (user.brandLogoKey) {
-    await c.env.FILES.delete(user.brandLogoKey).catch(() => {});
-    await db.delete(schema.files).where(eq(schema.files.key, user.brandLogoKey));
-  }
+  if (user.brandLogoKey) await db.delete(schema.files).where(eq(schema.files.key, user.brandLogoKey));
   await db.update(schema.users).set({ brandLogoKey: null }).where(eq(schema.users.id, user.id));
   return c.json({ ok: true });
 });
@@ -124,29 +120,28 @@ accountRoutes.delete("/logo", async (c) => {
 // and the response forbids scripts and framing.
 export const fileRoutes = new Hono<AppEnv>();
 // Images for proposals. Same checks as logos, plus a per-plan quota so the service never becomes storage.
-const MAX_IMAGE = 1_500_000;
+const MAX_IMAGE = 600_000;
 accountRoutes.post("/images", async (c) => {
   const owner = c.get("owner");
   const db = getDb(c.env.DB);
   const len = Number(c.req.header("content-length") ?? "0");
-  if (len > MAX_IMAGE * 1.05) return c.json({ error: "Images are limited to 1.5 MB. The editor shrinks them for you; try a smaller file." }, 413);
+  if (len > MAX_IMAGE * 1.05) return c.json({ error: "Images are limited to 600 KB. The editor shrinks them for you; try a smaller file." }, 413);
   const form = await c.req.formData().catch(() => null);
   const file = form?.get("file");
   if (!(file instanceof File)) return c.json({ error: "Choose an image file." }, 400);
-  if (file.size > MAX_IMAGE) return c.json({ error: "Images are limited to 1.5 MB." }, 413);
+  if (file.size > MAX_IMAGE) return c.json({ error: "Images are limited to 600 KB." }, 413);
   const quota = capsOf(owner).images;
   const used = await db.select({ n: sql<number>`count(*)` }).from(schema.files).where(and(eq(schema.files.userId, owner.id), like(schema.files.key, "images/%"))).get();
   if ((used?.n ?? 0) >= quota) return c.json({ error: `Your plan includes ${quota} images. Remove one from a proposal, or upgrade under Brand for more.`, code: "plan" }, 402);
   const bytes = new Uint8Array(await file.arrayBuffer());
   const kind = SNIFF.find((s) => s.test(bytes));
   if (!kind) return c.json({ error: "Use a PNG, JPEG or WebP image." }, 415);
-  const digest = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))).map((x) => x.toString(16).padStart(2, "0")).join("");
+  const digest = await sha(bytes);
   // The same picture twice is stored once.
   const dup = await db.select({ key: schema.files.key }).from(schema.files).where(and(eq(schema.files.userId, owner.id), eq(schema.files.sha256, digest), like(schema.files.key, "images/%"))).get();
   if (dup) return c.json({ key: dup.key, url: `/files/${dup.key}`, used: used?.n ?? 0, quota });
   const key = `images/${owner.id}/${uuid()}.${kind.ext}`;
-  await c.env.FILES.put(key, bytes, { httpMetadata: { contentType: kind.mime, cacheControl: "public, max-age=31536000, immutable" } });
-  await db.insert(schema.files).values({ id: uuid(), userId: owner.id, key, mime: kind.mime, bytes: bytes.length, sha256: digest, createdAt: new Date() });
+  await db.insert(schema.files).values({ id: uuid(), userId: owner.id, key, mime: kind.mime, bytes: bytes.length, sha256: digest, data: Buffer.from(bytes), createdAt: new Date() });
   await audit(db, { userId: c.get("user").id, event: "image.uploaded", meta: { bytes: bytes.length } });
   return c.json({ key, url: `/files/${key}`, used: (used?.n ?? 0) + 1, quota });
 });
@@ -161,13 +156,12 @@ accountRoutes.get("/images", async (c) => {
 fileRoutes.get("/*", async (c) => {
   const key = c.req.path.replace(/^\/files\//, "");
   if (!/^(logos|images)\/[0-9a-f-]{36}\/[0-9a-f-]{36}\.(png|jpg|webp)$/.test(key)) return c.notFound();
-  const obj = await c.env.FILES.get(key);
+  const obj = await getDb(c.env.DB).select({ mime: schema.files.mime, data: schema.files.data }).from(schema.files).where(eq(schema.files.key, key)).get();
   if (!obj) return c.notFound();
-  const mime = obj.httpMetadata?.contentType ?? "application/octet-stream";
-  c.header("content-type", mime.startsWith("image/") ? mime : "application/octet-stream");
+  c.header("content-type", obj.mime.startsWith("image/") ? obj.mime : "application/octet-stream");
   c.header("cache-control", "public, max-age=31536000, immutable");
   c.header("content-disposition", "inline");
   c.header("x-content-type-options", "nosniff");
   c.header("content-security-policy", "default-src 'none'; sandbox");
-  return c.body(obj.body);
+  return c.body(new Uint8Array(obj.data));
 });

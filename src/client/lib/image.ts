@@ -3,7 +3,7 @@
  * as WebP. A logo becomes tens of kilobytes, a photo a few hundred, so storage stays small and
  * pages stay fast. Anything the browser cannot decode is returned as-is for the server to judge.
  */
-export async function shrinkImage(file: File, max: number, quality = 0.86): Promise<File> {
+export async function shrinkImage(file: File, max: number, quality = 0.8): Promise<File> {
   try {
     const bmp = await createImageBitmap(file);
     const scale = Math.min(1, max / Math.max(bmp.width, bmp.height));

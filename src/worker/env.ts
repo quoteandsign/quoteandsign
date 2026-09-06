@@ -2,7 +2,6 @@ import type { User } from "./lib/db";
 
 export type Bindings = {
   DB: D1Database;
-  FILES: R2Bucket;
   ASSETS: Fetcher;
   APP_URL: string;
   ENVIRONMENT: string;

@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, index, uniqueIndex, primaryKey } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, blob, index, uniqueIndex, primaryKey } from "drizzle-orm/sqlite-core";
 
 // ---- Accounts (passwordless) -------------------------------------------------
 export const users = sqliteTable(
@@ -8,7 +8,7 @@ export const users = sqliteTable(
     email: text("email").notNull(),
     name: text("name"),
     brandName: text("brand_name"),
-    brandLogoKey: text("brand_logo_key"), // R2 object key
+    brandLogoKey: text("brand_logo_key"), // key in the files table
     brandColor: text("brand_color"), // hex
     defaultStyle: text("default_style"), // page style for new proposals; null = the template's own
     notifyEmails: text("notify_emails", { mode: "json" }).$type<string[]>(), // team addresses told when a client signs or asks
@@ -236,7 +236,8 @@ export const messages = sqliteTable(
   (t) => [index("messages_proposal_idx").on(t.proposalId)],
 );
 
-// Uploaded images (logos, proposal images). Served from a separate cookieless origin.
+// Uploaded images (logos, proposal images). The bytes live here too: images are shrunk to WebP in
+// the browser before upload, so a row is tens of kilobytes and the whole thing stays inside D1.
 export const files = sqliteTable(
   "files",
   {
@@ -244,10 +245,11 @@ export const files = sqliteTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    key: text("key").notNull(), // R2 key
+    key: text("key").notNull(), // logos/<user>/<uuid>.<ext> or images/<user>/<uuid>.<ext>
     mime: text("mime").notNull(), // validated by magic bytes, not by the client header
     bytes: integer("bytes").notNull(),
     sha256: text("sha256").notNull(),
+    data: blob("data", { mode: "buffer" }).notNull(),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
   },
   (t) => [uniqueIndex("files_key_uq").on(t.key), index("files_user_idx").on(t.userId)],

@@ -14,7 +14,7 @@ async function shoot(ctx, name, path, opts = {}) {
   const page = await ctx.newPage();
   page.on("pageerror", (e) => errors.push(`${name}: ${e.message}`));
   page.on("console", (m) => { if (m.type() === "error") errors.push(`${name}: console ${m.text()}`); });
-  await page.goto(BASE + path, { waitUntil: "networkidle" });
+  await page.goto(BASE + path, { waitUntil: path === "/login" || path.startsWith("/contact") ? "load" : "networkidle" });
   if (opts.wait) await page.waitForSelector(opts.wait, { timeout: 15000 });
   if (opts.act) await opts.act(page);
   await page.waitForTimeout(400);
@@ -27,7 +27,7 @@ for (const [label, viewport] of [["desktop", { width: 1440, height: 900 }], ["ph
   await shoot(ctx, `${label}-home`, "/", { full: true });
   await shoot(ctx, `${label}-login`, "/login", { wait: "form" });
 
-  const res = await ctx.request.post(BASE + "/auth/request", { data: { email: "dev@example.com" } });
+  const res = await ctx.request.post(BASE + "/auth/request", { data: { email: "dev@example.com", turnstile: "local-test-key-accepts-any-token" } });
   const auth = await res.json();
   if (!auth.devLink) throw new Error(`sign-in link not returned (${res.status()}): ${auth.error ?? JSON.stringify(auth)}`);
   const p = await ctx.newPage();

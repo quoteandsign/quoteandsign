@@ -14,12 +14,9 @@
     {
       "binding": "DB",
       "database_name": "quoteandsign",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "35358bcb-9fc7-479a-9fda-a2b69c7465f9",
       "migrations_dir": "./drizzle"
     }
-  ],
-  "r2_buckets": [
-    { "binding": "FILES", "bucket_name": "quoteandsign-files" }
   ],
   // Production values. Local development overrides these in .dev.vars (git-ignored).
   "vars": {

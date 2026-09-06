@@ -14,6 +14,9 @@ export default defineConfig(async () => {
             ENVIRONMENT: "development",
             APP_URL: "http://localhost:5173",
             TEST_MIGRATIONS: migrations,
+            // Real Turnstile keys in .dev.vars must not reach the tests: an empty secret means no challenge.
+            TURNSTILE_SECRET: "",
+            TURNSTILE_SITE_KEY: "",
           },
         },
       }),
