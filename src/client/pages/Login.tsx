@@ -97,10 +97,10 @@ export function Login() {
           </a>
         </header>
 
-        <div className="grid gap-12 py-8 lg:grid-cols-[1.1fr_1fr] lg:items-start lg:gap-20 lg:py-20">
-          {/* On a phone the form comes first; the pitch follows for anyone who scrolls. */}
-          <section className="order-2 lg:order-1">
-            <h1 className="max-w-[14ch] text-[34px] font-[650] leading-[1.04] tracking-[-0.035em] text-ink sm:text-[56px] dark:text-stone-50">
+        <div className="grid gap-12 py-8 lg:grid-cols-[1.1fr_1fr] lg:items-start lg:gap-x-20 lg:gap-y-8 lg:py-20">
+          {/* On a phone: headline, then the form, then the three facts. On desktop: pitch left, form right. */}
+          <section className="order-1">
+            <h1 className="max-w-[14ch] text-[36px] font-[650] leading-[1.04] tracking-[-0.035em] text-ink sm:text-[56px] dark:text-stone-50">
               Proposals your clients accept{" "}
               <span className="relative inline-block whitespace-nowrap text-brand dark:text-indigo-300">
                 on their phone.
@@ -110,7 +110,9 @@ export function Login() {
             <p className="mt-7 max-w-[44ch] text-[17px] leading-[1.6] text-graphite dark:text-stone-400">
               Write it once. Send a link. See when it is opened, watch the options get toggled, and get a signed copy the moment they accept.
             </p>
-            <dl className="mt-10 grid max-w-md grid-cols-3 gap-6 border-t border-hairline pt-6 text-[13px] text-graphite dark:border-white/10 dark:text-stone-400">
+          </section>
+          <section className="order-3 lg:col-start-1">
+            <dl className="grid max-w-md grid-cols-3 gap-6 border-t border-hairline pt-6 text-[13px] text-graphite lg:-mt-2 dark:border-white/10 dark:text-stone-400">
               <div>
                 <dt className="font-medium text-ink dark:text-stone-200">Open source</dt>
                 <dd>Read exactly what it does.</dd>
@@ -126,7 +128,7 @@ export function Login() {
             </dl>
           </section>
 
-          <section className="order-1 lg:order-2 lg:pt-3">
+          <section className="order-2 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:pt-3">
             <div className="max-w-[400px] border-t-2 border-ink pt-6 lg:pt-8 dark:border-stone-200">
               {sent ? (
                 <div aria-live="polite">
