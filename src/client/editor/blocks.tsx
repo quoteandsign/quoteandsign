@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type KeyboardEvent } from "react";
+import { createContext, useContext, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { BlockNoteSchema, defaultBlockSpecs, filterSuggestionItems, createHeadingBlockSpec } from "@blocknote/core";
 import { createReactBlockSpec, getDefaultReactSlashMenuItems, type DefaultReactSuggestionItem } from "@blocknote/react";
 import { Table, CheckCircle, TextAa, SquaresFour, ChatCircleText, Images, FilmSlate } from "@phosphor-icons/react";
@@ -215,6 +215,8 @@ function ImageRowEditor({ block, editor }: { block: any; editor: any }) {
   const images = parseImages(block.props.images);
   const [busy, setBusy] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const pickers = useRef<(HTMLInputElement | null)[]>([]);
+  const pick = (e: MouseEvent, i: number) => { e.preventDefault(); e.stopPropagation(); pickers.current[i]?.click(); };
   const save = (next: RowImage[]) => editor.updateBlock(block, { props: { images: JSON.stringify(next) } });
   const upload = async (i: number, file: File) => {
     setBusy(i);
@@ -234,23 +236,22 @@ function ImageRowEditor({ block, editor }: { block: any; editor: any }) {
       <div className={"grid gap-3 " + (images.length <= 2 ? "grid-cols-2" : images.length === 3 ? "grid-cols-3" : "grid-cols-4")}>
         {images.map((it, i) => (
           <figure key={i} className="group relative m-0">
+            <input ref={(el) => { pickers.current[i] = el; }} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(i, f); e.target.value = ""; }} />
             {it.url ? (
               <img src={it.url} alt={it.caption} className="aspect-[4/3] w-full rounded-xl object-cover" />
             ) : (
-              <label className="grid aspect-[4/3] w-full cursor-pointer place-items-center rounded-xl border border-dashed border-stone-900/[.15] bg-stone-900/[.03] text-[13px] text-stone-500 hover:bg-stone-900/[.06] dark:border-white/15 dark:bg-white/[.04]">
-                {busy === i ? "Uploading…" : "+ Choose image"}
-                <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(i, f); e.target.value = ""; }} />
-              </label>
+              <button type="button" onMouseDown={(e) => pick(e, i)} disabled={busy === i} className="grid aspect-[4/3] w-full cursor-pointer place-items-center rounded-xl border border-dashed border-stone-900/[.15] bg-stone-900/[.03] text-[13px] text-stone-500 hover:bg-stone-900/[.06] dark:border-white/15 dark:bg-white/[.04]">
+                {busy === i ? "Uploading…" : "+ Upload image"}
+              </button>
             )}
             <input className={fieldCls + " mt-1 text-[12.5px]"} value={it.caption} placeholder="Caption (optional)" onKeyDown={stop} onChange={(e) => save(images.map((x, k) => (k === i ? { ...x, caption: e.target.value } : x)))} />
             {images.length > 2 && (
               <button type="button" aria-label="Remove image" onClick={() => save(images.filter((_, k) => k !== i))} className="absolute right-2 top-2 hidden h-6 w-6 place-items-center rounded-full bg-white/90 text-[12px] text-stone-700 shadow group-hover:grid">×</button>
             )}
             {it.url && (
-              <label className="absolute left-2 top-2 hidden cursor-pointer rounded-full bg-white/90 px-2 py-0.5 text-[11px] font-medium text-stone-700 shadow group-hover:block">
+              <button type="button" onMouseDown={(e) => pick(e, i)} className="absolute left-2 top-2 hidden cursor-pointer rounded-full bg-white/90 px-2 py-0.5 text-[11px] font-medium text-stone-700 shadow group-hover:block">
                 Replace
-                <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(i, f); e.target.value = ""; }} />
-              </label>
+              </button>
             )}
           </figure>
         ))}
