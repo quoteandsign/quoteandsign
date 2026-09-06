@@ -218,6 +218,14 @@ export function renderLanding(o: { nonce: string; appUrl: string; githubUrl: str
 <meta property="og:title" content="${esc(title)}">
 <meta property="og:description" content="${esc(description)}">
 <meta property="og:url" content="${esc(o.appUrl)}/">
+<meta property="og:image" content="${esc(o.appUrl)}/brand/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<link rel="icon" href="/brand/mark.svg" type="image/svg+xml">
+<link rel="icon" href="/brand/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
+<link rel="manifest" href="/brand/site.webmanifest">
+<meta name="theme-color" content="#2b3f8c">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <script type="application/ld+json" nonce="${o.nonce}">${JSON.stringify(jsonLd)}</script>

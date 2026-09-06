@@ -42,6 +42,11 @@ function shell(title: string, body: string, nonce: string, extraHead = ""): stri
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)} · ${esc(LEGAL.shortName)}</title>
 <meta name="description" content="${esc(title)} for ${esc(LEGAL.shortName)}.">
+<link rel="icon" href="/brand/mark.svg" type="image/svg+xml">
+<link rel="icon" href="/brand/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
+<link rel="manifest" href="/brand/site.webmanifest">
+<meta name="theme-color" content="#2b3f8c">
 <style nonce="${nonce}">${CSS}</style>
 ${extraHead}
 </head>

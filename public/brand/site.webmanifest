@@ -1,0 +1,20 @@
+{
+  "name": "Quote and Sign",
+  "short_name": "Quote and Sign",
+  "start_url": "/app",
+  "display": "standalone",
+  "background_color": "#fbfaf7",
+  "theme_color": "#2b3f8c",
+  "icons": [
+    {
+      "src": "/brand/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/brand/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

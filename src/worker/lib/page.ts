@@ -547,6 +547,11 @@ fetch("/p/${esc(proposal.publicId)}/decline",{method:"POST",headers:{"content-ty
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
 <meta name="color-scheme" content="${pageStyle.dark ? "dark" : "light"}">
+<link rel="icon" href="/brand/mark.svg" type="image/svg+xml">
+<link rel="icon" href="/brand/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
+<link rel="manifest" href="/brand/site.webmanifest">
+<meta name="theme-color" content="#2b3f8c">
 <meta name="theme-color" content="${pageStyle.dark ? "#0e0e11" : esc(color)}">
 <title>${esc(proposal.title)} · ${esc(brand)}</title>
 <meta property="og:type" content="website">
@@ -714,7 +719,7 @@ export function renderRecordPage(nonce: string, r: RecordView): string {
   const color = accent(r.brandColor);
   const when = (d: Date) => d.toLocaleString("en-CA", { dateStyle: "long", timeStyle: "short", timeZone: "UTC" }) + " UTC";
   const row = (k: string, v: string, mono = false) => `<tr><th>${esc(k)}</th><td${mono ? ' class="mono"' : ""}>${v}</td></tr>`;
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Signing record · ${esc(r.title)}</title><style nonce="${nonce}">${CSS}:root{--accent:${color};--accent-fg:${readableOn(color)}}
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><link rel="icon" href="/brand/mark.svg" type="image/svg+xml"><link rel="icon" href="/brand/favicon-32.png" sizes="32x32" type="image/png"><link rel="apple-touch-icon" href="/brand/apple-touch-icon.png"><link rel="manifest" href="/brand/site.webmanifest"><meta name="theme-color" content="#2b3f8c"><title>Signing record · ${esc(r.title)}</title><style nonce="${nonce}">${CSS}:root{--accent:${color};--accent-fg:${readableOn(color)}}
 .rec{max-width:680px;margin:0 auto;padding:56px 20px 64px}.rec h1{font-size:30px;letter-spacing:-.02em;margin:6px 0 4px}.rec .sub{color:var(--muted);margin:0 0 28px}
 .rec .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-card);padding:6px 22px;margin:0 0 18px}
 .rec table{width:100%;border-collapse:collapse;font-size:15px}.rec th{text-align:left;font-weight:500;color:var(--muted);width:38%;padding:12px 12px 12px 0;vertical-align:top;border-bottom:1px solid var(--line)}.rec td{padding:12px 0;border-bottom:1px solid var(--line);vertical-align:top}.rec tr:last-child th,.rec tr:last-child td{border-bottom:0}
@@ -747,13 +752,13 @@ ${r.device ? row("Signer's device", esc([r.device.ip, r.device.userAgent].filter
 }
 
 export function renderSimplePage(title: string, message: string): string {
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${esc(title)}</title><style>${CSS}</style></head>
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><link rel="icon" href="/brand/mark.svg" type="image/svg+xml"><link rel="icon" href="/brand/favicon-32.png" sizes="32x32" type="image/png"><link rel="apple-touch-icon" href="/brand/apple-touch-icon.png"><link rel="manifest" href="/brand/site.webmanifest"><meta name="theme-color" content="#2b3f8c"><title>${esc(title)}</title><style>${CSS}</style></head>
 <body><div class="wrap"><article class="pad"><h1>${esc(title)}</h1><p>${esc(message)}</p></article><footer class="made">Quote and Sign</footer></div></body></html>`;
 }
 
 export function renderUnlockPage(o: { publicId: string; brandName: string | null; brandColor?: string | null; wrong: boolean }): string {
   const color = accent(o.brandColor);
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Enter password</title><style>${CSS}:root{--accent:${color};--accent-fg:${readableOn(color)}}.unlock{min-height:100dvh;display:grid;place-items:center;padding:24px}.unlock article{width:100%;max-width:420px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-card);padding:28px 28px 24px}.unlock .brand{margin-bottom:22px;font-size:14px}</style></head>
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><link rel="icon" href="/brand/mark.svg" type="image/svg+xml"><link rel="icon" href="/brand/favicon-32.png" sizes="32x32" type="image/png"><link rel="apple-touch-icon" href="/brand/apple-touch-icon.png"><link rel="manifest" href="/brand/site.webmanifest"><meta name="theme-color" content="#2b3f8c"><title>Enter password</title><style>${CSS}:root{--accent:${color};--accent-fg:${readableOn(color)}}.unlock{min-height:100dvh;display:grid;place-items:center;padding:24px}.unlock article{width:100%;max-width:420px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-card);padding:28px 28px 24px}.unlock .brand{margin-bottom:22px;font-size:14px}</style></head>
 <body><div class="unlock"><article>
 ${o.brandName ? `<p class="brand"><span class="dot"></span>${esc(o.brandName)}</p>` : ""}
 <h1 class="h-sm">This proposal is protected</h1>
