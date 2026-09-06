@@ -414,12 +414,12 @@ export function Profile() {
 
             {!paid && (
               <section aria-label="Plans">
-                <div className="mb-4 flex items-center justify-between gap-3">
+                <div className="mb-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <h2 className="text-[15px] font-semibold">Choose a plan</h2>
                   <div role="radiogroup" aria-label="Billing" className="inline-grid grid-cols-2 gap-0.5 rounded-full bg-stone-900/[.06] p-0.5 dark:bg-white/[.08]">
                     {(["month", "year"] as const).map((i) => (
-                      <button key={i} type="button" role="radio" aria-checked={interval === i} onClick={() => setInterval_(i)} className={cn("inline-flex h-8 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-medium transition-colors", interval === i ? "bg-white text-ink shadow-[0_1px_2px_rgba(25,24,22,.12)] dark:bg-stone-800 dark:text-stone-50" : "text-graphite dark:text-stone-400")}>
-                        {i === "year" ? <>Yearly <span className={cn("rounded-full px-1.5 py-px text-[10.5px] font-semibold", interval === i ? "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300" : "bg-stone-900/[.06] text-stone-500 dark:bg-white/10")}>2 months free</span></> : "Monthly"}
+                      <button key={i} type="button" role="radio" aria-checked={interval === i} onClick={() => setInterval_(i)} className={cn("inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 text-[13px] font-medium transition-colors", interval === i ? "bg-white text-ink shadow-[0_1px_2px_rgba(25,24,22,.12)] dark:bg-stone-800 dark:text-stone-50" : "text-graphite dark:text-stone-400")}>
+                        {i === "year" ? <>Yearly <span className={cn("whitespace-nowrap rounded-full px-1.5 py-px text-[10.5px] font-semibold", interval === i ? "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300" : "bg-stone-900/[.06] text-stone-500 dark:bg-white/10")}>2 months free</span></> : "Monthly"}
                       </button>
                     ))}
                   </div>

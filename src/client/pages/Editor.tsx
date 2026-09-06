@@ -17,6 +17,7 @@ import { businessName } from "../../shared/names";
 import { isHex, readableOn } from "../../shared/looks";
 import { shrinkImage } from "../lib/image";
 import { en as bnEn } from "@blocknote/core/locales";
+import { SuggestionMenu } from "@blocknote/core/extensions";
 import type { PricingLine } from "../../shared/pricing";
 
 type Question = { id: string; name: string; email: string | null; body: string; createdAt: number; unread: boolean };
@@ -214,6 +215,22 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
     },
   });
   const saveContent = useDebounced(() => void save({ content: editor.document }), 800);
+  // Phones have no hover, so the side menu's plus never shows. This does the same from a fixed button.
+  const addBlockHere = () => {
+    const doc = editor.document as { id: string; type: string; content?: unknown }[];
+    let target = doc[doc.length - 1];
+    try {
+      target = editor.getTextCursorPosition().block as typeof target;
+    } catch {
+      /* nothing focused yet: append at the end */
+    }
+    if (!target) return;
+    const empty = target.type === "paragraph" && Array.isArray(target.content) && target.content.length === 0;
+    const at = empty ? target : editor.insertBlocks([{ type: "paragraph" }], target, "after")[0]!;
+    editor.setTextCursorPosition(at);
+    editor.focus();
+    editor.getExtension(SuggestionMenu)?.openSuggestionMenu("/");
+  };
   const flushAll = () => [saveTitle, saveDetails, saveItems, saveSender, saveContent].forEach((f) => f.flush());
   const bandCss = useSectionBands(editor);
   const toolbarBlockTypes = useMemo(() => {
@@ -559,6 +576,11 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
           </aside>
         </div>
 
+        {!readOnly && !sendOpen && !tplOpen && !phoneOpen && (
+          <button type="button" onClick={addBlockHere} aria-label="Add a block" data-test="add-block-mobile" className="fixed bottom-5 right-5 z-20 grid h-13 w-13 place-items-center rounded-full bg-brand text-white shadow-[0_10px_30px_-8px_rgba(43,63,140,.7)] transition-transform active:scale-95 lg:hidden">
+            <Plus size={22} weight="bold" />
+          </button>
+        )}
         {tplOpen && (
           <div role="dialog" aria-modal="true" aria-label="Save as template" className="fixed inset-0 z-30 grid place-items-end bg-stone-950/40 backdrop-blur-sm sm:place-items-center" onClick={() => setTplOpen(false)}>
             <div className="w-full rounded-t-2xl bg-white p-6 text-stone-900 shadow-2xl sm:w-[440px] sm:rounded-2xl dark:bg-stone-900 dark:text-stone-50" onClick={(e) => e.stopPropagation()}>

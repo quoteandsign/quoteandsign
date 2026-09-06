@@ -93,9 +93,20 @@ function Journey({ row, onResend, note }: { row: Row; onResend: () => void; note
         },
   ];
   const canResend = Boolean(row.clientEmail) && row.status !== "accepted";
+  // On a phone there is no room for three steps: show the furthest one reached.
+  const latest = [...stages].reverse().find((s) => s.done) ?? stages[0]!;
   return (
     <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-2" data-test="journey">
-      <ol className="flex items-center gap-0" aria-label="Progress">
+      <span className="flex items-center gap-2 sm:hidden" aria-label="Progress">
+        <span aria-hidden="true" className={cn("grid h-[22px] w-[22px] flex-none place-items-center rounded-full", latest.tone === "bad" ? "bg-rose-600 text-white" : "bg-ink text-white dark:bg-white dark:text-ink")}>
+          {latest.tone === "bad" ? latest.icon : <Check size={12} weight="bold" />}
+        </span>
+        <span className="leading-tight">
+          <span className={cn("block text-[12.5px] font-medium", latest.tone === "bad" && "text-rose-700 dark:text-rose-300")}>{latest.label}</span>
+          <span className="block text-[11.5px] text-stone-500 tabular-nums">{latest.sub}</span>
+        </span>
+      </span>
+      <ol className="hidden items-center gap-0 sm:flex" aria-label="Progress">
         {stages.map((s, i) => (
           <li key={s.key} className="flex items-center">
             {i > 0 && <span aria-hidden="true" className={cn("mx-2 h-px w-6 sm:w-9", stages[i - 1]!.done && s.done ? "bg-ink/40 dark:bg-white/40" : "bg-stone-900/[.12] dark:bg-white/[.14]")} />}
@@ -239,9 +250,9 @@ export function Dashboard() {
             {user?.isAdmin && (
               <Link href="/app/admin" className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[13.5px] font-medium text-stone-700 hover:bg-stone-900/[.05] dark:text-stone-300 dark:hover:bg-white/[.07]">Admin</Link>
             )}
-            <a href="/contact" className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[13.5px] font-medium text-stone-700 hover:bg-stone-900/[.05] dark:text-stone-300 dark:hover:bg-white/[.07]">Help</a>
-            <Link href="/app/brand" className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[13.5px] font-medium text-stone-700 hover:bg-stone-900/[.05] dark:text-stone-300 dark:hover:bg-white/[.07]">
-              <UserCircle size={17} weight="light" /> Settings
+            <a href="/contact" className="hidden h-9 items-center gap-1.5 rounded-full px-3 text-[13.5px] font-medium text-stone-700 hover:bg-stone-900/[.05] sm:inline-flex dark:text-stone-300 dark:hover:bg-white/[.07]">Help</a>
+            <Link href="/app/brand" className="inline-flex h-9 items-center gap-1.5 rounded-full px-2.5 text-[13.5px] font-medium text-stone-700 hover:bg-stone-900/[.05] sm:px-3 dark:text-stone-300 dark:hover:bg-white/[.07]" aria-label="Settings">
+              <UserCircle size={17} weight="light" /> <span className="hidden sm:inline">Settings</span>
             </Link>
             <ThemeToggle />
             <Button variant="ghost" size="icon" aria-label="Sign out" title={`Sign out ${user?.email ?? ""}`} onClick={() => void logout()}>

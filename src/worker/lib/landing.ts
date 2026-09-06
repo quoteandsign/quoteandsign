@@ -13,6 +13,7 @@ const DEMO_ITEMS = [
 ];
 
 const LANDING_CSS = `
+html,body{overflow-x:hidden}
 .site{max-width:1160px;margin:0 auto;padding:0 24px}
 nav.main{display:flex;align-items:center;justify-content:space-between;height:76px}
 nav.main .links{display:flex;gap:28px;align-items:center;font-size:15px}
@@ -39,7 +40,7 @@ nav.main .links a.cta{background:var(--fg);color:var(--bg);padding:10px 18px;bor
 .stage .halo{position:absolute;inset:auto;width:520px;height:520px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--accent) 14%,transparent),transparent 62%);filter:blur(10px);z-index:0}
 .phone{position:relative;z-index:1;width:min(392px,100%);background:#141311;border-radius:46px;padding:12px;box-shadow:0 2px 3px rgba(25,24,22,.12),0 60px 100px -40px rgba(25,24,22,.55),inset 0 0 0 1px rgba(255,255,255,.08);transform:rotateY(-10deg) rotateX(5deg);transform-style:preserve-3d;transition:transform .9s cubic-bezier(.32,.72,0,1)}
 .phone.flat{transform:none}
-.screen{background:var(--card);border-radius:36px;overflow:hidden;height:min(720px,72dvh);min-height:560px;display:flex;flex-direction:column}
+.screen{background:var(--card);border-radius:36px;overflow:hidden;height:min(720px,72svh);min-height:560px;display:flex;flex-direction:column}
 .statusbar{display:flex;justify-content:space-between;align-items:center;padding:14px 26px 6px;font-size:13px;font-weight:600;color:var(--fg)}
 .statusbar .notch{width:110px;height:26px;border-radius:999px;background:#141311;margin:-4px auto 0}
 .scroll{overflow-y:auto;padding:8px 18px 18px;scrollbar-width:none}
@@ -61,7 +62,9 @@ nav.main .links a.cta{background:var(--fg);color:var(--bg);padding:10px 18px;bor
 .done{margin-top:14px;padding:12px 14px;border-radius:12px;background:color-mix(in srgb,var(--accent) 10%,transparent);font-size:13.5px}
 .done b{display:block}
 .try{position:absolute;right:-8px;top:8px;transform:rotate(3deg);background:var(--fg);color:var(--bg);font-size:12.5px;font-weight:600;padding:7px 12px;border-radius:999px;z-index:2}
-@media(max-width:979px){.stage{order:2}.try{right:8px}}
+@media(max-width:979px){.stage{order:2;overflow:hidden;margin:0 -20px;padding:16px 20px}.try{right:8px}.phone{transform:none;transition:none}.stage .halo{width:100%;max-width:520px}
+/* On a phone the mock is a picture, not a second page: it does not scroll or catch taps. */
+.screen{height:min(560px,64svh);min-height:0}.scroll{overflow:hidden;pointer-events:none;touch-action:pan-y}}
 .cur{position:relative;z-index:1;display:flex;gap:6px;align-items:center;margin-top:18px;font-size:13px;color:var(--muted)}
 .cur span{margin-right:4px}
 .cur button{font:inherit;font-size:13px;font-weight:600;padding:6px 11px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer;transition:background-color .15s,border-color .15s}
@@ -158,9 +161,14 @@ section.band .sub{color:var(--muted);font-size:18px;max-width:50ch;margin:0;line
 .trust b{display:block;font-size:17px;letter-spacing:-.01em;margin-bottom:4px}
 .trust p{margin:0;color:var(--muted);font-size:15.5px;line-height:1.55}
 
-footer.site-foot{padding:48px 0 56px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:16px 28px;justify-content:space-between;align-items:center;font-size:14px;color:var(--muted)}
-footer.site-foot a{color:inherit;text-decoration:none;margin-right:20px}
+footer.site-foot{padding:44px 0 56px;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr auto auto;gap:18px 44px;align-items:center;font-size:14px;color:var(--muted)}
+footer.site-foot .foot-brand{display:inline-flex;align-items:center;gap:8px;font-weight:600;color:var(--fg)}
+footer.site-foot .foot-brand i{width:10px;height:10px;border-radius:50%;background:var(--accent)}
+footer.site-foot nav{display:flex;flex-wrap:wrap;gap:8px 20px}
+footer.site-foot a{color:inherit;text-decoration:none}
 footer.site-foot a:hover{color:var(--fg)}
+footer.site-foot .foot-licence{grid-column:1/-1;margin:0;font-size:13px}
+@media(max-width:700px){footer.site-foot{grid-template-columns:1fr;gap:16px;padding:36px 0 44px}footer.site-foot nav{gap:8px 18px}}
 
 /* One load sequence. Everything else on the page is still. */
 .rise{opacity:0;transform:translateY(14px)}
@@ -369,8 +377,10 @@ export function renderLanding(o: { nonce: string; appUrl: string; githubUrl: str
 </section>
 
 <footer class="site-foot">
-  <div><a href="${esc(o.githubUrl)}" rel="noopener">GitHub</a><a href="/contact">Contact</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/acceptable-use">Acceptable use</a><a href="/dpa">DPA</a><a href="/login">Sign in</a></div>
-  <div>Quote and Sign is open-source software released under the AGPL-3.0 licence.</div>
+  <span class="foot-brand"><i aria-hidden="true"></i>Quote and Sign</span>
+  <nav aria-label="Product"><a href="/login">Sign in</a><a href="${esc(o.githubUrl)}" rel="noopener">GitHub</a><a href="/contact">Contact</a></nav>
+  <nav aria-label="Legal"><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/acceptable-use">Acceptable use</a><a href="/dpa">DPA</a></nav>
+  <p class="foot-licence">Open-source software released under the AGPL-3.0 licence.</p>
 </footer>
 </div>
 ${pricingScript(o.nonce, clientItems, DEMO_CURRENCY, true)}
@@ -384,7 +394,7 @@ requestAnimationFrame(function(){document.body.classList.add("ready")});
 var phone=document.getElementById("phone");if(!phone)return;
 // Straighten as the pointer approaches, tilt back when it leaves.
 var stage=phone.parentElement;
-if(!reduce)stage.addEventListener("pointermove",function(e){var r=stage.getBoundingClientRect();var x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;phone.style.transform="rotateY("+(x*10)+"deg) rotateX("+(-y*8)+"deg)"});
+if(!reduce&&matchMedia("(hover:hover)").matches)stage.addEventListener("pointermove",function(e){var r=stage.getBoundingClientRect();var x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;phone.style.transform="rotateY("+(x*10)+"deg) rotateX("+(-y*8)+"deg)"});
 stage.addEventListener("pointerleave",function(){phone.style.transform=""});
 // One guided moment: switch an option off and back on so the total visibly changes.
 document.querySelectorAll(".cur button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll(".cur button").forEach(function(x){x.setAttribute("aria-pressed",String(x===b))});if(window.qsSetCurrency)window.qsSetCurrency(b.dataset.cur)})});
