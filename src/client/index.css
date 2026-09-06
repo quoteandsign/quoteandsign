@@ -1,0 +1,278 @@
+@import "tailwindcss";
+@import "@blocknote/shadcn/style.css";
+
+/* Geist and Geist Mono by Vercel, SIL Open Font License 1.1 (public/fonts/LICENSE-Geist-OFL.txt). */
+@font-face {
+  font-family: "Geist";
+  src: url("/fonts/Geist-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("/fonts/GeistMono-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@source "../../node_modules/@blocknote/shadcn/dist";
+
+@theme {
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* Brand */
+  --color-brand: #2b3f8c;
+  --color-brand-strong: #1f2f6e;
+  /* shadcn tokens, read by the BlockNote menus (its "accent" is a hover surface, not our brand) */
+  --color-background: #ffffff;
+  --color-foreground: #191816;
+  --color-card: #ffffff;
+  --color-card-foreground: #191816;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #191816;
+  --color-primary: #191816;
+  --color-primary-foreground: #fbfaf7;
+  --color-secondary: #f3f1ec;
+  --color-secondary-foreground: #191816;
+  --color-muted: #f3f1ec;
+  --color-muted-foreground: #5f5b55;
+  --color-accent: #efede8;
+  --color-accent-foreground: #191816;
+  --color-destructive: #b42318;
+  --color-border: #e6e2da;
+  --color-input: #e6e2da;
+  --color-ring: #2b3f8c;
+  --color-paper: #fbfaf7;
+  --color-ink: #191816;
+  --color-graphite: #5f5b55;
+  --color-hairline: #e6e2da;
+}
+
+/* Dark follows the app theme, except inside the editor sheet: a paper sheet stays light in dark mode
+   and a Night sheet is dark in light mode, because the sheet shows what the client gets. */
+@custom-variant dark (&:where(.dark, .dark *, .sheet-dark, .sheet-dark *):not(.sheet-light, .sheet-light *));
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    @apply bg-paper text-ink dark:bg-stone-950 dark:text-stone-50;
+  }
+}
+
+/* BlockNote: let the editor inherit our type and sit flush in the page. */
+.bn-container {
+  font-family: var(--font-sans);
+}
+.bn-editor {
+  padding-inline: 0;
+}
+.bn-editor h1 {
+  letter-spacing: -0.03em;
+}
+
+/* Tabular figures everywhere numbers line up. */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* BlockNote theme tokens. The shadcn build reads these and defines none itself, which is why
+   menus rendered transparent. Values map to our stone/teal system. */
+.bn-container {
+  --bn-font-family: var(--font-sans);
+  --bn-colors-editor-text: #1c1917;
+  --bn-colors-editor-background: transparent;
+  --bn-colors-menu-text: #1c1917;
+  --bn-colors-menu-background: #ffffff;
+  --bn-colors-tooltip-text: #ffffff;
+  --bn-colors-tooltip-background: #1c1917;
+  --bn-colors-hovered-text: #1c1917;
+  --bn-colors-hovered-background: rgba(28, 25, 23, 0.06);
+  --bn-colors-selected-text: #ffffff;
+  --bn-colors-selected-background: #2b3f8c;
+  --bn-colors-disabled-text: #a8a29e;
+  --bn-colors-disabled-background: rgba(28, 25, 23, 0.04);
+  --bn-colors-shadow: rgba(28, 25, 23, 0.14);
+  --bn-colors-border: rgba(28, 25, 23, 0.09);
+  --bn-colors-side-menu: #a8a29e;
+  --bn-colors-highlights-gray-text: #57534e;
+  --bn-colors-highlights-gray-background: #f5f5f4;
+  --bn-colors-highlights-brown-text: #7c4a2a;
+  --bn-colors-highlights-brown-background: #f4ebe4;
+  --bn-colors-highlights-red-text: #b42318;
+  --bn-colors-highlights-red-background: #fdeceb;
+  --bn-colors-highlights-orange-text: #b54708;
+  --bn-colors-highlights-orange-background: #fff1e5;
+  --bn-colors-highlights-yellow-text: #93700a;
+  --bn-colors-highlights-yellow-background: #fdf6dd;
+  --bn-colors-highlights-green-text: #0f6e4a;
+  --bn-colors-highlights-green-background: #e6f4f2;
+  --bn-colors-highlights-blue-text: #175cd3;
+  --bn-colors-highlights-blue-background: #e8f0fc;
+  --bn-colors-highlights-purple-text: #6941c6;
+  --bn-colors-highlights-purple-background: #f0ebfb;
+  --bn-colors-highlights-pink-text: #c11574;
+  --bn-colors-highlights-pink-background: #fce7f3;
+  --bn-border-radius: 12px;
+  --bn-border-radius-small: 8px;
+  --bn-border-radius-medium: 10px;
+  --bn-border: 1px solid var(--bn-colors-border);
+  --bn-shadow: 0 12px 32px -12px var(--bn-colors-shadow), 0 1px 2px rgba(28, 25, 23, 0.06);
+}
+.dark .bn-container {
+  --bn-colors-editor-text: #fafaf9;
+  --bn-colors-menu-text: #fafaf9;
+  --bn-colors-menu-background: #1c1917;
+  --bn-colors-tooltip-text: #1c1917;
+  --bn-colors-tooltip-background: #fafaf9;
+  --bn-colors-hovered-text: #fafaf9;
+  --bn-colors-hovered-background: rgba(255, 255, 255, 0.08);
+  --bn-colors-disabled-text: #78716c;
+  --bn-colors-disabled-background: rgba(255, 255, 255, 0.05);
+  --bn-colors-shadow: rgba(0, 0, 0, 0.5);
+  --bn-colors-border: rgba(255, 255, 255, 0.1);
+  --bn-colors-side-menu: #78716c;
+}
+.bn-container,
+.bn-container .bn-editor,
+.bn-container [class*="bn-"] {
+  font-family: var(--font-sans);
+}
+
+/* Editor typography: the document should read like a finished page, not a form. */
+.bn-container {
+  --doc-text: #292524;
+  --doc-heading: #1c1917;
+}
+.dark .bn-container {
+  --doc-text: #e7e5e4;
+  --doc-heading: #fafaf9;
+}
+.bn-editor {
+  font-size: 17px;
+  line-height: 1.7;
+  color: var(--doc-text);
+}
+.bn-editor h1 {
+  font-size: 44px;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  font-weight: 650;
+}
+.bn-editor h2 {
+  font-size: 26px;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+  font-weight: 600;
+  margin-top: 1.6em;
+}
+.bn-editor h3 {
+  font-size: 20px;
+  letter-spacing: -0.015em;
+  font-weight: 600;
+  margin-top: 1.2em;
+}
+/* Headings are ink by default, but a chosen text colour must win. */
+.bn-editor .bn-block-content:not([data-text-color]) :is(h1, h2, h3),
+.bn-editor .bn-block-content[data-text-color="default"] :is(h1, h2, h3) {
+  color: var(--doc-heading);
+}
+.bn-editor .bn-inline-content[data-is-empty-and-focused]::before,
+.bn-editor .bn-block-content[data-is-empty-and-focused] .bn-inline-content::before {
+  color: color-mix(in srgb, var(--doc-text) 45%, transparent);
+}
+.bn-editor .bn-inline-content { text-wrap: pretty; }
+.bn-editor .bn-block-outer { margin-block: 0.35em; }
+
+/* While text is selected the formatting toolbar is the focus; the side controls stay out of the way. */
+.has-selection .bn-side-menu {
+  opacity: 0;
+  pointer-events: none;
+}
+
+
+/* The editor sheet mirrors the client page: section bands need the sheet's padding and ground. */
+.sheet {
+  --sheet-pad: 24px;
+  --sheet-bg: #ffffff;
+  --band-mix: 70%;
+}
+@media (min-width: 640px) {
+  .sheet {
+    --sheet-pad: 80px;
+  }
+}
+/* The sheet is what the client gets: paper in both app themes, dark only for the Night style. */
+.dark .sheet:not([data-style="night"]) .bn-container {
+  --doc-text: #292524;
+  --doc-heading: #1c1917;
+  --bn-colors-editor-text: #1c1917;
+  --bn-colors-side-menu: #a8a29e;
+}
+.dark .sheet:not([data-style="night"]) {
+  color: #191816;
+}
+
+/* Page styles mirrored in the editor sheet: display type and the ground the cover sits on. */
+.sheet[data-style="editorial"] {
+  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+}
+.sheet[data-style="editorial"] .cover-title,
+.sheet[data-style="editorial"] .bn-editor :is(h1, h2),
+.sheet[data-style="editorial"] .bn-editor p.statement-like {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+.sheet[data-style="editorial"] .bn-editor h2::before {
+  content: "";
+  display: block;
+  width: 36px;
+  height: 3px;
+  background: var(--sheet-accent, #2b3f8c);
+  margin: 0 0 12px;
+}
+.sheet[data-style="bold"] .cover-title {
+  font-weight: 750;
+  letter-spacing: -0.055em;
+  line-height: 0.94;
+  max-width: none;
+}
+.sheet[data-style="bold"] .bn-editor h2 {
+  font-weight: 750;
+  letter-spacing: -0.045em;
+  font-size: 34px;
+}
+.sheet[data-style="minimal"] .cover-title {
+  font-weight: 450;
+}
+.sheet[data-style="minimal"] .bn-editor h2 {
+  font-weight: 500;
+}
+.sheet[data-style="minimal"] .bn-editor > .bn-block-group > [data-id] {
+  background: transparent !important;
+}
+.sheet[data-style="night"] {
+  --sheet-bg: #17171b;
+  --band-mix: 22%;
+  background: #17171b;
+  color: #f4f4f5;
+}
+.sheet[data-style="night"] .bn-container {
+  --doc-text: #e4e4e7;
+  --doc-heading: #fafafa;
+  --bn-colors-editor-text: #f4f4f5;
+}
+.sheet[data-style="warm"] {
+  --sheet-bg: #fffaf2;
+  background: #fffaf2;
+}
+.sheet[data-style="warm"] .bn-container {
+  --doc-text: #2a2118;
+  --doc-heading: #2a2118;
+}

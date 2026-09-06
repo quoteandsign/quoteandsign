@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.wrangler/
+.dev.vars
+.dev.vars.*
+*.local
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+coverage/
+*.log
+.shots/
+!.dev.vars.example

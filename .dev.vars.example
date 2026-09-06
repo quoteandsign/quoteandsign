@@ -1,0 +1,22 @@
+# Copy to .dev.vars for local development. Never commit .dev.vars.
+# These two turn on development behaviour (sign-in links shown on the page, links follow the request host).
+ENVIRONMENT=development
+APP_URL=http://localhost:5173
+# In production these are set with `wrangler secret put NAME` — never in wrangler.jsonc.
+SESSION_SECRET=replace-with-32-random-bytes-hex
+RESEND_API_KEY=
+POLAR_ACCESS_TOKEN=
+POLAR_WEBHOOK_SECRET=
+# Polar product ids for the two paid plans, and which Polar server they live on.
+POLAR_SERVER=sandbox
+POLAR_PRODUCT_PRO=
+POLAR_PRODUCT_BUSINESS=
+POLAR_PRODUCT_PRO_YEAR=
+POLAR_PRODUCT_BUSINESS_YEAR=
+# Cloudflare Turnstile keeps bots off the sign-in form. Leave empty locally.
+TURNSTILE_SITE_KEY=
+TURNSTILE_SECRET=
+# Who may open the admin area, and where contact-form messages go.
+ADMIN_EMAILS=
+SUPPORT_EMAIL=
+# Leave RESEND_API_KEY empty in dev: magic links and notifications print to the terminal instead.

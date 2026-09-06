@@ -1,0 +1,1 @@
+ALTER TABLE `proposals` ADD `nav_hidden` text;

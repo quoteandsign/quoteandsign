@@ -1,0 +1,125 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1788495970390,
+      "tag": "0000_tidy_squirrel_girl",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1788536326477,
+      "tag": "0001_tax_defaults",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1788537112132,
+      "tag": "0002_acceptance_snapshots",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1788557907806,
+      "tag": "0003_sender_recipients",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1788560934761,
+      "tag": "0004_nav_hidden",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1788561412006,
+      "tag": "0005_section_time",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1788561945223,
+      "tag": "0006_page_style",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1788563160328,
+      "tag": "0007_user_templates",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1788570940567,
+      "tag": "0008_default_style",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1788576838817,
+      "tag": "0009_notify_emails",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1788624994627,
+      "tag": "0010_trial_and_teams",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1788625394241,
+      "tag": "0011_snapshot_and_webhook_events",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1788641755696,
+      "tag": "0012_decline_payment_manual",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1788643259932,
+      "tag": "0013_billing_and_units",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1788646471714,
+      "tag": "0014_send_count",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "6",
+      "when": 1788649515057,
+      "tag": "0015_plans_countersign_trial",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1788651568577,
+      "tag": "0016_tickets_marketing",
+      "breakpoints": true
+    }
+  ]
+}

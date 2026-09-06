@@ -1,0 +1,67 @@
+{
+  "name": "quoteandsign",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Open-source proposal & quote software. Web-native proposals, live pricing tables, one-click accept.",
+  "license": "AGPL-3.0-only",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "tsc --noEmit",
+    "test": "vitest run",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "wrangler d1 migrations apply quoteandsign --local",
+    "db:migrate:remote": "wrangler d1 migrations apply quoteandsign --remote",
+    "deploy": "npm run build && wrangler deploy",
+    "audit": "npm audit --audit-level=moderate",
+    "dev:lan": "vite dev --host",
+    "db:seed:local": "wrangler d1 execute quoteandsign --local --file ./drizzle/seed.dev.sql",
+    "types": "wrangler types",
+    "e2e": "node scripts/e2e.mjs",
+    "shots": "node scripts/shots.mjs .shots"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "1.54.4",
+    "@cloudflare/vitest-pool-workers": "0.22.0",
+    "@tailwindcss/vite": "4.3.3",
+    "@types/node": "26.4.1",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.7",
+    "@vitejs/plugin-react": "6.1.1",
+    "drizzle-kit": "0.31.10",
+    "playwright": "1.62.1",
+    "tailwindcss": "4.3.3",
+    "typescript": "7.0.2",
+    "vite": "8.2.2",
+    "vitest": "4.1.11",
+    "wrangler": "4.129.0"
+  },
+  "dependencies": {
+    "@blocknote/core": "0.54.0",
+    "@blocknote/react": "0.54.0",
+    "@blocknote/shadcn": "0.54.0",
+    "@phosphor-icons/react": "2.1.10",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "drizzle-orm": "0.45.2",
+    "hono": "4.13.5",
+    "motion": "13.2.0",
+    "pdf-lib": "1.17.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "tailwind-merge": "3.6.0",
+    "zod": "4.5.4"
+  },
+  "allowScripts": {
+    "workerd@1.20260815.1": true,
+    "workerd@1.20260903.1": true,
+    "esbuild@0.18.20": true,
+    "esbuild@0.25.12": true,
+    "esbuild@0.28.1": true
+  }
+}

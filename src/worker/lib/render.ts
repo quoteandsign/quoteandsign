@@ -1,0 +1,294 @@
+// Renders BlockNote document JSON to static HTML for the public proposal page.
+// Everything is escaped. Only known block types render; unknown types render as paragraphs.
+
+export const PRICING_MARKER = "<!--op:pricing-->";
+export const ACCEPT_MARKER = "<!--op:accept-->";
+
+type Styles = Partial<Record<"bold" | "italic" | "underline" | "strike" | "code", boolean>> & {
+  textColor?: string;
+};
+type Inline =
+  | { type: "text"; text: string; styles?: Styles }
+  | { type: "link"; href: string; content: Inline[] | string };
+type TableContent = { type: "tableContent"; rows: { cells: (Inline[] | string)[] }[] };
+export type Block = {
+  id?: string;
+  type: string;
+  props?: Record<string, unknown>;
+  content?: Inline[] | string | TableContent;
+  children?: Block[];
+};
+
+export const COLOUR_NAMES = ["gray", "brown", "red", "orange", "yellow", "green", "blue", "purple", "pink"] as const;
+
+export function esc(s: unknown): string {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function safeHref(href: string): string {
+  const h = String(href ?? "").trim();
+  if (/^(https?:|mailto:|tel:)/i.test(h)) return h;
+  return "#";
+}
+
+function colourClass(props: Record<string, unknown> | undefined, kind: "bg" | "fg"): string {
+  const v = String(props?.[kind === "bg" ? "backgroundColor" : "textColor"] ?? "default");
+  return (COLOUR_NAMES as readonly string[]).includes(v) ? ` ${kind}-${v}` : "";
+}
+
+function renderInline(content: Inline[] | string | undefined): string {
+  if (content == null) return "";
+  if (typeof content === "string") return esc(content);
+  if (!Array.isArray(content)) return "";
+  return content
+    .map((node) => {
+      if (!node || typeof node !== "object") return "";
+      if (node.type === "link") {
+        return `<a href="${esc(safeHref(node.href))}" rel="noopener nofollow" target="_blank">${renderInline(node.content)}</a>`;
+      }
+      let t = esc(node.text);
+      const s = node.styles ?? {};
+      if (s.code) t = `<code>${t}</code>`;
+      if (s.bold) t = `<strong>${t}</strong>`;
+      if (s.italic) t = `<em>${t}</em>`;
+      if (s.underline) t = `<u>${t}</u>`;
+      if (s.strike) t = `<s>${t}</s>`;
+      if (s.textColor && (COLOUR_NAMES as readonly string[]).includes(String(s.textColor))) t = `<span class="fg-${esc(s.textColor)}">${t}</span>`;
+      return t;
+    })
+    .join("");
+}
+
+export function inlineToText(content: Block["content"]): string {
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) return content.map((n) => (n.type === "text" ? n.text : inlineToText(n.content as Inline[]))).join("");
+  return "";
+}
+
+function isEmptyText(content: Block["content"]): boolean {
+  if (content == null) return true;
+  if (typeof content === "string") return content.trim() === "";
+  if (Array.isArray(content)) return content.every((n) => n.type === "text" && n.text.trim() === "");
+  return false;
+}
+
+/** Only these hosts may be embedded as video. The CSP frame-src list must match. */
+export function videoEmbed(url: string): { src: string; host: string } | null {
+  let u: URL;
+  try {
+    u = new URL(url);
+  } catch {
+    return null;
+  }
+  const host = u.hostname.replace(/^www\./, "");
+  if (host === "youtube.com" || host === "m.youtube.com") {
+    const id = u.searchParams.get("v") ?? (u.pathname.startsWith("/embed/") ? u.pathname.split("/")[2] : u.pathname.startsWith("/shorts/") ? u.pathname.split("/")[2] : null);
+    return id && /^[\w-]{6,}$/.test(id) ? { src: `https://www.youtube-nocookie.com/embed/${id}`, host: "youtube" } : null;
+  }
+  if (host === "youtu.be") {
+    const id = u.pathname.slice(1);
+    return /^[\w-]{6,}$/.test(id) ? { src: `https://www.youtube-nocookie.com/embed/${id}`, host: "youtube" } : null;
+  }
+  if (host === "vimeo.com" || host === "player.vimeo.com") {
+    const id = u.pathname.split("/").filter(Boolean).pop() ?? "";
+    return /^\d{6,}$/.test(id) ? { src: `https://player.vimeo.com/video/${id}`, host: "vimeo" } : null;
+  }
+  if (host === "loom.com") {
+    const id = u.pathname.split("/").filter(Boolean).pop() ?? "";
+    return /^[a-f0-9]{20,}$/i.test(id) ? { src: `https://www.loom.com/embed/${id}`, host: "loom" } : null;
+  }
+  return null;
+}
+
+function parseJson<T>(v: unknown, fallback: T): T {
+  if (typeof v !== "string") return fallback;
+  try {
+    const p = JSON.parse(v);
+    return (p ?? fallback) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+const MAX_DEPTH = 12;
+
+export function renderBlocks(blocks: Block[], depth = 0): string {
+  if (!Array.isArray(blocks) || depth > MAX_DEPTH) return "";
+  const out: string[] = [];
+  let i = 0;
+  while (i < blocks.length) {
+    const b = blocks[i]!;
+    const listTag =
+      b.type === "bulletListItem" ? "ul" : b.type === "numberedListItem" ? "ol" : b.type === "checkListItem" ? "ul" : null;
+    if (listTag) {
+      const items: string[] = [];
+      const kind = b.type;
+      while (i < blocks.length && blocks[i]!.type === kind) {
+        const item = blocks[i]!;
+        const checked = kind === "checkListItem" ? Boolean(item.props?.checked) : null;
+        const prefix = checked === null ? "" : `<span class="check${checked ? " on" : ""}" aria-hidden="true"></span>`;
+        items.push(`<li class="${colourClass(item.props, "bg").trim()}${colourClass(item.props, "fg")}">${prefix}${renderInline(item.content as Inline[] | string)}${renderChildren(item, depth)}</li>`);
+        i++;
+      }
+      out.push(`<${listTag}${kind === "checkListItem" ? ' class="checklist"' : ""}>${items.join("")}</${listTag}>`);
+      continue;
+    }
+    out.push(renderBlock(b, depth));
+    i++;
+  }
+  return out.join("\n");
+}
+
+function renderChildren(b: Block, depth: number): string {
+  return Array.isArray(b.children) && b.children.length ? renderBlocks(b.children, depth + 1) : "";
+}
+
+function blockClass(b: Block): string {
+  const c = `${colourClass(b.props, "bg")}${colourClass(b.props, "fg")}`.trim();
+  return c ? ` class="${c}"` : "";
+}
+
+function renderBlock(b: Block, depth: number): string {
+  if (!b || typeof b !== "object") return "";
+  const props = b.props && typeof b.props === "object" ? b.props : {};
+  switch (b.type) {
+    case "heading": {
+      const level = Math.min(3, Math.max(1, Number(props.level) || 2));
+      return `<h${level}${blockClass(b)}>${renderInline(b.content as Inline[] | string)}</h${level}>${renderChildren(b, depth)}`;
+    }
+    case "paragraph":
+      return isEmptyText(b.content) && !b.children?.length
+        ? `<p class="blank"></p>`
+        : `<p${blockClass(b)}>${renderInline(b.content as Inline[] | string)}</p>${renderChildren(b, depth)}`;
+    case "quote":
+      return `<blockquote${blockClass(b)}>${renderInline(b.content as Inline[] | string)}</blockquote>${renderChildren(b, depth)}`;
+    case "divider":
+      return `<hr>`;
+    case "codeBlock":
+      return `<pre><code>${renderInline(b.content as Inline[] | string)}</code></pre>`;
+    case "image": {
+      const url = safeHref(String(props.url ?? ""));
+      if (url === "#") return "";
+      const caption = props.caption ? `<figcaption>${esc(props.caption)}</figcaption>` : "";
+      const wide = props.previewWidth === undefined || Number(props.previewWidth) >= 640 ? " wide" : "";
+      return `<figure class="img${wide}"><img src="${esc(url)}" alt="${esc(props.caption ?? "")}" loading="lazy">${caption}</figure>`;
+    }
+    case "video": {
+      const url = String(props.url ?? "");
+      const embed = videoEmbed(url);
+      const caption = props.caption ? `<figcaption>${esc(props.caption)}</figcaption>` : "";
+      if (embed) {
+        return `<figure class="video"><div class="frame"><iframe src="${esc(embed.src)}" title="${esc(props.caption || "Video")}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>${caption}</figure>`;
+      }
+      const safe = safeHref(url);
+      if (safe === "#") return "";
+      return `<figure class="video"><video src="${esc(safe)}" controls preload="metadata"></video>${caption}</figure>`;
+    }
+    case "table": {
+      const tc = b.content as TableContent | undefined;
+      if (!tc || tc.type !== "tableContent" || !Array.isArray(tc.rows)) return "";
+      // Cells are plain inline content in templates and {type:"tableCell", content} once the editor has saved them.
+      const cellContent = (c: unknown): Inline[] | string =>
+        c && typeof c === "object" && !Array.isArray(c) && (c as { type?: string }).type === "tableCell" ? ((c as { content?: Inline[] | string }).content ?? "") : (c as Inline[] | string);
+      const cellsOf = (r: TableContent["rows"][number]) => (r && Array.isArray(r.cells) ? r.cells : []);
+      const headings = cellsOf(tc.rows[0]!).map((c) => inlineToText(cellContent(c) as Block["content"]));
+      const head = `<thead><tr>${cellsOf(tc.rows[0]!).map((c) => `<th>${renderInline(cellContent(c))}</th>`).join("")}</tr></thead>`;
+      const body = tc.rows
+        .slice(1)
+        .map((r) => `<tr>${cellsOf(r).map((c, i) => `<td data-th="${esc(headings[i] ?? "")}">${renderInline(cellContent(c))}</td>`).join("")}</tr>`)
+        .join("");
+      return `<div class="tablewrap"><table>${head}<tbody>${body}</tbody></table></div>`;
+    }
+    case "statement":
+      return `<p class="statement${colourClass(b.props, "fg")}">${renderInline(b.content as Inline[] | string)}</p>`;
+    case "featureGrid": {
+      const items = parseJson<{ title?: string; text?: string }[]>(props.items, []);
+      const cols = Number(props.cols) === 2 ? 2 : 3;
+      if (!Array.isArray(items) || !items.length) return "";
+      return `<div class="grid cols-${cols}">${items
+        .slice(0, 6)
+        .map((it) => `<div class="card"><h3>${esc(it?.title ?? "")}</h3><p>${esc(it?.text ?? "")}</p></div>`)
+        .join("")}</div>`;
+    }
+    case "testimonial": {
+      const quote = String(props.quote ?? "").trim();
+      if (!quote) return "";
+      const photo = safeHref(String(props.photo ?? ""));
+      const avatar =
+        photo !== "#" ? `<img class="avatar" src="${esc(photo)}" alt="" loading="lazy">` : `<span class="avatar initials" aria-hidden="true">${esc(String(props.name ?? "").trim().slice(0, 1).toUpperCase() || "“")}</span>`;
+      return `<figure class="testimonial"><blockquote>${esc(quote)}</blockquote><figcaption>${avatar}<span><b>${esc(props.name ?? "")}</b>${props.role ? `<br>${esc(props.role)}` : ""}</span></figcaption></figure>`;
+    }
+    case "pricingTable":
+      return PRICING_MARKER;
+    case "acceptBlock":
+      return ACCEPT_MARKER;
+    default:
+      return typeof b.content === "string" || Array.isArray(b.content)
+        ? `<p>${renderInline(b.content)}</p>${renderChildren(b, depth)}`
+        : renderChildren(b, depth);
+  }
+}
+
+/**
+ * Splits a document into sections at level-1 and level-2 headings. A heading's highlight colour
+ * becomes the band colour of its whole section, which is how a plain document turns into a page.
+ */
+export type Section = { id: string; blockId: string | null; title: string | null; level: number; colour: string | null; blocks: Block[] };
+
+export function splitSections(blocks: Block[]): Section[] {
+  const sections: Section[] = [];
+  let current: Section = { id: "intro", blockId: null, title: null, level: 0, colour: null, blocks: [] };
+  let n = 0;
+  for (const b of Array.isArray(blocks) ? blocks : []) {
+    const level = b?.type === "heading" ? Number(b.props?.level) || 2 : 0;
+    if (level === 1 || level === 2) {
+      if (current.blocks.length || current.title) sections.push(current);
+      n++;
+      const bg = String(b.props?.backgroundColor ?? "default");
+      const blockId = typeof b.id === "string" && /^[\w-]{1,64}$/.test(b.id) ? b.id : null;
+      current = {
+        id: blockId ?? `s${n}`,
+        blockId,
+        title: inlineToText(b.content).trim() || null,
+        level,
+        colour: (COLOUR_NAMES as readonly string[]).includes(bg) ? bg : null,
+        blocks: [{ ...b, props: { ...(b.props ?? {}), backgroundColor: "default" } }],
+      };
+      continue;
+    }
+    current.blocks.push(b);
+  }
+  if (current.blocks.length || current.title) sections.push(current);
+  return sections;
+}
+
+/** Plain-text flattening for email previews and search. */
+export function blocksToText(blocks: Block[], depth = 0): string {
+  const parts: string[] = [];
+  if (!Array.isArray(blocks) || depth > MAX_DEPTH) return "";
+  for (const b of blocks) {
+    if (!b || typeof b !== "object") continue;
+    if (b.type === "featureGrid") {
+      for (const it of parseJson<{ title?: unknown; text?: unknown }[]>(b.props?.items, [])) {
+        if (it && typeof it === "object") parts.push([it.title, it.text].filter((x) => typeof x === "string").join(": "));
+      }
+    } else if (b.type === "testimonial") {
+      parts.push([b.props?.quote, b.props?.name, b.props?.role].filter((x) => typeof x === "string" && x).join(" — "));
+    }
+    if (typeof b.content === "string") parts.push(b.content);
+    else if (Array.isArray(b.content)) {
+      parts.push(
+        b.content
+          .map((n) => (n.type === "text" ? n.text : typeof n.content === "string" ? n.content : ""))
+          .join(""),
+      );
+    }
+    if (Array.isArray(b.children) && b.children.length) parts.push(blocksToText(b.children, depth + 1));
+  }
+  return parts.filter(Boolean).join("\n");
+}

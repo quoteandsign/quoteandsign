@@ -1,0 +1,30 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "quoteandsign",
+  "main": "./src/worker/index.ts",
+  "compatibility_date": "2026-08-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/", "/api/*", "/p/*", "/t/*", "/auth/*", "/files/*", "/billing/*", "/terms", "/privacy", "/acceptable-use", "/dpa", "/contact"]
+  },
+  "observability": { "enabled": true },
+  "triggers": { "crons": ["0 14 * * *"] },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "quoteandsign",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "./drizzle"
+    }
+  ],
+  "r2_buckets": [
+    { "binding": "FILES", "bucket_name": "quoteandsign-files" }
+  ],
+  // Production values. Local development overrides these in .dev.vars (git-ignored).
+  "vars": {
+    "APP_URL": "https://quoteandsign.com",
+    "ENVIRONMENT": "production",
+    "EMAIL_FROM": "Quote and Sign <noreply@quoteandsign.com>",
+  }
+}
