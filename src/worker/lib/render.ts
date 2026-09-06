@@ -1,11 +1,14 @@
 // Renders BlockNote document JSON to static HTML for the public proposal page.
 // Everything is escaped. Only known block types render; unknown types render as paragraphs.
 
+import { videoEmbed } from "../../shared/video";
+
 export const PRICING_MARKER = "<!--op:pricing-->";
 export const ACCEPT_MARKER = "<!--op:accept-->";
 
 type Styles = Partial<Record<"bold" | "italic" | "underline" | "strike" | "code", boolean>> & {
   textColor?: string;
+  backgroundColor?: string;
 };
 type Inline =
   | { type: "text"; text: string; styles?: Styles }
@@ -60,6 +63,7 @@ function renderInline(content: Inline[] | string | undefined): string {
       if (s.underline) t = `<u>${t}</u>`;
       if (s.strike) t = `<s>${t}</s>`;
       if (s.textColor && (COLOUR_NAMES as readonly string[]).includes(String(s.textColor))) t = `<span class="fg-${esc(s.textColor)}">${t}</span>`;
+      if (s.backgroundColor && (COLOUR_NAMES as readonly string[]).includes(String(s.backgroundColor))) t = `<span class="bg-${esc(s.backgroundColor)}">${t}</span>`;
       return t;
     })
     .join("");
@@ -79,32 +83,7 @@ function isEmptyText(content: Block["content"]): boolean {
 }
 
 /** Only these hosts may be embedded as video. The CSP frame-src list must match. */
-export function videoEmbed(url: string): { src: string; host: string } | null {
-  let u: URL;
-  try {
-    u = new URL(url);
-  } catch {
-    return null;
-  }
-  const host = u.hostname.replace(/^www\./, "");
-  if (host === "youtube.com" || host === "m.youtube.com") {
-    const id = u.searchParams.get("v") ?? (u.pathname.startsWith("/embed/") ? u.pathname.split("/")[2] : u.pathname.startsWith("/shorts/") ? u.pathname.split("/")[2] : null);
-    return id && /^[\w-]{6,}$/.test(id) ? { src: `https://www.youtube-nocookie.com/embed/${id}`, host: "youtube" } : null;
-  }
-  if (host === "youtu.be") {
-    const id = u.pathname.slice(1);
-    return /^[\w-]{6,}$/.test(id) ? { src: `https://www.youtube-nocookie.com/embed/${id}`, host: "youtube" } : null;
-  }
-  if (host === "vimeo.com" || host === "player.vimeo.com") {
-    const id = u.pathname.split("/").filter(Boolean).pop() ?? "";
-    return /^\d{6,}$/.test(id) ? { src: `https://player.vimeo.com/video/${id}`, host: "vimeo" } : null;
-  }
-  if (host === "loom.com") {
-    const id = u.pathname.split("/").filter(Boolean).pop() ?? "";
-    return /^[a-f0-9]{20,}$/i.test(id) ? { src: `https://www.loom.com/embed/${id}`, host: "loom" } : null;
-  }
-  return null;
-}
+export { videoEmbed };
 
 function parseJson<T>(v: unknown, fallback: T): T {
   if (typeof v !== "string") return fallback;
@@ -117,6 +96,20 @@ function parseJson<T>(v: unknown, fallback: T): T {
 }
 
 const MAX_DEPTH = 12;
+
+/** The editor stores a pixel width; the page gets the nearest of a few fractions of the column. */
+function imageSize(props: Record<string, unknown>): string {
+  const px = Number(props.previewWidth);
+  if (!Number.isFinite(px) || px <= 0) return " wide";
+  const share = px / 740;
+  if (share >= 0.9) return " wide";
+  const buckets: [number, string][] = [[0.29, "w-25"], [0.41, "w-33"], [0.58, "w-50"], [0.7, "w-66"], [0.9, "w-75"]];
+  return " " + (buckets.find(([max]) => share <= max)?.[1] ?? "w-75");
+}
+function imageAlign(props: Record<string, unknown>): string {
+  const a = String(props.textAlignment ?? "left");
+  return a === "center" || a === "right" ? ` al-${a}` : "";
+}
 
 export function renderBlocks(blocks: Block[], depth = 0): string {
   if (!Array.isArray(blocks) || depth > MAX_DEPTH) return "";
@@ -133,10 +126,12 @@ export function renderBlocks(blocks: Block[], depth = 0): string {
         const item = blocks[i]!;
         const checked = kind === "checkListItem" ? Boolean(item.props?.checked) : null;
         const prefix = checked === null ? "" : `<span class="check${checked ? " on" : ""}" aria-hidden="true"></span>`;
-        items.push(`<li class="${colourClass(item.props, "bg").trim()}${colourClass(item.props, "fg")}">${prefix}${renderInline(item.content as Inline[] | string)}${renderChildren(item, depth)}</li>`);
+        items.push(`<li class="${colourClass(item.props, "bg").trim()}${colourClass(item.props, "fg")}${alignClass(item.props)}">${prefix}${renderInline(item.content as Inline[] | string)}${renderChildren(item, depth)}</li>`);
         i++;
       }
-      out.push(`<${listTag}${kind === "checkListItem" ? ' class="checklist"' : ""}>${items.join("")}</${listTag}>`);
+      // A numbered list may continue from an earlier one: the editor stores where it starts.
+      const start = kind === "numberedListItem" && Number(b.props?.start) > 1 ? ` start="${Number(b.props!.start)}"` : "";
+      out.push(`<${listTag}${start}${kind === "checkListItem" ? ' class="checklist"' : ""}>${items.join("")}</${listTag}>`);
       continue;
     }
     out.push(renderBlock(b, depth));
@@ -149,8 +144,14 @@ function renderChildren(b: Block, depth: number): string {
   return Array.isArray(b.children) && b.children.length ? renderBlocks(b.children, depth + 1) : "";
 }
 
+/** The alignment button in the editor. */
+function alignClass(props: Record<string, unknown> | undefined): string {
+  const a = String(props?.textAlignment ?? "left");
+  return a === "center" || a === "right" || a === "justify" ? ` ta-${a}` : "";
+}
+
 function blockClass(b: Block): string {
-  const c = `${colourClass(b.props, "bg")}${colourClass(b.props, "fg")}`.trim();
+  const c = `${colourClass(b.props, "bg")}${colourClass(b.props, "fg")}${alignClass(b.props)}`.trim();
   return c ? ` class="${c}"` : "";
 }
 
@@ -176,8 +177,13 @@ function renderBlock(b: Block, depth: number): string {
       const url = safeHref(String(props.url ?? ""));
       if (url === "#") return "";
       const caption = props.caption ? `<figcaption>${esc(props.caption)}</figcaption>` : "";
-      const wide = props.previewWidth === undefined || Number(props.previewWidth) >= 640 ? " wide" : "";
-      return `<figure class="img${wide}"><img src="${esc(url)}" alt="${esc(props.caption ?? "")}" loading="lazy">${caption}</figure>`;
+      return `<figure class="img${imageSize(props)}${imageAlign(props)}"><img src="${esc(url)}" alt="${esc(props.caption ?? "")}" loading="lazy">${caption}</figure>`;
+    }
+    case "imageRow": {
+      const list = parseJson<{ url?: string; caption?: string }[]>(props.images, []);
+      const shown = (Array.isArray(list) ? list : []).map((it) => ({ url: safeHref(String(it?.url ?? "")), caption: String(it?.caption ?? "") })).filter((it) => it.url !== "#").slice(0, 4);
+      if (!shown.length) return "";
+      return `<div class="imgrow cols-${shown.length}">${shown.map((it) => `<figure class="img"><img src="${esc(it.url)}" alt="${esc(it.caption)}" loading="lazy">${it.caption ? `<figcaption>${esc(it.caption)}</figcaption>` : ""}</figure>`).join("")}</div>`;
     }
     case "video": {
       const url = String(props.url ?? "");
@@ -186,9 +192,7 @@ function renderBlock(b: Block, depth: number): string {
       if (embed) {
         return `<figure class="video"><div class="frame"><iframe src="${esc(embed.src)}" title="${esc(props.caption || "Video")}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>${caption}</figure>`;
       }
-      const safe = safeHref(url);
-      if (safe === "#") return "";
-      return `<figure class="video"><video src="${esc(safe)}" controls preload="metadata"></video>${caption}</figure>`;
+      return "";
     }
     case "table": {
       const tc = b.content as TableContent | undefined;
@@ -197,11 +201,14 @@ function renderBlock(b: Block, depth: number): string {
       const cellContent = (c: unknown): Inline[] | string =>
         c && typeof c === "object" && !Array.isArray(c) && (c as { type?: string }).type === "tableCell" ? ((c as { content?: Inline[] | string }).content ?? "") : (c as Inline[] | string);
       const cellsOf = (r: TableContent["rows"][number]) => (r && Array.isArray(r.cells) ? r.cells : []);
-      const headings = cellsOf(tc.rows[0]!).map((c) => inlineToText(cellContent(c) as Block["content"]));
-      const head = `<thead><tr>${cellsOf(tc.rows[0]!).map((c) => `<th>${renderInline(cellContent(c))}</th>`).join("")}</tr></thead>`;
+      const cellAlign = (c: unknown) => alignClass(c && typeof c === "object" && !Array.isArray(c) ? ((c as { props?: Record<string, unknown> }).props ?? {}) : {});
+      const cls = (c: unknown) => { const a = cellAlign(c).trim(); return a ? ` class="${a}"` : ""; };
+      const hasHeader = (tc as { headerRows?: number }).headerRows === undefined || Number((tc as { headerRows?: number }).headerRows) > 0;
+      const headings = hasHeader ? cellsOf(tc.rows[0]!).map((c) => inlineToText(cellContent(c) as Block["content"])) : [];
+      const head = hasHeader ? `<thead><tr>${cellsOf(tc.rows[0]!).map((c) => `<th${cls(c)}>${renderInline(cellContent(c))}</th>`).join("")}</tr></thead>` : "";
       const body = tc.rows
-        .slice(1)
-        .map((r) => `<tr>${cellsOf(r).map((c, i) => `<td data-th="${esc(headings[i] ?? "")}">${renderInline(cellContent(c))}</td>`).join("")}</tr>`)
+        .slice(hasHeader ? 1 : 0)
+        .map((r) => `<tr>${cellsOf(r).map((c, i) => `<td data-th="${esc(headings[i] ?? "")}"${cls(c)}>${renderInline(cellContent(c))}</td>`).join("")}</tr>`)
         .join("");
       return `<div class="tablewrap"><table>${head}<tbody>${body}</tbody></table></div>`;
     }

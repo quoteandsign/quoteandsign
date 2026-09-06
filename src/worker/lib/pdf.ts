@@ -177,9 +177,12 @@ export async function proposalPdf(inp: PdfInput): Promise<Uint8Array> {
     w.space(14);
   };
 
-  for (const sec of splitSections(blocks)) {
-    for (const b of sec.blocks) {
+  // Blocks nest (indented lists, notes under a heading); the PDF walks the tree with an indent.
+  let numbered = 0;
+  const draw = (b: Block, depth: number) => {
       const props = b.props ?? {};
+      const indent = depth * 14;
+      if (b.type !== "numberedListItem") numbered = 0;
       switch (b.type) {
         case "heading": {
           const level = Number(props.level) || 2;
@@ -193,7 +196,7 @@ export async function proposalPdf(inp: PdfInput): Promise<Uint8Array> {
           break;
         case "paragraph": {
           const t = inlineToText(b.content).trim();
-          if (t) w.text(t);
+          if (t) w.text(t, { indent });
           else w.space(4);
           break;
         }
@@ -201,11 +204,17 @@ export async function proposalPdf(inp: PdfInput): Promise<Uint8Array> {
           w.text(`"${inlineToText(b.content)}"`, { indent: 12, color: rgb(0.35, 0.33, 0.3), gap: 8 });
           break;
         case "bulletListItem":
+          w.text(`•  ${inlineToText(b.content)}`, { indent: 8 + indent, gap: 2 });
+          break;
         case "checkListItem":
-          w.text(`•  ${inlineToText(b.content)}`, { indent: 8, gap: 2 });
+          w.text(`${props.checked ? "[x]" : "[ ]"}  ${inlineToText(b.content)}`, { indent: 8 + indent, gap: 2 });
           break;
         case "numberedListItem":
-          w.text(`-  ${inlineToText(b.content)}`, { indent: 8, gap: 2 });
+          numbered = numbered ? numbered + 1 : Math.max(1, Number(props.start) || 1);
+          w.text(`${numbered}.  ${inlineToText(b.content)}`, { indent: 8 + indent, gap: 2 });
+          break;
+        case "codeBlock":
+          w.text(inlineToText(b.content), { size: 9, indent: 8 + indent, color: rgb(0.25, 0.24, 0.22), gap: 6 });
           break;
         case "divider":
           w.rule();
@@ -246,11 +255,18 @@ export async function proposalPdf(inp: PdfInput): Promise<Uint8Array> {
         case "video":
           if (props.url) w.text(`[${b.type === "image" ? "Image" : "Video"}: ${String(props.url)}]`, { size: 9, color: rgb(0.45, 0.43, 0.4) });
           break;
+        case "imageRow": {
+          let list: { url?: string }[] = [];
+          try { list = JSON.parse(String(props.images ?? "[]")); } catch { list = []; }
+          for (const it of Array.isArray(list) ? list : []) if (it?.url) w.text(`[Image: ${String(it.url)}]`, { size: 9, color: rgb(0.45, 0.43, 0.4) });
+          break;
+        }
         default:
           break;
       }
-    }
-  }
+      for (const child of Array.isArray(b.children) ? b.children : []) draw(child, depth + 1);
+  };
+  for (const sec of splitSections(blocks)) for (const b of sec.blocks) draw(b, 0);
   drawPricing();
 
   // The acceptance record, or the note that it is not accepted yet. Kept on one page.

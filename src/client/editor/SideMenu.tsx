@@ -47,7 +47,7 @@ function BlockOptionsPanel() {
   }, [block]);
   if (!block) return null;
   const props = (block.props ?? {}) as { textColor?: string; backgroundColor?: string };
-  const canColour = "textColor" in props || "backgroundColor" in props;
+  const canColour = block.type !== "image" && block.type !== "imageRow" && ("textColor" in props || "backgroundColor" in props);
   const set = (patch: Record<string, string>) => {
     editor.updateBlock(block, { props: patch } as any);
     setColours((c) => ({ ...c, ...patch }));

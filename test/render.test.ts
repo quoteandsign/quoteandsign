@@ -74,3 +74,38 @@ describe("uploaded images and highlighted statements", () => {
     expect(html).toContain('class="statement bg-yellow"');
   });
 });
+
+describe("image size, alignment and rows", () => {
+  const img = (props: Record<string, unknown>) => renderBlocks([{ type: "image", props: { url: "https://example.com/a.png", ...props }, content: [] } as unknown as Block]);
+  it("keeps the width chosen in the editor as a fraction of the column, and the alignment", () => {
+    expect(img({})).toContain('class="img wide"');
+    expect(img({ previewWidth: 740 })).toContain('class="img wide"');
+    expect(img({ previewWidth: 370 })).toContain('class="img w-50"');
+    expect(img({ previewWidth: 180 })).toContain('class="img w-25"');
+    expect(img({ previewWidth: 370, textAlignment: "center" })).toContain('class="img w-50 al-center"');
+  });
+  it("lays out an image row and drops slots without a safe address", () => {
+    const html = renderBlocks([{ type: "imageRow", props: { images: JSON.stringify([{ url: "https://example.com/a.png", caption: "A" }, { url: "javascript:alert(1)" }, { url: "/files/images/0f9131f6-deb7-4c00-b2a2-7a37431a3672/1a6ff8b6-9ce9-4e93-966c-edae7a07ea92.webp", caption: "" }]) }, content: [] } as unknown as Block]);
+    expect(html).toContain('class="imgrow cols-2"');
+    expect(html).toContain("<figcaption>A</figcaption>");
+    expect(html).not.toContain("javascript:");
+  });
+});
+
+describe("what the toolbar can do, the page shows", () => {
+  it("alignment, inline highlight, numbered list start and table header flag", () => {
+    const html = renderBlocks([
+      { type: "paragraph", props: { textAlignment: "center" }, content: [{ type: "text", text: "Hi", styles: { backgroundColor: "yellow" } }] } as unknown as Block,
+      { type: "numberedListItem", props: { start: 4 }, content: [{ type: "text", text: "four", styles: {} }] } as unknown as Block,
+      { type: "table", content: { type: "tableContent", headerRows: 0, rows: [{ cells: [{ type: "tableCell", content: [{ type: "text", text: "a", styles: {} }], props: { textAlignment: "right" } }] }] } } as unknown as Block,
+    ]);
+    expect(html).toContain('<p class="ta-center">');
+    expect(html).toContain('<span class="bg-yellow">Hi</span>');
+    expect(html).toContain('<ol start="4">');
+    expect(html).not.toContain("<thead>");
+    expect(html).toContain('<td data-th="" class="ta-right">');
+  });
+  it("a bare video file address is not embedded", () => {
+    expect(renderBlocks([{ type: "video", props: { url: "https://example.com/clip.mp4" }, content: [] } as unknown as Block])).toBe("");
+  });
+});

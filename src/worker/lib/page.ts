@@ -117,13 +117,21 @@ html.has-ribbon .topnav{top:var(--ribbon-h)}
 article h1{font-family:var(--font-display);font-size:clamp(30px,5vw,42px);line-height:1.06;letter-spacing:-.035em;margin:0 0 .5em;font-weight:650;text-wrap:balance}
 article h2{font-family:var(--font-display);font-size:clamp(24px,3.2vw,30px);line-height:1.12;letter-spacing:-.03em;margin:0 0 .6em;font-weight:650;text-wrap:balance}
 article h3{font-size:19px;margin:1.4em 0 .4em;font-weight:600;letter-spacing:-.015em}
-article p{margin:0 0 1em;font-size:17px;line-height:1.65}article p.blank{margin:0;height:.6em}
+article p{margin:0 0 1em;font-size:17px;line-height:1.65}article p.blank{margin:0;height:1em}
+.ta-center{text-align:center}.ta-right{text-align:right}.ta-justify{text-align:justify}
 article ul,article ol{padding-left:1.3em;margin:0 0 1em;font-size:17px}article li{margin:.3em 0}
 article blockquote{margin:1.4em 0;padding:.2em 0 .2em 1.1em;border-left:3px solid var(--accent);color:var(--muted);font-size:18px}
 article hr{border:0;border-top:1px solid var(--line);margin:2em 0}
 article figure{margin:1.4em 0}article figcaption{font-size:13px;color:var(--muted);margin-top:.5em}
 figure.img img{max-width:100%;height:auto;border-radius:14px;display:block}
 figure.img.wide img{width:100%}
+figure.img.w-25{width:25%}figure.img.w-33{width:33.333%}figure.img.w-50{width:50%}figure.img.w-66{width:66.666%}figure.img.w-75{width:75%}
+figure.img.al-center{margin-left:auto;margin-right:auto}figure.img.al-right{margin-left:auto}
+figure.img.al-center figcaption{text-align:center}figure.img.al-right figcaption{text-align:right}
+@media(max-width:640px){figure.img.w-25,figure.img.w-33{width:50%}}
+.imgrow{display:grid;gap:14px;margin:1.4em 0}.imgrow.cols-2{grid-template-columns:repeat(2,1fr)}.imgrow.cols-3{grid-template-columns:repeat(3,1fr)}.imgrow.cols-4{grid-template-columns:repeat(4,1fr)}
+.imgrow figure{margin:0}.imgrow img{width:100%;aspect-ratio:4/3;object-fit:cover}
+@media(max-width:640px){.imgrow.cols-3,.imgrow.cols-4{grid-template-columns:repeat(2,1fr)}}
 figure.video .frame{aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:#111}
 figure.video iframe,figure.video video{width:100%;height:100%;border:0;display:block}
 figure.video video{border-radius:14px}

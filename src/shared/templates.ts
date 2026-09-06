@@ -36,7 +36,7 @@ const quote = (text: string) => ({ type: "quote", content: text });
 const statement = (text: string) => ({ type: "statement", content: text });
 const grid = (items: { title: string; text: string }[], cols: 2 | 3 = 3) => ({ type: "featureGrid", props: { cols: String(cols), items: JSON.stringify(items) } });
 const testimonial = (q: string, name: string, role: string) => ({ type: "testimonial", props: { quote: q, name, role, photo: "" } });
-const table = (rows: string[][]) => ({ type: "table", content: { type: "tableContent", rows: rows.map((cells) => ({ cells })) } });
+const table = (rows: string[][]) => ({ type: "table", content: { type: "tableContent", headerRows: 1, rows: rows.map((cells) => ({ cells })) } });
 const PRICING = { type: "pricingTable" };
 const ACCEPT = { type: "acceptBlock" };
 

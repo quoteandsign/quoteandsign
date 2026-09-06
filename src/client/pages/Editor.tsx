@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BlockNoteView } from "@blocknote/shadcn";
-import { FormattingToolbar, FormattingToolbarController, SideMenuController, SuggestionMenuController, blockTypeSelectItems, useCreateBlockNote } from "@blocknote/react";
+import { FormattingToolbar, FormattingToolbarController, SideMenuController, SuggestionMenuController, blockTypeSelectItems, useCreateBlockNote, BlockTypeSelect, FileCaptionButton, FileReplaceButton, FileDeleteButton, BasicTextStyleButton, TextAlignButton, ColorStyleButton, NestBlockButton, UnnestBlockButton, CreateLinkButton } from "@blocknote/react";
 import { ArrowLeft, PaperPlaneTilt, Eye, Check, LinkSimple, X, Plus, DeviceMobile, Globe } from "@phosphor-icons/react";
 import { api, ApiError } from "../lib/api";
 import { Link, useRouter } from "../lib/router";
@@ -202,6 +202,7 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
 
   const editor = useCreateBlockNote({
     schema,
+    tables: { headers: true },
     initialContent: proposal.content.length ? (proposal.content as any) : undefined,
     dictionary: { ...bnEn, placeholders: { ...bnEn.placeholders, emptyDocument: "Type / to add pricing, headings, cards…", default: "Type / for blocks, or just write" } },
     uploadFile: async (file: File) => {
@@ -452,7 +453,26 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
               <div className="px-6 pb-10 pt-6 sm:px-20 sm:pb-20 sm:pt-10">
                 <BlockNoteView editor={editor} editable={!readOnly} theme={pageStyle === "night" ? "dark" : "light"} slashMenu={false} sideMenu={false} formattingToolbar={false} className={hasSelection ? "has-selection" : undefined}>
                   <SideMenuController sideMenu={ProposalSideMenu} />
-                  <FormattingToolbarController formattingToolbar={() => <FormattingToolbar blockTypeSelectItems={toolbarBlockTypes} />} />
+                  <FormattingToolbarController formattingToolbar={() => (
+                    // The stock toolbar minus the file gadgets the client page cannot honour (preview toggle, rename, download).
+                    <FormattingToolbar>
+                      <BlockTypeSelect items={toolbarBlockTypes} key="blockTypeSelect" />
+                      <FileCaptionButton key="fileCaptionButton" />
+                      <FileReplaceButton key="replaceFileButton" />
+                      <FileDeleteButton key="fileDeleteButton" />
+                      <BasicTextStyleButton basicTextStyle="bold" key="boldStyleButton" />
+                      <BasicTextStyleButton basicTextStyle="italic" key="italicStyleButton" />
+                      <BasicTextStyleButton basicTextStyle="underline" key="underlineStyleButton" />
+                      <BasicTextStyleButton basicTextStyle="strike" key="strikeStyleButton" />
+                      <TextAlignButton textAlignment="left" key="textAlignLeftButton" />
+                      <TextAlignButton textAlignment="center" key="textAlignCenterButton" />
+                      <TextAlignButton textAlignment="right" key="textAlignRightButton" />
+                      <ColorStyleButton key="colorStyleButton" />
+                      <NestBlockButton key="nestBlockButton" />
+                      <UnnestBlockButton key="unnestBlockButton" />
+                      <CreateLinkButton key="createLinkButton" />
+                    </FormattingToolbar>
+                  )} />
                   <SuggestionMenuController triggerCharacter="/" getItems={async (q) => slashItems(editor as any, q)} suggestionMenuComponent={BlockMenu} />
                 </BlockNoteView>
               </div>

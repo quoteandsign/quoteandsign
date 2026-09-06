@@ -1,8 +1,10 @@
 import { createContext, useContext, useState, type KeyboardEvent } from "react";
-import { BlockNoteSchema, defaultBlockSpecs, filterSuggestionItems } from "@blocknote/core";
+import { BlockNoteSchema, defaultBlockSpecs, filterSuggestionItems, createHeadingBlockSpec } from "@blocknote/core";
 import { createReactBlockSpec, getDefaultReactSlashMenuItems, type DefaultReactSuggestionItem } from "@blocknote/react";
-import { Table, CheckCircle, TextAa, SquaresFour, ChatCircleText } from "@phosphor-icons/react";
+import { Table, CheckCircle, TextAa, SquaresFour, ChatCircleText, Images, FilmSlate } from "@phosphor-icons/react";
 import { computeTotals, formatMoney, lineSummary, periodRow, type PricingLine } from "../../shared/pricing";
+import { videoEmbed } from "../../shared/video";
+import { shrinkImage } from "../lib/image";
 
 // The editor shows a live preview of the pricing table inside the document. The data
 // itself lives in the pricing panel; this context hands it to the block.
@@ -170,6 +172,106 @@ function TestimonialEditor({ block, editor }: { block: any; editor: any }) {
   );
 }
 
+// ---- Video by link: YouTube, Vimeo or Loom. No uploads; video files have no place in a proposal. --
+function VideoLinkEditor({ block, editor }: { block: any; editor: any }) {
+  const p = block.props as { url: string; caption: string };
+  const [draft, setDraft] = useState(p.url);
+  const set = (patch: Partial<typeof p>) => editor.updateBlock(block, { props: patch });
+  const embed = videoEmbed(p.url);
+  return (
+    <figure className="my-4 w-full" contentEditable={false}>
+      {embed ? (
+        <div className="overflow-hidden rounded-2xl bg-black" style={{ aspectRatio: "16 / 9" }}>
+          <iframe src={embed.src} title={p.caption || "Video"} className="h-full w-full border-0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />
+        </div>
+      ) : (
+        <div className="grid place-items-center rounded-2xl bg-stone-900/[.04] px-4 py-8 text-center text-[13.5px] text-stone-500 dark:bg-white/[.06]">
+          {p.url ? "That link is not a YouTube, Vimeo or Loom video." : "Paste a YouTube, Vimeo or Loom link below."}
+        </div>
+      )}
+      <div className="mt-2 grid gap-1">
+        <input className={fieldCls + " text-[13px]"} value={draft} placeholder="https://www.youtube.com/watch?v=…" onKeyDown={stop} onChange={(e) => setDraft(e.target.value)} onBlur={() => set({ url: draft.trim() })} />
+        <input className={fieldCls + " text-[13px]"} value={p.caption} placeholder="Caption (optional)" onKeyDown={stop} onChange={(e) => set({ caption: e.target.value })} />
+      </div>
+    </figure>
+  );
+}
+export const VideoLinkBlock = createReactBlockSpec(
+  { type: "video", propSchema: { url: { default: "" }, caption: { default: "" } }, content: "none" },
+  { render: (props) => <VideoLinkEditor block={props.block} editor={props.editor} /> },
+);
+
+// ---- Image row: two to four pictures side by side, each uploaded and shrunk like any image. -----
+type RowImage = { url: string; caption: string };
+function parseImages(v: unknown): RowImage[] {
+  try {
+    const list = JSON.parse(String(v ?? "[]"));
+    return Array.isArray(list) ? list.map((it) => ({ url: String(it?.url ?? ""), caption: String(it?.caption ?? "") })) : [];
+  } catch {
+    return [];
+  }
+}
+function ImageRowEditor({ block, editor }: { block: any; editor: any }) {
+  const images = parseImages(block.props.images);
+  const [busy, setBusy] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const save = (next: RowImage[]) => editor.updateBlock(block, { props: { images: JSON.stringify(next) } });
+  const upload = async (i: number, file: File) => {
+    setBusy(i);
+    setError(null);
+    try {
+      const small = await shrinkImage(file, 1400);
+      const url = await editor.uploadFile(small);
+      save(images.map((it, k) => (k === i ? { ...it, url: typeof url === "string" ? url : String(url?.props?.url ?? "") } : it)));
+    } catch (e) {
+      setError((e as Error).message || "Could not upload that image.");
+    } finally {
+      setBusy(null);
+    }
+  };
+  return (
+    <div className="my-4 w-full" contentEditable={false}>
+      <div className={"grid gap-3 " + (images.length <= 2 ? "grid-cols-2" : images.length === 3 ? "grid-cols-3" : "grid-cols-4")}>
+        {images.map((it, i) => (
+          <figure key={i} className="group relative m-0">
+            {it.url ? (
+              <img src={it.url} alt={it.caption} className="aspect-[4/3] w-full rounded-xl object-cover" />
+            ) : (
+              <label className="grid aspect-[4/3] w-full cursor-pointer place-items-center rounded-xl border border-dashed border-stone-900/[.15] bg-stone-900/[.03] text-[13px] text-stone-500 hover:bg-stone-900/[.06] dark:border-white/15 dark:bg-white/[.04]">
+                {busy === i ? "Uploading…" : "+ Choose image"}
+                <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(i, f); e.target.value = ""; }} />
+              </label>
+            )}
+            <input className={fieldCls + " mt-1 text-[12.5px]"} value={it.caption} placeholder="Caption (optional)" onKeyDown={stop} onChange={(e) => save(images.map((x, k) => (k === i ? { ...x, caption: e.target.value } : x)))} />
+            {images.length > 2 && (
+              <button type="button" aria-label="Remove image" onClick={() => save(images.filter((_, k) => k !== i))} className="absolute right-2 top-2 hidden h-6 w-6 place-items-center rounded-full bg-white/90 text-[12px] text-stone-700 shadow group-hover:grid">×</button>
+            )}
+            {it.url && (
+              <label className="absolute left-2 top-2 hidden cursor-pointer rounded-full bg-white/90 px-2 py-0.5 text-[11px] font-medium text-stone-700 shadow group-hover:block">
+                Replace
+                <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(i, f); e.target.value = ""; }} />
+              </label>
+            )}
+          </figure>
+        ))}
+      </div>
+      <div className="mt-2 flex items-center gap-3 text-[12px] text-stone-500">
+        {images.length < 4 && (
+          <button type="button" className="font-medium text-brand dark:text-indigo-300" onClick={() => save([...images, { url: "", caption: "" }])}>
+            + Add image
+          </button>
+        )}
+        <span>Side by side on desktop, stacked in pairs on a phone.</span>
+        {error && <span className="text-red-700 dark:text-red-400">{error}</span>}
+      </div>
+    </div>
+  );
+}
+export const ImageRowBlock = createReactBlockSpec(
+  { type: "imageRow", propSchema: { images: { default: JSON.stringify([{ url: "", caption: "" }, { url: "", caption: "" }]) } }, content: "none" },
+  { render: (props) => <ImageRowEditor block={props.block} editor={props.editor} /> },
+);
+
 export const PricingTableBlock = createReactBlockSpec({ type: "pricingTable", propSchema: {}, content: "none" }, { render: () => <PricingPreview /> });
 export const AcceptBlock = createReactBlockSpec({ type: "acceptBlock", propSchema: {}, content: "none" }, { render: () => <AcceptPreview /> });
 export const StatementBlock = createReactBlockSpec(
@@ -196,9 +298,16 @@ export const TestimonialBlock = createReactBlockSpec(
   { render: (props) => <TestimonialEditor block={props.block} editor={props.editor} /> },
 );
 
+// BlockNote's own video, audio and file blocks upload files; only images belong in a proposal.
+// Code and toggle blocks do not survive the trip to the client page, so they are out too, and
+// headings stop at three levels, which is what the page and the section nav understand.
+const { video: _video, audio: _audio, file: _file, codeBlock: _code, toggleListItem: _toggle, heading: _heading, ...keptDefaults } = defaultBlockSpecs;
 export const schema = BlockNoteSchema.create({
   blockSpecs: {
-    ...defaultBlockSpecs,
+    ...keptDefaults,
+    heading: createHeadingBlockSpec({ levels: [1, 2, 3], allowToggleHeadings: false }),
+    video: VideoLinkBlock(),
+    imageRow: ImageRowBlock(),
     pricingTable: PricingTableBlock(),
     acceptBlock: AcceptBlock(),
     statement: StatementBlock(),
@@ -225,9 +334,11 @@ export function slashItems(editor: Editor, query: string): DefaultReactSuggestio
     { title: "Big statement", subtext: "One big line that sets the tone", group: "Proposal", aliases: ["big", "callout", "statement"], icon: <TextAa size={18} weight="light" />, onItemClick: () => insertBlock(editor, { type: "statement" }) },
     { title: "Feature grid", subtext: "Two or three cards side by side", group: "Proposal", aliases: ["cards", "columns", "grid", "features"], icon: <SquaresFour size={18} weight="light" />, onItemClick: () => insertBlock(editor, { type: "featureGrid" }) },
     { title: "Testimonial", subtext: "A client quote with name and photo", group: "Proposal", aliases: ["quote", "review", "testimonial"], icon: <ChatCircleText size={18} weight="light" />, onItemClick: () => insertBlock(editor, { type: "testimonial" }) },
+    { title: "Image row", subtext: "Two to four pictures side by side", group: "Lists and more", aliases: ["images", "gallery", "photos", "row"], icon: <Images size={18} weight="light" />, onItemClick: () => insertBlock(editor, { type: "imageRow" }) },
+    { title: "Video", subtext: "A YouTube, Vimeo or Loom link", group: "Lists and more", aliases: ["youtube", "vimeo", "loom", "video"], icon: <FilmSlate size={18} weight="light" />, onItemClick: () => insertBlock(editor, { type: "video" }) },
   ];
   // Keep only blocks that belong in a proposal. Code, toggles, audio and file uploads are noise here.
-  const keep = new Set(["Heading 1", "Heading 2", "Heading 3", "Paragraph", "Quote", "Bullet List", "Numbered List", "Check List", "Table", "Image", "Video", "Divider"]);
+  const keep = new Set(["Heading 1", "Heading 2", "Heading 3", "Paragraph", "Quote", "Bullet List", "Numbered List", "Check List", "Table", "Image", "Divider"]);
   const defaults = getDefaultReactSlashMenuItems(editor)
     .filter((i) => keep.has(i.title))
     .map((i) => ({ ...i, title: i.title.replace(" List", " list"), group: i.title.startsWith("Heading") || i.title === "Paragraph" || i.title === "Quote" ? "Text" : "Lists and more" }));
