@@ -362,10 +362,8 @@ proposalRoutes.post("/:id/send", async (c) => {
       accent: proposal.accentColor ?? user.brandColor,
       heading: title,
       buttons: [{ label: "Open the proposal", url: link }],
-      text: `${from} sent you a proposal.
+      text: `${from} sent you a proposal: ${title}.
 ${message ? `\n${message}\n` : ""}
-${title}
-
 Open it here:
 ${link}
 

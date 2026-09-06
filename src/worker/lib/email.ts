@@ -119,7 +119,11 @@ export function renderHtml(mail: Mail, appUrl: string): string {
   };
   const paragraphs = mail.text
     .split(/\n{2,}/)
-    .map((p) => p.split("\n").map(line).filter((x): x is string => x !== null).join("<br>"))
+    .map((p) => {
+      const raw = p.split("\n").map((l) => l.trim());
+      const kept = raw.filter((l, i) => !(l.endsWith(":") && raw[i + 1] !== undefined && buttonUrls.has(raw[i + 1]!)));
+      return kept.map(line).filter((x): x is string => x !== null).join("<br>");
+    })
     .filter(Boolean);
   const buttons = (mail.buttons ?? [])
     .filter((b) => /^https?:\/\//.test(b.url))
@@ -128,13 +132,6 @@ export function renderHtml(mail: Mail, appUrl: string): string {
         `<a href="${escape(b.url)}" style="display:inline-block;margin:${i ? "10px 10px 0 0" : "0 10px 0 0"};padding:12px 22px;border-radius:999px;background:${i ? "#f1efe9" : accent};color:${i ? "#191816" : fg};font-weight:600;font-size:15px;text-decoration:none">${escape(b.label)}</a>`,
     )
     .join("");
-  const host = (() => {
-    try {
-      return new URL(appUrl).host;
-    } catch {
-      return "quoteandsign.com";
-    }
-  })();
   return `<!doctype html><html lang="en"><body style="margin:0;padding:0;background:#f4f2ec">
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f2ec"><tr><td align="center" style="padding:32px 16px">
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#191816">
@@ -142,8 +139,8 @@ export function renderHtml(mail: Mail, appUrl: string): string {
 <tr><td style="padding:28px 32px 0;font-size:13px;font-weight:600;letter-spacing:.02em;color:#5f5b55">${escape(brand)}</td></tr>
 ${mail.heading ? `<tr><td style="padding:10px 32px 0;font-size:24px;line-height:1.25;font-weight:700;letter-spacing:-.01em">${escape(mail.heading)}</td></tr>` : ""}
 <tr><td style="padding:16px 32px 0;font-size:15.5px;line-height:1.65;color:#2a2826">${paragraphs.map((p) => `<p style="margin:0 0 14px">${p}</p>`).join("")}</td></tr>
-${buttons ? `<tr><td style="padding:8px 32px 0">${buttons}</td></tr>` : ""}
-<tr><td style="padding:28px 32px 26px;font-size:12.5px;line-height:1.6;color:#8a857d;border-top:1px solid #efece5;margin-top:24px">${mail.brand && mail.brand.trim() ? `Sent by ${escape(mail.brand.trim())} with ` : "Sent with "}<a href="${escape(appUrl)}" style="color:#8a857d">Quote and Sign</a> · ${escape(host)}</td></tr>
+${buttons ? `<tr><td style="padding:8px 32px 0">${buttons}</td></tr><tr><td style="padding:14px 32px 0;font-size:12.5px;line-height:1.6;color:#8a857d">${(mail.buttons ?? []).filter((b) => /^https?:\/\//.test(b.url)).map((b) => `${escape(b.label)}: <a href="${escape(b.url)}" style="color:#8a857d;word-break:break-all">${escape(b.url)}</a>`).join("<br>")}</td></tr>` : ""}
+<tr><td style="padding:28px 32px 26px;font-size:12.5px;line-height:1.6;color:#8a857d;border-top:1px solid #efece5;margin-top:24px">${mail.brand && mail.brand.trim() ? `Sent by ${escape(mail.brand.trim())} with ` : "Sent with "}<a href="${escape(appUrl)}" style="color:#8a857d">Quote and Sign</a></td></tr>
 </table>
 </td></tr></table>
 </body></html>`;
