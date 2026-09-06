@@ -1,6 +1,6 @@
 // Starter templates. Content is BlockNote partial-block JSON; items are pricing lines.
 // Amounts are in minor units. Names and prices are examples the sender is expected to change.
-// A heading's highlight colour becomes the band colour of its whole section on the client page.
+// A heading's highlight color becomes the band color of its whole section on the client page.
 // The title lives on the cover, so content does not start with an H1.
 
 export type TemplateItem = {
@@ -154,7 +154,7 @@ export const TEMPLATES: Template[] = [
       h(2, "What is included", "pink"),
       grid([
         { title: "Four hours on location", text: "With a planning call the week before so the shot list is agreed." },
-        { title: "Forty edited photos", text: "Colour-corrected and delivered in web and print sizes." },
+        { title: "Forty edited photos", text: "Color-corrected and delivered in web and print sizes." },
         { title: "Full usage rights", text: "Use them for your own marketing, forever." },
       ]),
       quote("We plan the shot list together so nothing important is missed on the day."),

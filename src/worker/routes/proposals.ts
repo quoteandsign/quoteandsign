@@ -247,7 +247,7 @@ proposalRoutes.put("/:id", async (c) => {
   const caps = capsOf(user);
   const wants = (v: unknown, current: unknown) => v !== undefined && v !== null && v !== "" && v !== false && v !== current;
   const gate = (msg: string) => c.json({ error: msg, code: "plan" }, 402);
-  if (!caps.brand && (wants(d.accentColor?.toLowerCase(), proposal.accentColor) || wants(d.style, proposal.style) || wants(d.senderName, proposal.senderName))) return gate("Colours, page styles and a custom sender name are part of Pro.");
+  if (!caps.brand && (wants(d.accentColor?.toLowerCase(), proposal.accentColor) || wants(d.style, proposal.style) || wants(d.senderName, proposal.senderName))) return gate("Colors, page styles and a custom sender name are part of Pro.");
   if (!caps.protect && (wants(d.password, undefined) || wants(d.expiresAt, proposal.expiresAt?.getTime()))) return gate("Link passwords, expiry dates and reminders are part of Pro.");
   if (!caps.payment && wants(d.paymentUrl, proposal.paymentUrl)) return gate("A payment link after signing is part of Pro.");
   if (!caps.countersign && wants(d.countersign, proposal.countersign)) return gate("Countersigning is part of Business.");

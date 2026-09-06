@@ -7,7 +7,7 @@ const p = (text: string): Block => ({ type: "paragraph", content: [{ type: "text
 describe("sections", () => {
   it("splits at H1/H2 and carries the heading highlight to the section", () => {
     const s = splitSections([p("intro"), h(2, "Scope", "blue"), p("a"), h(3, "Sub"), h(2, "Terms"), p("b")]);
-    expect(s.map((x) => [x.title, x.colour, x.blocks.length])).toEqual([
+    expect(s.map((x) => [x.title, x.color, x.blocks.length])).toEqual([
       [null, null, 1],
       ["Scope", "blue", 3],
       ["Terms", null, 2],
@@ -17,9 +17,9 @@ describe("sections", () => {
     expect(renderBlocks(s[1]!.blocks)).not.toContain("bg-blue");
   });
 
-  it("ignores unknown colour names", () => {
+  it("ignores unknown color names", () => {
     const s = splitSections([h(2, "X", "javascript:alert(1)")]);
-    expect(s[0]!.colour).toBeNull();
+    expect(s[0]!.color).toBeNull();
   });
 });
 
@@ -59,5 +59,18 @@ describe("new blocks", () => {
       { type: "testimonial", props: { quote: "Q", name: "N", role: "R", photo: "" } } as Block,
     ]);
     for (const w of ["S", "A", "B", "Q", "N"]) expect(t).toContain(w);
+  });
+});
+
+describe("uploaded images and highlighted statements", () => {
+  it("shows an image stored under /files and drops anything else that is not a web address", () => {
+    const ok = renderBlocks([{ type: "image", props: { url: "/files/images/0f9131f6-deb7-4c00-b2a2-7a37431a3672/1a6ff8b6-9ce9-4e93-966c-edae7a07ea92.webp" }, content: [] } as unknown as Block]);
+    expect(ok).toContain('<img src="/files/images/0f9131f6-deb7-4c00-b2a2-7a37431a3672/1a6ff8b6-9ce9-4e93-966c-edae7a07ea92.webp"');
+    expect(renderBlocks([{ type: "image", props: { url: "/files/../etc/passwd" }, content: [] } as unknown as Block])).toBe("");
+    expect(renderBlocks([{ type: "image", props: { url: "javascript:alert(1)" }, content: [] } as unknown as Block])).toBe("");
+  });
+  it("a big statement carries its highlight to the client page", () => {
+    const html = renderBlocks([{ type: "statement", props: { backgroundColor: "yellow" }, content: [{ type: "text", text: "Hello" }] } as unknown as Block]);
+    expect(html).toContain('class="statement bg-yellow"');
   });
 });

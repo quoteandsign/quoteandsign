@@ -74,7 +74,7 @@ export const proposals = sqliteTable(
     taxRateBps: integer("tax_rate_bps").notNull().default(0), // default tax for every line, basis points
     taxLabel: text("tax_label"), // e.g. "HST", "VAT", "GST"
     senderName: text("sender_name"), // per-proposal override of the profile brand name
-    accentColor: text("accent_color"), // per-proposal override of the profile brand colour (hex)
+    accentColor: text("accent_color"), // per-proposal override of the profile brand color (hex)
     ccEmails: text("cc_emails", { mode: "json" }).$type<string[]>(), // extra recipients
     remind: integer("remind", { mode: "boolean" }).notNull().default(true), // reminder before expiry
     navHidden: text("nav_hidden", { mode: "json" }).$type<string[]>(), // heading block ids kept out of the section nav

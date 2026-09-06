@@ -9,7 +9,7 @@ export type Mail = {
   attachments?: { filename: string; content: Uint8Array }[];
   /** Who the message is from, as the reader sees it: the sender's business, or Quote and Sign. */
   brand?: string | null;
-  /** The sender's accent colour, #rrggbb. Used for the button and the small mark. */
+  /** The sender's accent color, #rrggbb. Used for the button and the small mark. */
   accent?: string | null;
   /** A headline above the body. */
   heading?: string;
@@ -76,7 +76,7 @@ function accentOf(hex: string | null | undefined): string {
   return hex && /^#[0-9a-f]{6}$/i.test(hex) ? hex : "#2b3f8c";
 }
 
-/** Black or white, whichever reads on the colour. */
+/** Black or white, whichever reads on the color. */
 function readable(hex: string): string {
   const n = parseInt(hex.slice(1), 16);
   const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {

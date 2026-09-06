@@ -23,8 +23,8 @@ export type Details = {
   countersign: boolean;
 };
 
-/** Per-proposal look. Empty colour or sender means "use the brand". */
-export type Look = { style: string; colour: string; senderName: string; brandColour: string };
+/** Per-proposal look. Empty color or sender means "use the brand". */
+export type Look = { style: string; color: string; senderName: string; brandColour: string };
 
 function dateValue(ms: number | null): string {
   if (!ms) return "";
@@ -164,7 +164,7 @@ export function MoreOptions({
   const [styleOpen, setStyleOpen] = useState(false);
   const [open, setOpen] = useState<Set<string>>(() => new Set());
   const toggle = (id: string) => setOpen((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  const effective = isHex(look.colour) ? look.colour : isHex(look.brandColour) ? look.brandColour : "#2b3f8c";
+  const effective = isHex(look.color) ? look.color : isHex(look.brandColour) ? look.brandColour : "#2b3f8c";
   const [hex, setHex] = useState(effective);
   useEffect(() => { setHex(effective); }, [effective]);
   const setNotify = (i: number, v: string) => onChange({ ...details, notifyEmails: details.notifyEmails.map((e, k) => (k === i ? v : e)) });
@@ -188,7 +188,7 @@ export function MoreOptions({
   return (
     <div className="grid gap-4" data-test="more-options">
       <Group title="Look" locked={caps.brand ? null : "Pro"}>
-        {/* One row that reads as a menu: current style, current colour, a caret. Opens the full picker below it. */}
+        {/* One row that reads as a menu: current style, current color, a caret. Opens the full picker below it. */}
         <div ref={styleBox}>
           <button
             type="button"
@@ -202,7 +202,7 @@ export function MoreOptions({
             <StyleSwatch id={current.id} accent={effective} className="h-9 w-12" />
             <span className="min-w-0 flex-1">
               <span className="block text-[13.5px] font-medium">{current.name}</span>
-              <span className="block truncate text-[12px] text-stone-500">{look.colour ? "Own colour for this proposal" : "Your brand colour"}</span>
+              <span className="block truncate text-[12px] text-stone-500">{look.color ? "Own color for this proposal" : "Your brand color"}</span>
             </span>
             <span aria-hidden="true" className="h-5 w-5 flex-none rounded-full ring-1 ring-inset ring-black/10" style={{ background: effective }} />
             <span className="inline-flex h-8 items-center gap-1 rounded-full bg-stone-900/[.05] pl-3 pr-2 text-[12.5px] font-medium text-stone-700 dark:bg-white/[.08] dark:text-stone-200">
@@ -223,22 +223,22 @@ export function MoreOptions({
                 })}
               </div>
               <div className="grid gap-2">
-                <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label="Accent colour">
+                <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label="Accent color">
                   {LOOKS.map((l) => {
                     const on = l.accent === effective.toLowerCase();
                     return <button key={l.id} type="button" role="radio" aria-checked={on} aria-label={l.name} title={l.name} disabled={readOnly} onClick={() => { setHex(l.accent); onColour(l.accent); }} className={cn("h-7 w-7 rounded-full ring-2 ring-offset-2 ring-offset-[#fbfaf7] transition-transform hover:scale-110 dark:ring-offset-stone-900", on ? "ring-ink dark:ring-white" : "ring-transparent")} style={{ background: l.accent }} />;
                   })}
                   <label className="relative ml-auto flex h-9 items-center gap-2 rounded-lg bg-white px-2.5 ring-1 ring-inset ring-stone-900/[.08] dark:bg-stone-800 dark:ring-white/10">
                     <span aria-hidden="true" className="h-4 w-4 rounded-full ring-1 ring-inset ring-black/10" style={{ background: isHex(hex) ? hex : effective }} />
-                    <input aria-label="Colour hex" value={hex} disabled={readOnly} maxLength={7} spellCheck={false} className="w-[68px] bg-transparent font-mono text-[12.5px] outline-none" onChange={(e) => { const v = e.target.value.startsWith("#") ? e.target.value : "#" + e.target.value; setHex(v); if (isHex(v)) onColour(v.toLowerCase()); }} />
-                    <input type="color" aria-label="Pick any colour" disabled={readOnly} value={isHex(hex) ? hex : effective} className="absolute inset-0 cursor-pointer opacity-0" onChange={(e) => { setHex(e.target.value); onColour(e.target.value.toLowerCase()); }} />
+                    <input aria-label="Color hex" value={hex} disabled={readOnly} maxLength={7} spellCheck={false} className="w-[68px] bg-transparent font-mono text-[12.5px] outline-none" onChange={(e) => { const v = e.target.value.startsWith("#") ? e.target.value : "#" + e.target.value; setHex(v); if (isHex(v)) onColour(v.toLowerCase()); }} />
+                    <input type="color" aria-label="Pick any color" disabled={readOnly} value={isHex(hex) ? hex : effective} className="absolute inset-0 cursor-pointer opacity-0" onChange={(e) => { setHex(e.target.value); onColour(e.target.value.toLowerCase()); }} />
                   </label>
                 </div>
                 <p className="text-[12px] text-stone-500">
-                  {look.colour ? (
-                    <>This proposal has its own colour. <button type="button" className="font-medium text-brand underline underline-offset-4 dark:text-indigo-300" onClick={() => { onColour(null); setHex(isHex(look.brandColour) ? look.brandColour : "#2b3f8c"); }}>Back to my brand colour</button></>
+                  {look.color ? (
+                    <>This proposal has its own color. <button type="button" className="font-medium text-brand underline underline-offset-4 dark:text-indigo-300" onClick={() => { onColour(null); setHex(isHex(look.brandColour) ? look.brandColour : "#2b3f8c"); }}>Back to my brand color</button></>
                   ) : (
-                    <>Your brand colour. Change it for every proposal under <Link href="/app/brand" className="font-medium text-brand underline underline-offset-4 dark:text-indigo-300">Brand</Link>.</>
+                    <>Your brand color. Change it for every proposal under <Link href="/app/brand" className="font-medium text-brand underline underline-offset-4 dark:text-indigo-300">Brand</Link>.</>
                   )}
                 </p>
               </div>

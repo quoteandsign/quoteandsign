@@ -187,7 +187,7 @@ authRoutes.get("/me", async (c) => {
   });
 });
 
-// Profile: the name and colour used on every proposal unless one overrides them.
+// Profile: the name and color used on every proposal unless one overrides them.
 authRoutes.put("/me", async (c) => {
   const user = await getSessionUser(c);
   if (!user) return c.json({ error: "Sign in first." }, 401);
@@ -208,7 +208,7 @@ authRoutes.put("/me", async (c) => {
   const d = parsed.data;
   const caps = capsOf(user);
   const plan = (msg: string) => c.json({ error: msg, code: "plan" }, 402);
-  if (!caps.brand && ((d.brandColor && d.brandColor !== user.brandColor) || (d.defaultStyle && d.defaultStyle !== user.defaultStyle))) return plan("Your brand colour and page styles are part of Pro.");
+  if (!caps.brand && ((d.brandColor && d.brandColor !== user.brandColor) || (d.defaultStyle && d.defaultStyle !== user.defaultStyle))) return plan("Your brand color and page styles are part of Pro.");
   if (!caps.payment && d.paymentUrl && d.paymentUrl !== user.paymentUrl) return plan("A payment link after signing is part of Pro.");
   if (!caps.footerOff && d.hideMadeWith) return plan("Hiding the footer is part of Pro.");
   const set: Partial<typeof schema.users.$inferInsert> = {};

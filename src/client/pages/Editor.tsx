@@ -445,7 +445,7 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
                 onClientName={(v) => onDetails({ ...details, clientName: v })}
                 senderName={shownName}
                 onSenderName={(v) => { setSenderName(v); saveSender(v); }}
-                colour={shownColour}
+                color={shownColour}
                 pageStyle={pageStyle}
               />
               <style>{bandCss}</style>
@@ -547,7 +547,7 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
                 onChange={onDetails}
                 onPassword={onPassword}
                 readOnly={readOnly}
-                look={{ style: pageStyle, colour: accent, senderName, brandColour }}
+                look={{ style: pageStyle, color: accent, senderName, brandColour }}
                 onStyle={(id) => { setPageStyle(id); void save({ style: id }); }}
                 onColour={(hex) => { setAccent(hex ?? ""); void save({ accentColor: hex }); }}
                 onSender={(v) => { setSenderName(v); saveSender(v); }}
@@ -585,7 +585,7 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
           <div role="dialog" aria-modal="true" aria-label="Save as template" className="fixed inset-0 z-30 grid place-items-end bg-stone-950/40 backdrop-blur-sm sm:place-items-center" onClick={() => setTplOpen(false)}>
             <div className="w-full rounded-t-2xl bg-white p-6 text-stone-900 shadow-2xl sm:w-[440px] sm:rounded-2xl dark:bg-stone-900 dark:text-stone-50" onClick={(e) => e.stopPropagation()}>
               <h2 className="text-lg font-semibold tracking-tight">Save as template</h2>
-              <p className="mt-1 text-sm text-stone-500">Keeps the content, pricing, style and colour. Client details are not saved.</p>
+              <p className="mt-1 text-sm text-stone-500">Keeps the content, pricing, style and color. Client details are not saved.</p>
               <label className="mt-5 block text-[13px] font-medium" htmlFor="tplName">Template name</label>
               <Input id="tplName" autoFocus value={tplName} maxLength={80} onChange={(e) => setTplName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void saveTemplate(); }} className="mt-1.5" placeholder="Website project, standard" />
               {tplError && <p className="mt-3 rounded-xl bg-red-600/10 p-3 text-sm text-red-800 dark:text-red-300">{tplError}</p>}
@@ -668,9 +668,9 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
 }
 
 /** The cover the client sees first. Title, client and sender are edited in place. */
-function Cover(p: { title: string; readOnly: boolean; onTitle: (t: string) => void; clientName: string; onClientName: (v: string) => void; senderName: string; onSenderName: (v: string) => void; colour: string; pageStyle: string }) {
+function Cover(p: { title: string; readOnly: boolean; onTitle: (t: string) => void; clientName: string; onClientName: (v: string) => void; senderName: string; onSenderName: (v: string) => void; color: string; pageStyle: string }) {
   const style = styleOf(p.pageStyle);
-  const accent = p.colour;
+  const accent = p.color;
   const titleRef = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     const el = titleRef.current;
@@ -722,7 +722,7 @@ function Cover(p: { title: string; readOnly: boolean; onTitle: (t: string) => vo
 
 const BAND_COLOURS = new Set(["gray", "brown", "red", "orange", "yellow", "green", "blue", "purple", "pink"]);
 
-/** A heading's highlight colour becomes the band of its whole section, exactly as on the client page. */
+/** A heading's highlight color becomes the band of its whole section, exactly as on the client page. */
 function useSectionBands(editor: { document: unknown; onChange: (cb: () => void) => unknown }): string {
   const [css, setCss] = useState("");
   useEffect(() => {
@@ -731,27 +731,27 @@ function useSectionBands(editor: { document: unknown; onChange: (cb: () => void)
       frame = 0;
       const doc = editor.document as { id: string; type: string; props?: Record<string, unknown> }[];
       const rules: string[] = [];
-      let colour: string | null = null;
+      let color: string | null = null;
       let ids: string[] = [];
       const flush = () => {
-        if (colour && ids.length) {
+        if (color && ids.length) {
           const sel = (id: string) => `.bn-editor > .bn-block-group > [data-id="${id}"]`;
-          const bg = `color-mix(in srgb, var(--bn-colors-highlights-${colour}-background) var(--band-mix), var(--sheet-bg))`;
+          const bg = `color-mix(in srgb, var(--bn-colors-highlights-${color}-background) var(--band-mix), var(--sheet-bg))`;
           rules.push(`${ids.map(sel).join(",")}{background:${bg};margin-block:0;padding-block:.35em;margin-inline:calc(var(--sheet-pad) * -1);padding-inline:var(--sheet-pad)}`);
           rules.push(`${sel(ids[0]!)}{padding-top:44px;margin-top:20px}${sel(ids[0]!)} .bn-block,${sel(ids[0]!)} .bn-block-content{background:transparent!important}${sel(ids[0]!)} h2{margin-top:0}`);
           rules.push(`${sel(ids[ids.length - 1]!)}{padding-bottom:36px;margin-bottom:20px}`);
         }
         ids = [];
-        colour = null;
+        color = null;
       };
       for (const b of Array.isArray(doc) ? doc : []) {
         const level = b.type === "heading" ? Number(b.props?.level) : 0;
         if (level === 1 || level === 2) {
           flush();
           const bgc = String(b.props?.backgroundColor ?? "default");
-          colour = BAND_COLOURS.has(bgc) ? bgc : null;
+          color = BAND_COLOURS.has(bgc) ? bgc : null;
         }
-        if (colour) ids.push(b.id);
+        if (color) ids.push(b.id);
       }
       flush();
       setCss(rules.join("\n"));

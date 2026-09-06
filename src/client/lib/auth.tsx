@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { api } from "./api";
+import { api, ApiError } from "./api";
 
 export type Me = {
   id: string;
@@ -34,8 +34,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const r = await api<{ user: Me | null }>("/auth/me");
       setUser(r.user);
-    } catch {
-      setUser(null);
+    } catch (e) {
+      // Only an explicit 401 means signed out. A momentary 5xx or a dropped request keeps the session.
+      if (e instanceof ApiError && e.status === 401) setUser(null);
     } finally {
       setLoading(false);
     }

@@ -13,21 +13,21 @@ import { useEffect, useState } from "react";
 import { PencilSimple, Trash, Plus } from "@phosphor-icons/react";
 import { cn } from "../components/ui";
 
-// BlockNote's named colours. The CSS variables come from index.css.
+// BlockNote's named colors. The CSS variables come from index.css.
 const COLOURS = ["default", "gray", "brown", "red", "orange", "yellow", "green", "blue", "purple", "pink"] as const;
-type Colour = (typeof COLOURS)[number];
-const LABEL: Record<Colour, string> = {
+type Color = (typeof COLOURS)[number];
+const LABEL: Record<Color, string> = {
   default: "None", gray: "Gray", brown: "Brown", red: "Red", orange: "Orange", yellow: "Yellow", green: "Green", blue: "Blue", purple: "Purple", pink: "Pink",
 };
-const varFor = (c: Colour, kind: "text" | "background") =>
+const varFor = (c: Color, kind: "text" | "background") =>
   c === "default" ? undefined : `var(--bn-colors-highlights-${c}-${kind})`;
 
-/** One panel: text colour, highlight, delete. Used by both the pencil and the drag handle. */
+/** One panel: text color, highlight, delete. Used by both the pencil and the drag handle. */
 function BlockOptionsPanel() {
   const editor = useBlockNoteEditor();
   const block = useExtensionState(SideMenuExtension, { selector: (s) => s?.block }) as any;
-  // Live copy of the colours: the side-menu snapshot only refreshes when the mouse moves.
-  const [colours, setColours] = useState<{ textColor?: string; backgroundColor?: string }>({});
+  // Live copy of the colors: the side-menu snapshot only refreshes when the mouse moves.
+  const [colors, setColours] = useState<{ textColor?: string; backgroundColor?: string }>({});
   useEffect(() => {
     if (!block) return;
     const fresh = (editor.getBlock(block.id) ?? block) as any;
@@ -86,10 +86,10 @@ function BlockOptionsPanel() {
     <div className="w-[236px] p-2.5 text-ink dark:text-stone-50" onMouseDown={(e) => e.preventDefault()}>
       {canColour && (
         <>
-          <div className="mb-1.5 text-[11.5px] font-medium text-graphite dark:text-stone-400">Text colour</div>
-          <Swatches kind="text" current={colours.textColor ?? "default"} />
+          <div className="mb-1.5 text-[11.5px] font-medium text-graphite dark:text-stone-400">Text color</div>
+          <Swatches kind="text" current={colors.textColor ?? "default"} />
           <div className="mb-1.5 mt-3 text-[11.5px] font-medium text-graphite dark:text-stone-400">Highlight</div>
-          <Swatches kind="background" current={colours.backgroundColor ?? "default"} />
+          <Swatches kind="background" current={colors.backgroundColor ?? "default"} />
           <div className="my-2.5 border-t border-hairline dark:border-white/10" />
         </>
       )}

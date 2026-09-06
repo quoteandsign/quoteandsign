@@ -8,7 +8,7 @@ export type Caps = {
   liveLimit: number;
   seats: number;
   pdf: boolean; // PDF export of unsigned drafts (signed copies are always free)
-  brand: boolean; // logo, colour, page styles, sender name override
+  brand: boolean; // logo, color, page styles, sender name override
   protect: boolean; // link password, expiry, reminders
   notify: boolean; // "opened" emails
   payment: boolean; // payment link after signing

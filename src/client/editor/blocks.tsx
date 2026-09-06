@@ -173,11 +173,18 @@ function TestimonialEditor({ block, editor }: { block: any; editor: any }) {
 export const PricingTableBlock = createReactBlockSpec({ type: "pricingTable", propSchema: {}, content: "none" }, { render: () => <PricingPreview /> });
 export const AcceptBlock = createReactBlockSpec({ type: "acceptBlock", propSchema: {}, content: "none" }, { render: () => <AcceptPreview /> });
 export const StatementBlock = createReactBlockSpec(
-  { type: "statement", propSchema: { textColor: { default: "default" } }, content: "inline" },
+  { type: "statement", propSchema: { textColor: { default: "default" }, backgroundColor: { default: "default" } }, content: "inline" },
   {
-    render: (props) => (
-      <p className="my-3 max-w-[24ch] text-[clamp(22px,2.6vw,30px)] font-semibold leading-[1.25] tracking-[-0.025em]" ref={props.contentRef} />
-    ),
+    render: (props) => {
+      const bg = String(props.block.props.backgroundColor ?? "default");
+      return (
+        <p
+          className="my-3 max-w-[24ch] text-[clamp(22px,2.6vw,30px)] font-semibold leading-[1.25] tracking-[-0.025em]"
+          style={bg !== "default" ? { background: `var(--bn-colors-highlights-${bg}-background)`, padding: "0.35em 0.5em", borderRadius: 8, boxDecorationBreak: "clone" } : undefined}
+          ref={props.contentRef}
+        />
+      );
+    },
   },
 );
 export const FeatureGridBlock = createReactBlockSpec(

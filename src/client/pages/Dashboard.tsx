@@ -62,7 +62,7 @@ function line(r: Row): string {
 
 /**
  * Three stages under a live proposal: sent, opened, signed. A filled circle with a check is done,
- * a hollow one is still to come; the word under each carries the date, so nothing is colour alone.
+ * a hollow one is still to come; the word under each carries the date, so nothing is color alone.
  */
 function Journey({ row, onResend, note }: { row: Row; onResend: () => void; note?: string }) {
   const declined = row.status === "declined";
@@ -303,7 +303,7 @@ export function Dashboard() {
             </button>
             <div className="text-[12px] font-semibold uppercase tracking-[0.08em] text-brand dark:text-indigo-300">One step before your first proposal</div>
             <h2 className="mt-1.5 text-[20px] font-semibold tracking-[-0.02em]">Set up your brand</h2>
-            <p className="mt-1 max-w-xl text-[14.5px] text-graphite dark:text-stone-400">Your business name and colour go on every proposal automatically. Add your team so they hear the moment a client signs. Two minutes, once.</p>
+            <p className="mt-1 max-w-xl text-[14.5px] text-graphite dark:text-stone-400">Your business name and color go on every proposal automatically. Add your team so they hear the moment a client signs. Two minutes, once.</p>
             <div className="mt-4 flex flex-wrap items-center gap-2">
               <Button onClick={() => navigate("/app/brand")}>Set up brand <ArrowRight size={15} weight="bold" /></Button>
               <Button variant="ghost" onClick={dismissSetup}>Not now</Button>

@@ -13,7 +13,7 @@ for (const [name, px] of sizes) {
   await page.screenshot({ path: out(name), omitBackground: true });
   await page.close();
 }
-// The social image: mark, wordmark and the one-line promise on the site's paper colour.
+// The social image: mark, wordmark and the one-line promise on the site's paper color.
 const og = await browser.newPage({ viewport: { width: 1200, height: 630 }, deviceScaleFactor: 1 });
 const font = readFileSync(new URL("../public/fonts/Geist-Variable.woff2", import.meta.url)).toString("base64");
 await og.setContent(`<!doctype html><html><head><style>

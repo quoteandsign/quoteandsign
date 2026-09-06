@@ -182,7 +182,7 @@ export function renderPrivacy(nonce: string): string {
 <h3>Account holders</h3>
 <ul>
 <li>Email address, to sign you in with a one-time link and to send you service emails such as "your proposal was opened".</li>
-<li>Business name, colour, logo, page style, payment link and team email addresses, to put on your proposals.</li>
+<li>Business name, color, logo, page style, payment link and team email addresses, to put on your proposals.</li>
 <li>Your proposals: the text, prices, client names and client email addresses you enter.</li>
 <li>Billing status from our payment provider (which plan, whether it is active). Card details never reach us.</li>
 <li>A security log of sign-ins, sends and account changes, with a hashed IP address.</li>

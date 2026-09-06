@@ -1,4 +1,4 @@
-// Colour looks offered in the template gallery. Each is an accent the cover, buttons and
+// Color looks offered in the template gallery. Each is an accent the cover, buttons and
 // links take. The sender can change it at any time from the cover.
 export type Look = { id: string; name: string; accent: string };
 
@@ -11,7 +11,7 @@ export const LOOKS: Look[] = [
   { id: "slate", name: "Slate", accent: "#37404a" },
 ];
 
-/** Text colour that reads on a given accent: ink on light colours, white on dark ones. */
+/** Text color that reads on a given accent: ink on light colors, white on dark ones. */
 export function readableOn(hex: string): "#2f2e2b" | "#ffffff" {
   const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
   if (!m) return "#ffffff";

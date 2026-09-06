@@ -30,7 +30,7 @@ const tabFromHash = (): Tab => {
 };
 
 const PLANS = [
-  { id: "pro" as const, name: "Pro", month: 24, year: 19, blurb: "For freelancers and studios", popular: true, items: ["Unlimited proposals", "Your logo, colour and page styles", "Passwords, expiry dates and reminders", "An email the moment it is opened", "PDF export and a payment link after signing", "Hide the Quote and Sign footer"] },
+  { id: "pro" as const, name: "Pro", month: 24, year: 19, blurb: "For freelancers and studios", popular: true, items: ["Unlimited proposals", "Your logo, color and page styles", "Passwords, expiry dates and reminders", "An email the moment it is opened", "PDF export and a payment link after signing", "Hide the Quote and Sign footer"] },
   { id: "business" as const, name: "Business", month: 69, year: 59, blurb: "For small agencies", popular: false, items: ["Everything in Pro", "Up to 10 team members, one brand", "Shared templates", "Countersign after the client", "Priority support"] },
 ];
 
@@ -48,7 +48,7 @@ export function Profile() {
   const { user, refresh } = useAuth();
   const [tab, setTab] = useState<Tab>(tabFromHash);
   const [name, setName] = useState(businessName(user?.brandName, user?.name));
-  const [colour, setColour] = useState(user?.brandColor ?? "#2b3f8c");
+  const [color, setColour] = useState(user?.brandColor ?? "#2b3f8c");
   const [hex, setHex] = useState(user?.brandColor ?? "#2b3f8c");
   const [style, setStyle] = useState<string | null>(user?.defaultStyle ?? null);
   const [team, setTeam] = useState<string[]>(user?.notifyEmails ?? []);
@@ -169,7 +169,7 @@ export function Profile() {
     }
   };
 
-  // Colour, style and team follow the profile; the name is seeded once so a refresh never wipes what is being typed.
+  // Color, style and team follow the profile; the name is seeded once so a refresh never wipes what is being typed.
   useEffect(() => {
     if (user?.brandColor) {
       setColour(user.brandColor);
@@ -292,26 +292,26 @@ export function Profile() {
             </section>
 
             <section className={panel}>
-              <SectionTitle tag={caps.brand ? null : "Pro"} hint="The cover, buttons and links take this colour.">Brand colour</SectionTitle>
+              <SectionTitle tag={caps.brand ? null : "Pro"} hint="The cover, buttons and links take this color.">Brand color</SectionTitle>
               <fieldset disabled={!caps.brand} className={caps.brand ? "min-w-0" : "min-w-0 opacity-60"}>
-                <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label="Brand colour">
+                <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label="Brand color">
                   {LOOKS.map((l) => {
-                    const on = l.accent === colour.toLowerCase();
+                    const on = l.accent === color.toLowerCase();
                     return (
                       <button key={l.id} type="button" role="radio" aria-checked={on} aria-label={l.name} title={l.name} onClick={() => pick(l.accent)} className={cn("grid h-9 w-9 place-items-center rounded-full ring-2 ring-offset-2 ring-offset-white transition-transform duration-300 ease-[cubic-bezier(.32,.72,0,1)] hover:scale-110 dark:ring-offset-stone-900", on ? "ring-ink dark:ring-white" : "ring-transparent")} style={{ background: l.accent }}>
                         {on && <Check size={15} weight="bold" className="text-white" />}
                       </button>
                     );
                   })}
-                  <label className="ml-2 flex cursor-pointer items-center gap-2 rounded-full bg-stone-900/[.05] py-1.5 pl-1.5 pr-3.5 text-[13px] dark:bg-white/[.08]" title="Pick any colour">
-                    <span className="h-6 w-6 rounded-full ring-1 ring-inset ring-stone-900/15" style={{ background: isHex(colour) ? colour : "#2b3f8c" }} aria-hidden="true" />
-                    Any colour
-                    <input type="color" onBlur={(e) => { if (e.target.value !== (user?.brandColor ?? "")) void save({ brandColor: e.target.value }); }} value={isHex(colour) ? colour : "#2b3f8c"} aria-label="Pick any colour" onChange={(e) => pick(e.target.value)} className="sr-only" />
+                  <label className="ml-2 flex cursor-pointer items-center gap-2 rounded-full bg-stone-900/[.05] py-1.5 pl-1.5 pr-3.5 text-[13px] dark:bg-white/[.08]" title="Pick any color">
+                    <span className="h-6 w-6 rounded-full ring-1 ring-inset ring-stone-900/15" style={{ background: isHex(color) ? color : "#2b3f8c" }} aria-hidden="true" />
+                    Any color
+                    <input type="color" onBlur={(e) => { if (e.target.value !== (user?.brandColor ?? "")) void save({ brandColor: e.target.value }); }} value={isHex(color) ? color : "#2b3f8c"} aria-label="Pick any color" onChange={(e) => { setColour(e.target.value); setHex(e.target.value); }} className="sr-only" />
                   </label>
                 </div>
                 <div className="mt-3 flex items-center gap-3">
-                  <Input aria-label="Brand colour hex" value={hex} maxLength={7} spellCheck={false} className="w-[130px] font-mono text-[13px]" onChange={(e) => { const v = e.target.value.startsWith("#") ? e.target.value : "#" + e.target.value; setHex(v); if (isHex(v)) pick(v.toLowerCase()); }} />
-                  <span className="text-[13px] text-stone-500">Or paste your exact brand colour.</span>
+                  <Input aria-label="Brand color hex" value={hex} maxLength={7} spellCheck={false} className="w-[130px] font-mono text-[13px]" onChange={(e) => { const v = e.target.value.startsWith("#") ? e.target.value : "#" + e.target.value; setHex(v); if (isHex(v)) pick(v.toLowerCase()); }} />
+                  <span className="text-[13px] text-stone-500">Or paste your exact brand color.</span>
                 </div>
               </fieldset>
             </section>
@@ -326,7 +326,7 @@ export function Profile() {
                   </button>
                   {STYLES.map((st) => (
                     <button key={st.id} type="button" role="radio" aria-checked={st.id === style} title={st.blurb} onClick={() => { setStyle(st.id); void save({ defaultStyle: st.id }); }} className={tile(st.id === style)}>
-                      <StyleSwatch id={st.id} accent={isHex(colour) ? colour : "#2b3f8c"} className="h-12 w-full" />
+                      <StyleSwatch id={st.id} accent={isHex(color) ? color : "#2b3f8c"} className="h-12 w-full" />
                       <span className="px-0.5 text-[13px] font-medium">{st.name}</span>
                     </button>
                   ))}

@@ -34,10 +34,10 @@ export async function sendTrialNotices(env: Bindings, now = new Date()): Promise
     const brandUrl = `${env.APP_URL}/app/brand`;
     const text =
       stage === 3
-        ? `Your 14-day Pro trial has ended, so your account is on Free: three live proposals at a time, the standard look, and no PDF export of drafts.\n\nEverything you made is still there. Signed proposals stay online for your clients.\n\nTo keep unlimited proposals, your logo and colour, passwords and reminders, choose a plan:\n${brandUrl}`
+        ? `Your 14-day Pro trial has ended, so your account is on Free: three live proposals at a time, the standard look, and no PDF export of drafts.\n\nEverything you made is still there. Signed proposals stay online for your clients.\n\nTo keep unlimited proposals, your logo and color, passwords and reminders, choose a plan:\n${brandUrl}`
         : stage === 2
           ? `Your Pro trial ends today.\n\nAfter that, your account moves to Free: three live proposals at a time and the standard look. Nothing is deleted.\n\nKeep everything you have been using, from ${PLANS_YEARLY_PRO} a month billed yearly:\n${brandUrl}`
-          : `Your Pro trial ends in 3 days.\n\nAfter that, your account moves to Free: three live proposals at a time and the standard look. Nothing is deleted.\n\nKeep unlimited proposals, your logo and colour, passwords, reminders and PDF export from ${PLANS_YEARLY_PRO} a month billed yearly:\n${brandUrl}`;
+          : `Your Pro trial ends in 3 days.\n\nAfter that, your account moves to Free: three live proposals at a time and the standard look. Nothing is deleted.\n\nKeep unlimited proposals, your logo and color, passwords, reminders and PDF export from ${PLANS_YEARLY_PRO} a month billed yearly:\n${brandUrl}`;
     const claimed = await db.update(schema.users).set({ trialWarned: stage }).where(and(eq(schema.users.id, u.id), lt(schema.users.trialWarned, stage))).returning({ id: schema.users.id }).get();
     if (!claimed) continue;
     await sendEmail(env, { to: u.email, subject: stage === 3 ? "Your Pro trial has ended" : stage === 2 ? "Your Pro trial ends today" : "Your Pro trial ends in 3 days", text });

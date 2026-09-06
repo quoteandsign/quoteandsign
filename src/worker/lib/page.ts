@@ -1,6 +1,6 @@
 // The public proposal page. Server-rendered, one HTML response, no framework on the wire.
 // It reads as a designed web page, not a document: a cover, a sticky section nav with the
-// Accept button always in reach, and colour bands per section.
+// Accept button always in reach, and color bands per section.
 
 import type { Proposal, User, PricingItem, Acceptance } from "./db";
 import { renderBlocks, splitSections, esc, PRICING_MARKER, ACCEPT_MARKER, COLOUR_NAMES, type Block } from "./render";
@@ -42,7 +42,7 @@ function fmtDate(d: Date): string {
   return d.toLocaleDateString("en-CA", { year: "numeric", month: "long", day: "numeric" });
 }
 
-// Highlight palette (backgrounds) and text colours, the same values the editor uses.
+// Highlight palette (backgrounds) and text colors, the same values the editor uses.
 const HL: Record<string, [string, string]> = {
   gray: ["#f5f5f4", "#57534e"],
   brown: ["#f4ebe4", "#7c4a2a"],
@@ -206,7 +206,7 @@ textarea.t:focus{outline:2px solid var(--accent);outline-offset:0;border-color:t
 @media(min-width:720px){.bar{display:none}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 
-/* ---- Editorial: serif headlines, paper cover, a rule of colour. */
+/* ---- Editorial: serif headlines, paper cover, a rule of color. */
 [data-style=editorial]{--font-display:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;--radius-card:4px;--radius-btn:6px;--cover-fg:var(--fg)}
 [data-style=editorial] .cover{background:var(--bg);border-bottom:6px solid var(--accent)}
 [data-style=editorial] .cover::after{display:none}
@@ -433,7 +433,7 @@ export function renderProposalPage(p: PageProps): string {
         html = html.replace(ACCEPT_MARKER, acceptSection);
         placedAccept = true;
       }
-      const band = sec.colour ? `band-${sec.colour}` : "band-plain";
+      const band = sec.color ? `band-${sec.color}` : "band-plain";
       return `<section class="sec ${band}${i === 0 && !sec.title ? " intro" : ""}" id="${esc(sec.id)}" data-title="${esc(sec.title ?? "Introduction")}"><div class="wrap">${html}</div></section>`;
     })
     .join("\n");
@@ -689,7 +689,7 @@ export function renderTemplatePreview(o: { template: Template; nonce: string; ap
     consentText: "I have read this proposal and agree to it. I understand that typing my name and clicking Accept is my electronic signature and is legally binding.",
     appUrl: o.appUrl,
     seenHash: "",
-    ribbon: o.thumb ? { hidden: true } : { href: `${o.appUrl}/app/templates`, label: "← Back to templates", note: `Template preview: ${o.template.name}. Every word, colour and price is yours to change.` },
+    ribbon: o.thumb ? { hidden: true } : { href: `${o.appUrl}/app/templates`, label: "← Back to templates", note: `Template preview: ${o.template.name}. Every word, color and price is yours to change.` },
     previewNote: "Template preview. Your client will be able to accept here.",
   });
 }

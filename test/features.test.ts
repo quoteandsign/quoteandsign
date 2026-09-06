@@ -33,7 +33,7 @@ beforeAll(async () => {
 });
 
 describe("profile defaults", () => {
-  it("saves the sender name and colour on the profile", async () => {
+  it("saves the sender name and color on the profile", async () => {
     const r = await json("/auth/me", "PUT", { brandName: "Northwind Studio", brandColor: "#1F3A8A" });
     expect(r.status).toBe(200);
     const u = (await r.json()).user;

@@ -33,6 +33,7 @@ export function esc(s: unknown): string {
 function safeHref(href: string): string {
   const h = String(href ?? "").trim();
   if (/^(https?:|mailto:|tel:)/i.test(h)) return h;
+  if (/^\/files\/(logos|images)\/[0-9a-f-]{36}\/[0-9a-f-]{36}\.(png|jpg|webp)$/i.test(h)) return h;
   return "#";
 }
 
@@ -205,7 +206,7 @@ function renderBlock(b: Block, depth: number): string {
       return `<div class="tablewrap"><table>${head}<tbody>${body}</tbody></table></div>`;
     }
     case "statement":
-      return `<p class="statement${colourClass(b.props, "fg")}">${renderInline(b.content as Inline[] | string)}</p>`;
+      return `<p class="statement${colourClass(b.props, "fg")}${colourClass(b.props, "bg")}">${renderInline(b.content as Inline[] | string)}</p>`;
     case "featureGrid": {
       const items = parseJson<{ title?: string; text?: string }[]>(props.items, []);
       const cols = Number(props.cols) === 2 ? 2 : 3;
@@ -235,14 +236,14 @@ function renderBlock(b: Block, depth: number): string {
 }
 
 /**
- * Splits a document into sections at level-1 and level-2 headings. A heading's highlight colour
- * becomes the band colour of its whole section, which is how a plain document turns into a page.
+ * Splits a document into sections at level-1 and level-2 headings. A heading's highlight color
+ * becomes the band color of its whole section, which is how a plain document turns into a page.
  */
-export type Section = { id: string; blockId: string | null; title: string | null; level: number; colour: string | null; blocks: Block[] };
+export type Section = { id: string; blockId: string | null; title: string | null; level: number; color: string | null; blocks: Block[] };
 
 export function splitSections(blocks: Block[]): Section[] {
   const sections: Section[] = [];
-  let current: Section = { id: "intro", blockId: null, title: null, level: 0, colour: null, blocks: [] };
+  let current: Section = { id: "intro", blockId: null, title: null, level: 0, color: null, blocks: [] };
   let n = 0;
   for (const b of Array.isArray(blocks) ? blocks : []) {
     const level = b?.type === "heading" ? Number(b.props?.level) || 2 : 0;
@@ -256,7 +257,7 @@ export function splitSections(blocks: Block[]): Section[] {
         blockId,
         title: inlineToText(b.content).trim() || null,
         level,
-        colour: (COLOUR_NAMES as readonly string[]).includes(bg) ? bg : null,
+        color: (COLOUR_NAMES as readonly string[]).includes(bg) ? bg : null,
         blocks: [{ ...b, props: { ...(b.props ?? {}), backgroundColor: "default" } }],
       };
       continue;

@@ -7,7 +7,7 @@ import { ThemeToggle } from "../lib/theme";
 import { Wordmark, cn } from "../components/ui";
 import { TEMPLATES } from "../../shared/templates";
 
-// Each card is the real client page, scaled down, already in your brand colour and style.
+// Each card is the real client page, scaled down, already in your brand color and style.
 const FRAME_W = 1200;
 const FRAME_H = 1500;
 
@@ -115,7 +115,7 @@ export function Templates() {
       <main className="mx-auto max-w-6xl px-5 pb-32 pt-12 sm:px-8">
         <h1 className="text-[40px] font-[650] leading-none tracking-[-0.035em] sm:text-[48px]">New proposal</h1>
         <p className="mt-3 max-w-lg text-[16px] text-graphite dark:text-stone-400">
-          Pick a starting point. It opens in the editor already in your colour, and every word and price is yours to change.
+          Pick a starting point. It opens in the editor already in your color, and every word and price is yours to change.
           {!user?.brandName && (
             <>
               {" "}

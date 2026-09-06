@@ -55,10 +55,10 @@ try {
   await page.getByRole("radio", { name: "Forest" }).click();
   await page.waitForTimeout(1200);
   const me1 = (await get("/auth/me")).user;
-  ok("brand page saves the business name and colour", me1.brandName === "Northwind Studio" && me1.brandColor === "#0f6e4a", JSON.stringify(me1));
-  await page.getByRole("textbox", { name: /brand colour hex/i }).fill("#0f766e");
+  ok("brand page saves the business name and color", me1.brandName === "Northwind Studio" && me1.brandColor === "#0f6e4a", JSON.stringify(me1));
+  await page.getByRole("textbox", { name: /brand color hex/i }).fill("#0f766e");
   await page.waitForTimeout(1000);
-  ok("a pasted hex becomes the brand colour", (await get("/auth/me")).user.brandColor === "#0f766e");
+  ok("a pasted hex becomes the brand color", (await get("/auth/me")).user.brandColor === "#0f766e");
   await page.getByRole("tab", { name: "Notifications" }).click();
   await page.locator("[data-test=team]").getByRole("button", { name: /add a team email/i }).click();
   await page.getByLabel("Team email 1").fill("ops@northwind.example");
@@ -123,7 +123,7 @@ try {
   await page.waitForSelector(".bn-editor");
   const templId = page.url().split("/").pop();
   const g0 = await get("/api/proposals/" + templId);
-  ok("the new proposal uses the template's style and the brand colour", g0.proposal.style === "bold" && g0.proposal.accentColor === null);
+  ok("the new proposal uses the template's style and the brand color", g0.proposal.style === "bold" && g0.proposal.accentColor === null);
   ok("editor cover carries the title and the brand name", (await page.locator("[data-test=cover] textarea").inputValue()) === "Website redesign" && (await page.locator("[data-test=cover] input[aria-label='Sender name']").inputValue()) === "Northwind Studio");
   ok("no email anywhere in the editor", !(await page.locator("main").innerText()).includes("@"));
   const bandBg = await page.evaluate(() => {
@@ -169,17 +169,17 @@ try {
   ok("the phone preview shows the live client page at phone width", Math.round((await phoneFrame.boundingBox()).width) === 370 && (await phoneDoc.locator("h1").innerText()) === "Website redesign" && (await phoneDoc.locator(".ribbon").count()) === 0);
   await page.keyboard.press("Escape");
   await aside.locator("[data-test=style-menu]").click();
-  ok("the style row opens a picker with every style and colour", (await aside.getByRole("radiogroup", { name: "Page style" }).getByRole("radio").count()) === 6 && (await aside.getByRole("radiogroup", { name: "Accent colour" }).getByRole("radio").count()) === 6);
+  ok("the style row opens a picker with every style and color", (await aside.getByRole("radiogroup", { name: "Page style" }).getByRole("radio").count()) === 6 && (await aside.getByRole("radiogroup", { name: "Accent color" }).getByRole("radio").count()) === 6);
   await aside.getByRole("radiogroup", { name: "Page style" }).getByRole("radio", { name: "Editorial" }).click();
-  await aside.getByRole("textbox", { name: /colour hex/i }).fill("#6941c6");
+  await aside.getByRole("textbox", { name: /color hex/i }).fill("#6941c6");
   await page.getByLabel("Signed by").fill("Alex at Northwind");
   await page.waitForTimeout(1300);
   const g2 = await get("/api/proposals/" + templId);
-  ok("recipient, notify list, style, colour and sender override are saved", g2.proposal.clientEmail === "cfo@bramble.example" && JSON.stringify(g2.proposal.ccEmails) === JSON.stringify(["ops@bramble.example"]) && JSON.stringify(g2.proposal.notifyEmails) === JSON.stringify(["accounts@northwind.example"]) && g2.proposal.style === "editorial" && g2.proposal.accentColor === "#6941c6" && g2.proposal.senderName === "Alex at Northwind", JSON.stringify([g2.proposal.ccEmails, g2.proposal.notifyEmails, g2.proposal.style, g2.proposal.accentColor, g2.proposal.senderName]));
+  ok("recipient, notify list, style, color and sender override are saved", g2.proposal.clientEmail === "cfo@bramble.example" && JSON.stringify(g2.proposal.ccEmails) === JSON.stringify(["ops@bramble.example"]) && JSON.stringify(g2.proposal.notifyEmails) === JSON.stringify(["accounts@northwind.example"]) && g2.proposal.style === "editorial" && g2.proposal.accentColor === "#6941c6" && g2.proposal.senderName === "Alex at Northwind", JSON.stringify([g2.proposal.ccEmails, g2.proposal.notifyEmails, g2.proposal.style, g2.proposal.accentColor, g2.proposal.senderName]));
   ok("the cover follows the style and the sender override", (await page.locator("[data-test=cover]").getAttribute("data-cover-style")) === "editorial" && (await page.locator("[data-test=cover] input[aria-label='Sender name']").inputValue()) === "Alex at Northwind");
-  await aside.getByRole("button", { name: /back to my brand colour/i }).click();
+  await aside.getByRole("button", { name: /back to my brand color/i }).click();
   await page.waitForTimeout(1000);
-  ok("one click returns the proposal to the brand colour", (await get("/api/proposals/" + templId)).proposal.accentColor === null);
+  ok("one click returns the proposal to the brand color", (await get("/api/proposals/" + templId)).proposal.accentColor === null);
 
   // ---- The plus button opens the block menu right there ----------------------------------------
   const h2Terms = page.locator(".bn-editor h2", { hasText: "Terms" });
