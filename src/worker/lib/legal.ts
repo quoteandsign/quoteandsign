@@ -1,3 +1,4 @@
+import { consentMarkup, CONSENT_CSS } from "./analytics";
 // The legal pages: Terms, Privacy, Acceptable Use, and a standard DPA. Server-rendered like the
 // homepage, plain English, one HTML response each. Review by a lawyer before launch is still the
 // right call; these are a careful starting point, not legal advice.
@@ -34,7 +35,7 @@ footer{max-width:760px;margin:0 auto;padding:0 20px 48px;font-size:13.5px;color:
 @media(max-width:600px){.top nav a{margin-left:12px}}
 `;
 
-function shell(title: string, body: string, nonce: string, extraHead = ""): string {
+function shell(title: string, body: string, nonce: string, extraHead = "", analytics: string | null = null): string {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -47,7 +48,7 @@ function shell(title: string, body: string, nonce: string, extraHead = ""): stri
 <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
 <link rel="manifest" href="/brand/site.webmanifest">
 <meta name="theme-color" content="#2b3f8c">
-<style nonce="${nonce}">${CSS}</style>
+<style nonce="${nonce}">${CSS}${CONSENT_CSS}</style>
 ${extraHead}
 </head>
 <body>
@@ -55,13 +56,14 @@ ${extraHead}
 <main>
 ${body}
 </main>
-<footer><span>${esc(LEGAL.operator)}</span><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/acceptable-use">Acceptable use</a><a href="/dpa">DPA</a><a href="/">Home</a></footer>
+<footer><span>${esc(LEGAL.operator)}</span><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/acceptable-use">Acceptable use</a><a href="/dpa">DPA</a>${analytics ? `<a href="#" data-cookie-settings>Cookie settings</a>` : ""}<a href="/">Home</a></footer>
+${analytics ? consentMarkup(nonce, analytics) : ""}
 </body>
 </html>`;
 }
 
 /** The contact form: a ticket for us, an acknowledgement for them. Turnstile when configured. */
-export function renderContact(nonce: string, o: { siteKey: string | null; email?: string | null; name?: string | null; kind?: string | null }): string {
+export function renderContact(nonce: string, o: { siteKey: string | null; email?: string | null; name?: string | null; kind?: string | null; analytics?: string | null }): string {
   const kinds: [string, string][] = [["question", "A question"], ["billing", "Billing"], ["bug", "Something is broken"], ["abuse", "Report a proposal or email"], ["other", "Something else"]];
   return shell("Contact", `
 <h1>Contact</h1>
@@ -92,10 +94,10 @@ if(!body.name||!body.email||!body.subject||!body.message||String(body.message).l
 b.disabled=true;b.textContent="Sending…";
 fetch("/api/contact",{method:"POST",headers:{"content-type":"application/json",accept:"application/json"},body:JSON.stringify(body)}).then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j}})}).then(function(x){if(x.ok){f.hidden=true;var d=document.getElementById("done");d.hidden=false;d.textContent="Thanks. Your message is in, reference #"+x.j.ref+". Look out for a reply from us by email."}else{err.textContent=x.j.error||"Something went wrong.";b.disabled=false;b.textContent="Send message";if(window.turnstile){try{window.turnstile.reset()}catch(e){}}}}).catch(function(){err.textContent="Network error. Try again.";b.disabled=false;b.textContent="Send message"})})})();
 </script>
-`, nonce, o.siteKey ? `<script nonce="${nonce}" src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>` : "");
+`, nonce, o.siteKey ? `<script nonce="${nonce}" src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>` : "", o.analytics ?? null);
 }
 
-export function renderTerms(nonce: string): string {
+export function renderTerms(nonce: string, analytics: string | null = null): string {
   return shell("Terms of Service", `
 <h1>Terms of Service</h1>
 <p class="eff">Effective ${LEGAL.effective}. These terms are a contract between you and ${esc(LEGAL.operator)} ("we", "us"). By creating an account or using the service you agree to them. If you use the service for a company, you confirm you may bind that company.</p>
@@ -163,10 +165,10 @@ export function renderTerms(nonce: string): string {
 
 <h2>15. Contact</h2>
 <p>Use the <a href="/contact">contact form</a>. Reports about a proposal page or email go through the <a href="/contact?kind=abuse">same form</a> and are handled first.</p>
-`, nonce);
+`, nonce, "", analytics);
 }
 
-export function renderPrivacy(nonce: string): string {
+export function renderPrivacy(nonce: string, analytics: string | null = null): string {
   return shell("Privacy Policy", `
 <h1>Privacy Policy</h1>
 <p class="eff">Effective ${LEGAL.effective}. This policy explains what ${esc(LEGAL.shortName)} collects, why, and what you can do about it. It is written to meet Canada's PIPEDA, the EU and UK GDPR, and the California CCPA. A designated Privacy Officer is accountable for this policy and can be reached through the <a href="/contact?kind=other">contact form</a>; their name is provided on request.</p>
@@ -194,10 +196,11 @@ export function renderPrivacy(nonce: string): string {
 <li>When you accept: the name you type, your email address, the time, your IP address and browser, the options you chose and the consent sentence you agreed to. This is the acceptance record. It exists to prove who agreed to what and when, and is shared with the sender and emailed to you. Your IP address is kept in the record because it is part of that proof.</li>
 </ul>
 <h3>Visitors</h3>
-<p>Only standard server logs and privacy-preserving, cookieless analytics from our hosting provider. No advertising trackers.</p>
+<p>Standard server logs and privacy-preserving, cookieless analytics from our hosting provider. On the public pages (the homepage, sign-in, contact and these legal pages) we may also use Google Analytics, but only after you allow it in the cookie notice. If you allow it, Google receives the pages you view, a shortened IP address, and a browser identifier stored in a cookie; we use it to see which pages help people. Google's handling of that data is described in Google's privacy policy. Proposal pages your clients open never carry Google Analytics. No advertising trackers anywhere.</p>
 
 <h2>Cookies</h2>
-<p>We use one strictly necessary cookie to keep you signed in, and one to remember a proposal password you entered. Neither tracks you across sites, so no cookie banner is shown. Your theme choice is stored in your browser only.</p>
+<p><b>Strictly necessary:</b> one cookie keeps you signed in, and one remembers a proposal password you entered. Neither tracks you across sites. Your theme choice is stored in your browser only.</p>
+<p><b>Analytics, only with your consent:</b> if you click Allow in the cookie notice, Google Analytics sets its cookies (names beginning with <code>_ga</code>) for up to two years. Click Decline and none are set. You can change your mind at any time using the "Cookie settings" link at the bottom of any public page, or by clearing cookies for this site.</p>
 
 <h2>Legal bases (GDPR)</h2>
 <ul>
@@ -235,10 +238,10 @@ export function renderPrivacy(nonce: string): string {
 
 <h2>Contact</h2>
 <p>The Privacy Officer, ${esc(LEGAL.operator)}, through the <a href="/contact?kind=other">contact form</a>. The officer's name and a postal address are provided on request.</p>
-`, nonce);
+`, nonce, "", analytics);
 }
 
-export function renderAcceptableUse(nonce: string): string {
+export function renderAcceptableUse(nonce: string, analytics: string | null = null): string {
   return shell("Acceptable Use Policy", `
 <h1>Acceptable Use Policy</h1>
 <p class="eff">Effective ${LEGAL.effective}. Part of the <a href="/terms">Terms of Service</a>. It exists to protect the people who receive proposals, other users, and the service itself.</p>
@@ -261,10 +264,10 @@ export function renderAcceptableUse(nonce: string): string {
 
 <h2>Report abuse</h2>
 <p>If a proposal page or email from this service is fraudulent, infringing or harmful, report it through the <a href="/contact?kind=abuse">contact form</a> with the link. We act on valid reports within two business days and take down clear cases immediately. Copyright owners may send a notice with the work, the location and their contact details; we follow the notice-and-notice rules of the Canadian Copyright Act and honour DMCA-style notices.</p>
-`, nonce);
+`, nonce, "", analytics);
 }
 
-export function renderDpa(nonce: string): string {
+export function renderDpa(nonce: string, analytics: string | null = null): string {
   return shell("Data Processing Addendum", `
 <h1>Data Processing Addendum</h1>
 <p class="eff">Effective ${LEGAL.effective}. This addendum applies when you, an account holder, use ${esc(LEGAL.shortName)} to process personal data of your clients and the GDPR, UK GDPR or a similar law makes you the controller and us the processor. It forms part of the <a href="/terms">Terms of Service</a>. No signature is needed; it applies automatically.</p>
@@ -303,5 +306,5 @@ export function renderDpa(nonce: string): string {
 
 <h2>7. Contact</h2>
 <p>The Privacy Officer, ${esc(LEGAL.operator)}, through the <a href="/contact?kind=other">contact form</a>.</p>
-`, nonce);
+`, nonce, "", analytics);
 }

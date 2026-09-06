@@ -8,6 +8,7 @@ import { uuid, ipHash } from "../lib/crypto";
 import { rateLimit } from "../lib/ratelimit";
 import { sendEmail } from "../lib/email";
 import { audit } from "../lib/audit";
+import { getSetting, setSetting, ANALYTICS_KEY, ANALYTICS_ID } from "../lib/analytics";
 import { getSessionUser, requireAuth } from "../lib/session";
 import { effectivePlan } from "../lib/plan";
 import { turnstileOk } from "./auth";
@@ -76,6 +77,21 @@ adminRoutes.use("*", requireAuth);
 adminRoutes.use("*", async (c, next) => {
   if (!isAdmin(c.env, c.get("user").email)) return c.json({ error: "not found" }, 404); // admins are not advertised
   await next();
+});
+
+// Site settings: the Google Analytics id. Empty means off; the pages then carry no Google code at all.
+adminRoutes.get("/settings", async (c) => {
+  const db = getDb(c.env.DB);
+  return c.json({ analyticsId: await getSetting(db, ANALYTICS_KEY) });
+});
+adminRoutes.put("/settings", async (c) => {
+  const db = getDb(c.env.DB);
+  const body = (await c.req.json().catch(() => ({}))) as { analyticsId?: unknown };
+  const raw = typeof body.analyticsId === "string" ? body.analyticsId.trim().toUpperCase() : "";
+  if (raw && !ANALYTICS_ID.test(raw)) return c.json({ error: "That does not look like a Google Analytics id. It starts with G- (or GTM- for Tag Manager)." }, 400);
+  await setSetting(db, ANALYTICS_KEY, raw || null);
+  await audit(db, { userId: c.get("user").id, event: "settings.analytics", meta: { on: Boolean(raw) } });
+  return c.json({ analyticsId: raw || null });
 });
 
 adminRoutes.get("/overview", async (c) => {

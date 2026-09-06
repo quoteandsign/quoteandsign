@@ -10,6 +10,7 @@ import { accountRoutes, fileRoutes } from "./routes/account";
 import { teamRoutes } from "./routes/team";
 import { renderTerms, renderPrivacy, renderAcceptableUse, renderDpa, renderContact } from "./lib/legal";
 import { contactRoutes, adminRoutes } from "./routes/support";
+import { analyticsId, analyticsCsp } from "./lib/analytics";
 import { getSessionUser } from "./lib/session";
 import { businessName } from "../shared/names";
 import { eq, and } from "drizzle-orm";
@@ -80,24 +81,28 @@ app.get("/api/health", (c) => c.json({ ok: true, env: c.env.ENVIRONMENT }));
 
 // Homepage: server-rendered so it is indexable and fast, with the live demo built from the
 // same code as the client page.
-app.get("/", (c) => {
+app.get("/", async (c) => {
   const nonce = crypto.randomUUID().replace(/-/g, "");
+  const ga = await analyticsId(c.env.DB);
+  const csp = analyticsCsp(ga);
   c.header(
     "content-security-policy",
-    `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; img-src 'self' data:; font-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`,
+    `default-src 'none'; script-src 'nonce-${nonce}'${csp.script}; style-src 'nonce-${nonce}'; img-src 'self' data:${csp.img}; connect-src 'self'${csp.connect}; font-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`,
   );
   c.header("cache-control", "public, max-age=300");
-  return c.html(renderLanding({ nonce, appUrl: appUrl(c), githubUrl: "https://github.com/quoteandsign/quoteandsign" }));
+  return c.html(renderLanding({ nonce, appUrl: appUrl(c), githubUrl: "https://github.com/quoteandsign/quoteandsign", analytics: ga }));
 });
 
 // Legal pages, server-rendered like the homepage.
-const legalPages: Record<string, (nonce: string) => string> = { "/terms": renderTerms, "/privacy": renderPrivacy, "/acceptable-use": renderAcceptableUse, "/dpa": renderDpa };
+const legalPages: Record<string, (nonce: string, analytics: string | null) => string> = { "/terms": renderTerms, "/privacy": renderPrivacy, "/acceptable-use": renderAcceptableUse, "/dpa": renderDpa };
 for (const [path, render] of Object.entries(legalPages)) {
-  app.get(path, (c) => {
+  app.get(path, async (c) => {
     const nonce = crypto.randomUUID().replace(/-/g, "");
-    c.header("content-security-policy", `default-src 'none'; style-src 'nonce-${nonce}'; font-src 'self'; base-uri 'none'; frame-ancestors 'none'`);
+    const ga = await analyticsId(c.env.DB);
+    const csp = analyticsCsp(ga);
+    c.header("content-security-policy", `default-src 'none'; script-src 'nonce-${nonce}'${csp.script}; style-src 'nonce-${nonce}'; img-src 'self'${csp.img}; connect-src 'self'${csp.connect}; font-src 'self'; base-uri 'none'; frame-ancestors 'none'`);
     c.header("cache-control", "public, max-age=3600");
-    return c.html(render(nonce));
+    return c.html(render(nonce, ga));
   });
 }
 
@@ -106,12 +111,14 @@ app.get("/contact", async (c) => {
   const nonce = crypto.randomUUID().replace(/-/g, "");
   const siteKey = c.env.TURNSTILE_SECRET ? (c.env.TURNSTILE_SITE_KEY ?? null) : null;
   const viewer = await getSessionUser(c);
+  const ga = await analyticsId(c.env.DB);
+  const csp = analyticsCsp(ga);
   c.header(
     "content-security-policy",
-    `default-src 'none'; script-src 'nonce-${nonce}'${siteKey ? " https://challenges.cloudflare.com" : ""}; style-src 'nonce-${nonce}'; font-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'${siteKey ? "; frame-src https://challenges.cloudflare.com" : ""}`,
+    `default-src 'none'; script-src 'nonce-${nonce}'${siteKey ? " https://challenges.cloudflare.com" : ""}${csp.script}; style-src 'nonce-${nonce}'; img-src 'self'${csp.img}; font-src 'self'; connect-src 'self'${csp.connect}; form-action 'self'; base-uri 'none'; frame-ancestors 'none'${siteKey ? "; frame-src https://challenges.cloudflare.com" : ""}`,
   );
   c.header("cache-control", "private, no-store");
-  return c.html(renderContact(nonce, { siteKey, email: viewer?.email ?? null, name: viewer?.brandName ?? viewer?.name ?? null, kind: c.req.query("kind") ?? null }));
+  return c.html(renderContact(nonce, { siteKey, email: viewer?.email ?? null, name: viewer?.brandName ?? viewer?.name ?? null, kind: c.req.query("kind") ?? null, analytics: ga }));
 });
 
 // Template previews: the real client page fed with template content. Our own gallery embeds

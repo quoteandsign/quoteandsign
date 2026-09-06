@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { ConsentBanner } from "./components/ConsentBanner";
 import { RouterProvider, useRouter, matchPath } from "./lib/router";
 import { AuthProvider, useAuth } from "./lib/auth";
 import { ThemeProvider } from "./lib/theme";
@@ -62,6 +63,7 @@ export function App() {
     <ThemeProvider>
       <RouterProvider>
         <AuthProvider>
+          <ConsentBanner />
           <Routes />
         </AuthProvider>
       </RouterProvider>

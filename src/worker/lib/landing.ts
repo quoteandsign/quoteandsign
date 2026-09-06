@@ -1,3 +1,4 @@
+import { consentMarkup, CONSENT_CSS } from "./analytics";
 // The homepage. Server-rendered for search engines. The hero is the product itself: a live
 // proposal inside a phone, built from the same code the client page uses, so it cannot go stale.
 
@@ -14,6 +15,7 @@ const DEMO_ITEMS = [
 
 const LANDING_CSS = `
 html,body{overflow-x:hidden}
+${CONSENT_CSS}
 nav.main .brand,footer.site-foot .foot-brand{color:var(--accent)}
 .brand .and,.foot-brand .and{font-weight:300}
 .site{max-width:1160px;margin:0 auto;padding:0 24px}
@@ -182,7 +184,7 @@ footer.site-foot .foot-licence{grid-column:1/-1;margin:0;font-size:13px}
 @media(prefers-reduced-motion:reduce){.rise{opacity:1;transform:none;animation:none!important}.hero h1 .u path{stroke-dashoffset:0;animation:none!important}.phone{transform:none;transition:none}}
 `;
 
-export function renderLanding(o: { nonce: string; appUrl: string; githubUrl: string }): string {
+export function renderLanding(o: { nonce: string; appUrl: string; githubUrl: string; analytics?: string | null }): string {
   const totals = computeTotals(DEMO_ITEMS);
   const clientItems: ClientItem[] = DEMO_ITEMS.map(({ id, position, unitAmount, quantity, minQuantity, maxQuantity, optional, selectedByDefault, taxRateBps }) => ({ id, position, unitAmount, quantity, minQuantity, maxQuantity, optional, selectedByDefault, taxRateBps: taxRateBps ?? 0 }));
   const title = "Quote and Sign: open-source proposal software clients accept on their phone";
@@ -389,7 +391,7 @@ export function renderLanding(o: { nonce: string; appUrl: string; githubUrl: str
 <footer class="site-foot">
   <span class="foot-brand"><i aria-hidden="true"></i>Quote <span class="and">and</span> Sign</span>
   <nav aria-label="Product"><a href="/login">Sign in</a><a href="${esc(o.githubUrl)}" rel="noopener">GitHub</a><a href="/contact">Contact</a></nav>
-  <nav aria-label="Legal"><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/acceptable-use">Acceptable use</a><a href="/dpa">DPA</a></nav>
+  <nav aria-label="Legal"><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/acceptable-use">Acceptable use</a><a href="/dpa">DPA</a>${o.analytics ? `<a href="#" data-cookie-settings>Cookie settings</a>` : ""}</nav>
   <p class="foot-licence">Open-source software released under the AGPL-3.0 licence.</p>
 </footer>
 </div>
@@ -421,6 +423,7 @@ var sw=phone.querySelector('[data-item="d2"]');
 if(sw&&!reduce){setTimeout(function(){sw.checked=false;sw.dispatchEvent(new Event("change"))},1800);setTimeout(function(){sw.checked=true;sw.dispatchEvent(new Event("change"))},3200)}
 })();
 </script>
+${o.analytics ? consentMarkup(o.nonce, o.analytics) : ""}
 </body>
 </html>`;
 }

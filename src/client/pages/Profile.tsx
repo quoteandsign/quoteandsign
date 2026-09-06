@@ -11,6 +11,7 @@ import { StyleSwatch } from "../components/StyleSwatch";
 import { STYLES } from "../../shared/styles";
 import { LOOKS, isHex } from "../../shared/looks";
 import { businessName } from "../../shared/names";
+import { openCookieSettings } from "../components/ConsentBanner";
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -506,6 +507,11 @@ export function Profile() {
                 <input type="checkbox" className="mt-1 h-4 w-4 accent-brand" checked={Boolean(user?.marketingOptIn)} onChange={(e) => void save({ marketingOptIn: e.target.checked })} />
                 <span className="text-[13.5px]"><span className="font-medium">Send me product news and tips</span><span className="block text-[12.5px] text-stone-500">A few emails a year. Untick any time; this is your consent record.</span></span>
               </label>
+            </section>
+
+            <section className={panel}>
+              <SectionTitle hint="Analytics cookies on the public pages are optional. Change your answer here.">Cookies</SectionTitle>
+              <Button variant="secondary" size="sm" onClick={() => openCookieSettings()}>Cookie settings</Button>
             </section>
 
             <section className={panel} data-test="account">

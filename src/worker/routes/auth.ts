@@ -9,6 +9,7 @@ import { rateLimit } from "../lib/ratelimit";
 import { sendEmail } from "../lib/email";
 import { createSession, destroySession, getSessionUser } from "../lib/session";
 import { audit } from "../lib/audit";
+import { analyticsId } from "../lib/analytics";
 import { STYLE_IDS } from "../../shared/styles";
 import { effectivePlan, capsOf, trialEnd } from "../lib/plan";
 import { isAdmin } from "./support";
@@ -22,7 +23,7 @@ export const authRoutes = new Hono<AppEnv>();
 const requestSchema = z.object({ email: z.string().trim().toLowerCase().email().max(254), turnstile: z.string().max(4096).optional(), marketing: z.boolean().optional() });
 
 /** The public sign-in configuration: whether a Turnstile challenge is expected, and its site key. */
-authRoutes.get("/config", (c) => c.json({ turnstileSiteKey: c.env.TURNSTILE_SECRET ? (c.env.TURNSTILE_SITE_KEY ?? null) : null }));
+authRoutes.get("/config", async (c) => c.json({ turnstileSiteKey: c.env.TURNSTILE_SECRET ? (c.env.TURNSTILE_SITE_KEY ?? null) : null, analyticsId: await analyticsId(c.env.DB) }));
 
 /** Cloudflare Turnstile: when a secret is configured, every sign-in request must carry a fresh token. */
 export async function turnstileOk(env: { TURNSTILE_SECRET?: string }, token: string | undefined, ip: string): Promise<boolean> {

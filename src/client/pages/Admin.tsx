@@ -4,7 +4,7 @@ import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { Link, useRouter } from "../lib/router";
 import { ThemeToggle } from "../lib/theme";
-import { Button, Skeleton, Wordmark, cn } from "../components/ui";
+import { Button, Input, Skeleton, Wordmark, cn } from "../components/ui";
 import { ago } from "../components/Analytics";
 import { formatMoney } from "../../shared/pricing";
 
@@ -31,7 +31,24 @@ function Stat({ label, value, sub }: { label: string; value: string; sub?: strin
 export function Admin() {
   const { user } = useAuth();
   const { navigate } = useRouter();
-  const [tab, setTab] = useState<"overview" | "tickets" | "people">(() => (new URLSearchParams(location.search).get("ticket") ? "tickets" : "overview"));
+  const [tab, setTab] = useState<"overview" | "tickets" | "people" | "settings">(() => (new URLSearchParams(location.search).get("ticket") ? "tickets" : "overview"));
+  const [gaId, setGaId] = useState("");
+  const [gaState, setGaState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [gaError, setGaError] = useState<string | null>(null);
+  useEffect(() => { api<{ analyticsId: string | null }>("/api/admin/settings").then((r) => setGaId(r.analyticsId ?? ""), () => {}); }, []);
+  const saveGa = async () => {
+    setGaState("saving");
+    setGaError(null);
+    try {
+      const r = await api<{ analyticsId: string | null }>("/api/admin/settings", { method: "PUT", json: { analyticsId: gaId } });
+      setGaId(r.analyticsId ?? "");
+      setGaState("saved");
+      setTimeout(() => setGaState("idle"), 1500);
+    } catch (e) {
+      setGaState("error");
+      setGaError((e as Error).message);
+    }
+  };
   const [overview, setOverview] = useState<Overview | null>(null);
   const [people, setPeople] = useState<Person[] | null>(null);
   const [tickets, setTickets] = useState<Ticket[] | null>(null);
@@ -94,8 +111,8 @@ export function Admin() {
       <main className="mx-auto max-w-5xl px-5 pb-32 pt-10 sm:px-8">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <h1 className="text-[40px] font-[650] leading-none tracking-[-0.035em]">Admin</h1>
-          <div role="tablist" className="grid grid-cols-3 gap-1 rounded-full bg-stone-900/[.06] p-1 dark:bg-white/[.08]">
-            {(["overview", "tickets", "people"] as const).map((t) => (
+          <div role="tablist" className="grid grid-cols-4 gap-1 rounded-full bg-stone-900/[.06] p-1 dark:bg-white/[.08]">
+            {(["overview", "tickets", "people", "settings"] as const).map((t) => (
               <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={cn("h-9 rounded-full px-4 text-[13px] font-medium capitalize transition-colors", tab === t ? "bg-white text-ink shadow-[0_1px_2px_rgba(25,24,22,.12)] dark:bg-stone-800 dark:text-stone-50" : "text-graphite hover:text-ink dark:text-stone-400")}>
                 {t}{t === "tickets" && overview && overview.openTickets > 0 ? ` · ${overview.openTickets}` : ""}
               </button>
@@ -166,6 +183,18 @@ export function Admin() {
               )}
             </div>
           </div>
+        )}
+
+        {tab === "settings" && (
+          <section className="mt-8 max-w-xl rounded-[1.25rem] bg-white p-6 shadow-[0_1px_1px_rgba(25,24,22,.04),0_12px_32px_-20px_rgba(25,24,22,.35)] ring-1 ring-inset ring-stone-900/[.035] dark:bg-stone-900 dark:shadow-none dark:ring-white/[.08]" data-test="admin-settings">
+            <div className="text-[15px] font-semibold">Google Analytics</div>
+            <p className="mt-1 text-[13.5px] leading-relaxed text-stone-500">Paste the measurement id from Google Analytics (it starts with G-), or a Tag Manager container id (GTM-). Leave it empty to turn analytics off. It runs on the homepage, sign-in, contact and legal pages, and only after a visitor clicks Allow in the cookie notice. Proposal pages never carry it.</p>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <Input aria-label="Google Analytics id" value={gaId} onChange={(e) => setGaId(e.target.value)} placeholder="G-XXXXXXXXXX" className="w-[220px] font-mono text-[14px]" spellCheck={false} />
+              <Button size="md" disabled={gaState === "saving"} onClick={() => void saveGa()}>{gaState === "saving" ? "Saving…" : gaState === "saved" ? "Saved" : "Save"}</Button>
+            </div>
+            {gaError && <p role="alert" className="mt-2 text-[13px] text-red-700 dark:text-red-400">{gaError}</p>}
+          </section>
         )}
 
         {tab === "people" && (

@@ -308,6 +308,13 @@ export const webhookEvents = sqliteTable("webhook_events", {
   seenAt: integer("seen_at", { mode: "timestamp_ms" }).notNull(),
 });
 
+// Site-wide settings the admin can change without a deploy (the analytics id, for now).
+export const settings = sqliteTable("settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+});
+
 // Fixed-window rate limiting in D1 (the free-tier WAF allows only one rule).
 export const rateLimits = sqliteTable("rate_limits", {
   key: text("key").primaryKey(), // e.g. "login:<ipHash>" or "accept:<publicId>"

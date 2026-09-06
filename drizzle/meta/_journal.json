@@ -127,6 +127,13 @@
       "when": 1788658833891,
       "tag": "0017_files_in_d1",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1788738583743,
+      "tag": "0018_site_settings",
+      "breakpoints": true
     }
   ]
 }
