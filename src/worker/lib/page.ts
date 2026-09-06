@@ -689,6 +689,63 @@ export function renderTemplatePreview(o: { template: Template; nonce: string; ap
   });
 }
 
+export type RecordView = {
+  publicId: string;
+  title: string;
+  brand: string | null;
+  brandColor: string | null;
+  clientName: string | null;
+  signerName: string;
+  signerEmail: string | null; // the sender sees it; anyone else with the link does not
+  signedText: string;
+  acceptedAt: Date;
+  total: string;
+  method: string;
+  lines: { name: string; detail: string; amount: string }[];
+  contentHash: string;
+  matches: boolean;
+  consentText: string;
+  countersign: { name: string; at: Date } | null;
+  device: { ip: string | null; userAgent: string | null } | null;
+};
+
+/** The signing record: who accepted what, when, and the hash that proves the content. */
+export function renderRecordPage(nonce: string, r: RecordView): string {
+  const color = accent(r.brandColor);
+  const when = (d: Date) => d.toLocaleString("en-CA", { dateStyle: "long", timeStyle: "short", timeZone: "UTC" }) + " UTC";
+  const row = (k: string, v: string, mono = false) => `<tr><th>${esc(k)}</th><td${mono ? ' class="mono"' : ""}>${v}</td></tr>`;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Signing record · ${esc(r.title)}</title><style nonce="${nonce}">${CSS}:root{--accent:${color};--accent-fg:${readableOn(color)}}
+.rec{max-width:680px;margin:0 auto;padding:56px 20px 64px}.rec h1{font-size:30px;letter-spacing:-.02em;margin:6px 0 4px}.rec .sub{color:var(--muted);margin:0 0 28px}
+.rec .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-card);padding:6px 22px;margin:0 0 18px}
+.rec table{width:100%;border-collapse:collapse;font-size:15px}.rec th{text-align:left;font-weight:500;color:var(--muted);width:38%;padding:12px 12px 12px 0;vertical-align:top;border-bottom:1px solid var(--line)}.rec td{padding:12px 0;border-bottom:1px solid var(--line);vertical-align:top}.rec tr:last-child th,.rec tr:last-child td{border-bottom:0}
+.rec .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;word-break:break-all}
+.rec .ok{display:inline-flex;align-items:center;gap:6px;color:#166534;font-weight:600}.rec .bad{color:#9f1239;font-weight:600}
+.rec .actions{display:flex;flex-wrap:wrap;gap:10px;margin:22px 0 0}.rec .actions a{display:inline-flex;align-items:center;padding:11px 18px;border-radius:999px;font-weight:600;font-size:15px;text-decoration:none;background:var(--accent);color:var(--accent-fg)}.rec .actions a.quiet{background:transparent;border:1px solid var(--line);color:var(--fg)}
+.rec .note{font-size:13.5px;color:var(--muted);margin:22px 0 0;line-height:1.6}
+@media(max-width:520px){.rec th{width:100%;display:block;padding:12px 0 0;border:0}.rec td{display:block;padding:2px 0 12px}}</style></head>
+<body><main class="rec">
+${r.brand ? `<p class="brand"><span class="dot"></span>${esc(r.brand)}</p>` : ""}
+<h1>Signing record</h1>
+<p class="sub">${esc(r.title)}${r.clientName ? `, prepared for ${esc(r.clientName)}` : ""}</p>
+<div class="card"><table>
+${row("Accepted by", esc(r.signerName) + (r.signerEmail ? ` <span class="muted">(${esc(r.signerEmail)})</span>` : ""))}
+${row("Typed signature", esc(r.signedText))}
+${row("Date", esc(when(r.acceptedAt)))}
+${row("Amount", esc(r.total))}
+${row("How", r.method === "manual" ? "Marked as accepted by the sender; the client agreed by another channel." : "Signed online on the proposal page.")}
+${r.countersign ? row("Countersigned", `${esc(r.countersign.name)}${r.brand ? ` for ${esc(r.brand)}` : ""}, ${esc(when(r.countersign.at))}`) : ""}
+</table></div>
+${r.lines.length ? `<div class="card"><table>${r.lines.map((l) => `<tr><th>${esc(l.name)}${l.detail ? `<br><span class="muted" style="font-weight:400">${esc(l.detail)}</span>` : ""}</th><td style="text-align:right">${esc(l.amount)}</td></tr>`).join("")}</table></div>` : ""}
+<div class="card"><table>
+${row("Content hash", `<span class="mono">${esc(r.contentHash)}</span><br>${r.matches ? '<span class="ok">Matches the proposal as it reads today</span>' : '<span class="bad">The proposal has changed since it was signed. The signed version is kept in the record file.</span>'}`)}
+${row("Consent", esc(r.consentText))}
+${r.device ? row("Signer's device", esc([r.device.ip, r.device.userAgent].filter(Boolean).join(" · ") || "Not recorded"), true) : ""}
+</table></div>
+<div class="actions"><a href="/p/${esc(r.publicId)}">Open the signed proposal</a><a class="quiet" href="/p/${esc(r.publicId)}/pdf">Download the PDF</a><a class="quiet" href="/p/${esc(r.publicId)}/record.json">Record file (JSON)</a></div>
+<p class="note">The content hash is a SHA-256 fingerprint of the proposal exactly as it read when it was accepted. Anyone can recompute it from the record file to confirm nothing was altered afterwards.${r.device ? " The signer's device details are shown to the sender only." : ""}</p>
+</main><footer class="made"><a href="/">Quote and Sign</a></footer></body></html>`;
+}
+
 export function renderSimplePage(title: string, message: string): string {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${esc(title)}</title><style>${CSS}</style></head>
 <body><div class="wrap"><article class="pad"><h1>${esc(title)}</h1><p>${esc(message)}</p></article><footer class="made">Quote and Sign</footer></div></body></html>`;

@@ -49,18 +49,22 @@ class Writer {
     if (this.y - h < M) this.newPage();
   }
   wrap(text: string, font: PDFFont, size: number, width: number): string[] {
-    const words = safe(text).split(/\s+/).filter(Boolean);
+    // A line break in the text is a line break on paper; only spaces are wrapping points.
     const lines: string[] = [];
-    let line = "";
-    for (const w of words) {
-      const t = line ? line + " " + w : w;
-      if (font.widthOfTextAtSize(t, size) <= width) line = t;
-      else {
-        if (line) lines.push(line);
-        line = w;
+    for (const para of text.split(/\r?\n/)) {
+      const words = safe(para).split(/\s+/).filter(Boolean);
+      let line = "";
+      for (const w of words) {
+        const t = line ? line + " " + w : w;
+        if (font.widthOfTextAtSize(t, size) <= width) line = t;
+        else {
+          if (line) lines.push(line);
+          line = w;
+        }
       }
+      lines.push(line);
     }
-    if (line) lines.push(line);
+    while (lines.length > 1 && lines[lines.length - 1] === "") lines.pop();
     return lines.length ? lines : [""];
   }
   text(text: string, o: { size?: number; bold?: boolean; color?: ReturnType<typeof rgb>; gap?: number; indent?: number; width?: number; lineHeight?: number } = {}) {
@@ -119,9 +123,9 @@ export type PdfInput = {
 
 export async function proposalPdf(inp: PdfInput): Promise<Uint8Array> {
   const { proposal, owner, items, acceptance } = inp;
-  const brand = proposal.senderName || businessName(owner.brandName, owner.name, "Proposal");
+  const brand = proposal.senderName || businessName(owner.brandName, owner.name);
   const accent = hexToRgb(proposal.accentColor ?? owner.brandColor);
-  const w = new Writer(accent, `${brand}  ·  ${proposal.title}`);
+  const w = new Writer(accent, brand ? `${brand}  ·  ${proposal.title}` : proposal.title);
   await w.init();
 
   // Cover band.
@@ -137,10 +141,10 @@ export async function proposalPdf(inp: PdfInput): Promise<Uint8Array> {
     w.page.drawText(l, { x: M, y: cy - 20, size: 26, font: w.bold, color: rgb(1, 1, 1) });
     cy -= 32;
   }
-  const meta = [`By ${brand}`];
+  const meta = brand ? [`By ${brand}`] : [];
   if (proposal.sentAt) meta.push(proposal.sentAt.toLocaleDateString("en-CA", { year: "numeric", month: "long", day: "numeric" }));
   if (proposal.expiresAt && !acceptance) meta.push(`Valid until ${proposal.expiresAt.toLocaleDateString("en-CA", { year: "numeric", month: "long", day: "numeric" })}`);
-  w.page.drawText(safe(meta.join("    ")), { x: M, y: Math.max(A4.h - bandH + 22, cy - 18), size: 10, font: w.font, color: rgb(1, 1, 1), opacity: 0.9 });
+  if (meta.length) w.page.drawText(safe(meta.join("    ")), { x: M, y: Math.max(A4.h - bandH + 22, cy - 18), size: 10, font: w.font, color: rgb(1, 1, 1), opacity: 0.9 });
   w.y = A4.h - bandH - 34;
 
   // Body: the same sections the page shows, minus the leading title.
@@ -249,24 +253,25 @@ export async function proposalPdf(inp: PdfInput): Promise<Uint8Array> {
   }
   drawPricing();
 
-  // The acceptance record, or the note that it is not accepted yet.
+  // The acceptance record, or the note that it is not accepted yet. Kept on one page.
   w.space(10);
+  w.ensure(acceptance ? 150 : 60);
   w.rule();
   if (acceptance) {
     w.text("Accepted", { size: 14, bold: true, gap: 4 });
     w.text(`Accepted by ${acceptance.signerName}${acceptance.signerEmail ? ` (${acceptance.signerEmail})` : ""} on ${acceptance.acceptedAt.toUTCString()} for ${formatMoney(acceptance.totalAmount, acceptance.currency)}.`);
     w.text(`Typed signature: ${acceptance.signedText}`, { size: 9.5, color: rgb(0.35, 0.33, 0.3), gap: 2 });
-    if (acceptance.countersignerName && acceptance.countersignedAt) w.text(`Countersigned by ${acceptance.countersignerName} for ${brand} on ${acceptance.countersignedAt.toUTCString()}.`, { gap: 2 });
+    if (acceptance.countersignerName && acceptance.countersignedAt) w.text(`Countersigned by ${acceptance.countersignerName}${brand ? ` for ${brand}` : ""} on ${acceptance.countersignedAt.toUTCString()}.`, { gap: 2 });
     w.text(`Consent: ${acceptance.consentText}`, { size: 9, color: rgb(0.35, 0.33, 0.3), gap: 2 });
     w.text(`Content hash (SHA-256): ${acceptance.contentHash}`, { size: 8.5, color: rgb(0.35, 0.33, 0.3), gap: 2 });
-    w.text(`Record: ${inp.appUrl}/p/${proposal.publicId}/record.json`, { size: 8.5, color: rgb(0.35, 0.33, 0.3) });
+    w.text(`Signing record: ${inp.appUrl}/p/${proposal.publicId}/record`, { size: 8.5, color: rgb(0.35, 0.33, 0.3) });
   } else {
     w.text("Not yet accepted. The live version, with the accept button, is at:", { size: 9.5, color: rgb(0.35, 0.33, 0.3), gap: 2 });
     w.text(`${inp.appUrl}/p/${proposal.publicId}`, { size: 9.5, color: accent });
   }
 
   w.doc.setTitle(proposal.title);
-  w.doc.setAuthor(brand);
+  w.doc.setAuthor(brand || "Quote and Sign");
   w.doc.setProducer("Quote and Sign");
   w.doc.setCreationDate(new Date());
   return w.doc.save();

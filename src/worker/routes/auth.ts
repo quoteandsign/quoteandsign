@@ -71,6 +71,8 @@ authRoutes.post("/request", async (c) => {
   await sendEmail(c.env, {
     to: email,
     subject: "Your Quote and Sign sign-in link",
+    heading: "Sign in to Quote and Sign",
+    buttons: [{ label: "Sign in", url: link }],
     text: `Click to sign in. The link works once and expires in ${TOKEN_MINUTES} minutes.\n\n${link}\n\nIf you did not request this, ignore this email.`,
   });
   await audit(db, { event: "login.requested", ipHash: ip, meta: { email } });

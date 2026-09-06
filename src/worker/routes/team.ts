@@ -48,6 +48,10 @@ teamRoutes.post("/invite", requireOwner, async (c) => {
     to: email,
     replyTo: owner.email,
     subject: `${brand} invited you to Quote and Sign`,
+    brand,
+    accent: owner.brandColor,
+    heading: `${brand} added you to their team`,
+    buttons: [{ label: "Accept the invitation", url: `${appUrl(c)}/login` }],
     text: `${brand} added you to their team on Quote and Sign.\n\nSign in with this email address and accept the invitation:\n${appUrl(c)}/login\n\nYou will work inside their account: the same proposals, templates and brand.`,
   });
   await audit(db, { userId: owner.id, event: "team.invited", meta: { email } });

@@ -398,6 +398,8 @@ try {
   await cp.waitForURL(/accepted=1/, { timeout: 15000 });
   ok("acceptance redirects to the accepted page", cp.url().includes("accepted=1"));
   ok("accepted page names the signer", (await cp.locator("body").innerText()).includes("Accepted by Alex Morgan"));
+  const recPage = await (await client.request.get(BASE + pubPath + "/record")).text();
+  ok("the signing record page names the signer and the hash, and hides device details from the client", recPage.includes("Signing record") && recPage.includes("Content hash") && !recPage.includes("Signer's device"));
   const rec = await (await client.request.get(BASE + pubPath + "/record.json")).json();
   ok("record total equals what the client chose (13,334 CAD)", rec.acceptance.totalAmount === 1333400 && rec.acceptance.currency === "CAD");
   ok("record hash is 64 hex chars and matches current content", /^[0-9a-f]{64}$/.test(rec.acceptance.contentHash) && rec.acceptance.contentHashMatchesCurrentContent === true);

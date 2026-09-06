@@ -11,7 +11,7 @@ import { sendEmail } from "../lib/email";
 import { getSessionUser } from "../lib/session";
 import { audit } from "../lib/audit";
 import { computeTotals, formatMoney, describeTotals, type Selection } from "../../shared/pricing";
-import { renderProposalPage, renderSimplePage, renderUnlockPage } from "../lib/page";
+import { renderProposalPage, renderSimplePage, renderUnlockPage, renderRecordPage } from "../lib/page";
 import { splitSections, type Block } from "../lib/render";
 import { PLANS, effectivePlan, capsOf } from "../lib/plan";
 import { businessName } from "../../shared/names";
@@ -127,6 +127,8 @@ publicRoutes.get("/:publicId", async (c) => {
       await sendEmail(c.env, {
         to: owner.email,
         subject: `${proposal.clientName || "Your client"} opened "${proposal.title}"`,
+        heading: `${proposal.clientName || "Your client"} just opened it`,
+        buttons: [{ label: "See how it is going", url: `${appUrl(c)}/app/p/${proposal.id}` }],
         text: `Your proposal "${proposal.title}" was just opened for the first time.\n\n${appUrl(c)}/app/p/${proposal.id}`,
       });
     }
@@ -307,16 +309,25 @@ publicRoutes.post("/:publicId/accept", async (c) => {
   } catch (e) {
     console.error("signed pdf", e);
   }
+  const senderBrand = proposal.senderName || businessName(owner.brandName, owner.name) || null;
+  const senderAccent = proposal.accentColor ?? owner.brandColor;
+  const payUrl = proposal.paymentUrl || owner.paymentUrl;
   await sendEmail(c.env, {
     to: await internalRecipients(db, owner, proposal),
     subject: `Accepted: ${proposal.title} (${total})`,
-    text: `${d.signerName} accepted "${proposal.title}" for ${total} on ${now.toUTCString()}.${attachments.length ? "\n\nThe signed PDF is attached." : ""}\n\nSigned copy: ${link}\nRecord: ${link}/record.json\nContent hash: ${contentHash}`,
+    heading: `${d.signerName} signed ${proposal.title}`,
+    buttons: [{ label: "Open the signed copy", url: link }, { label: "Signing record", url: `${link}/record` }],
+    text: `${d.signerName} accepted "${proposal.title}" for ${total} on ${now.toUTCString()}.${attachments.length ? "\n\nThe signed PDF is attached." : ""}\n\nSigned copy: ${link}\nSigning record: ${link}/record\nContent hash: ${contentHash}`,
     attachments,
   });
   await sendEmail(c.env, {
     to: d.signerEmail,
     subject: `Your accepted copy: ${proposal.title}`,
-    text: `Thank you. You accepted "${proposal.title}" for ${total} on ${now.toUTCString()}.${attachments.length ? "\n\nYour signed copy is attached as a PDF." : ""}\n\n${proposal.paymentUrl || owner.paymentUrl ? `${proposal.paymentLabel || "Pay the deposit"}: ${proposal.paymentUrl || owner.paymentUrl}\n\n` : ""}Open it any time: ${link}\nRecord: ${link}/record.json\nContent hash: ${contentHash}`,
+    brand: senderBrand,
+    accent: senderAccent,
+    heading: "Thank you, it is signed",
+    buttons: [...(payUrl ? [{ label: proposal.paymentLabel || "Pay the deposit", url: payUrl }] : []), { label: "Open your signed copy", url: link }],
+    text: `Thank you. You accepted "${proposal.title}" for ${total} on ${now.toUTCString()}.${attachments.length ? "\n\nYour signed copy is attached as a PDF." : ""}\n\n${payUrl ? `${proposal.paymentLabel || "Pay the deposit"}: ${payUrl}\n\n` : ""}Open it any time: ${link}\nSigning record: ${link}/record\nContent hash: ${contentHash}`,
     attachments,
   });
 
@@ -351,6 +362,8 @@ publicRoutes.post("/:publicId/decline", async (c) => {
   await sendEmail(c.env, {
     to: await internalRecipients(db, owner, proposal),
     subject: `Declined: ${oneLine(proposal.title)}`,
+    heading: `${proposal.clientName || "Your client"} passed on it`,
+    buttons: [{ label: "Revise and send again", url: `${appUrl(c)}/app/p/${proposal.id}` }],
     text: `${proposal.clientName || "Your client"} passed on "${oneLine(proposal.title)}".${parsed.data.reason ? `\n\nThey said:\n${parsed.data.reason}` : "\n\nThey did not leave a reason."}\n\nYou can revise it and send it again from the editor:\n${appUrl(c)}/app/p/${proposal.id}`,
   });
   await audit(db, { userId: owner.id, proposalId: proposal.id, event: "proposal.declined", ipHash: viewerHash });
@@ -474,6 +487,52 @@ publicRoutes.get("/:publicId/pdf", async (c) => {
   c.header("content-disposition", `attachment; filename="${name}${acceptance ? "-signed" : ""}.pdf"`);
   c.header("cache-control", "private, no-store");
   return c.body(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer);
+});
+
+// The same facts as record.json, laid out for a person. Device details are the sender's only.
+publicRoutes.get("/:publicId/record", async (c) => {
+  const publicId = c.req.param("publicId");
+  const loaded = await loadProposal(c, publicId);
+  if (!loaded || !loaded.acceptance) return c.html(renderSimplePage("No signing record", "This proposal has not been accepted."), 404);
+  const { proposal, items, acceptance, owner } = loaded;
+  const viewer = await getSessionUser(c);
+  const isOwner = viewer?.id === owner.id;
+  if (proposal.passwordHash && !isOwner) {
+    const ok = (await verifyValue(c.env.SESSION_SECRET, getCookie(c, unlockCookie(publicId)))) === publicId;
+    if (!ok) return c.redirect(`/p/${publicId}`);
+  }
+  const recomputedHash = await sha256Hex(contentHashInput(proposal, owner, items));
+  const chosen = new Map((acceptance.selectedItemIds as { id: string; quantity: number }[]).map((s) => [s.id, s.quantity]));
+  const lines = items
+    .filter((it) => chosen.has(it.id))
+    .map((it) => {
+      const q = chosen.get(it.id) ?? 1;
+      return { name: it.name, detail: q > 1 || it.unit ? `${q} ${it.unit ? (q === 1 ? it.unit : it.unit + "s") : "x"}`.replace(/ x$/, " x") : "", amount: formatMoney(it.unitAmount * q, acceptance.currency) };
+    });
+  const nonce = uuid().replace(/-/g, "");
+  c.header("content-security-policy", `default-src 'none'; style-src 'nonce-${nonce}'; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`);
+  c.header("cache-control", "private, no-store");
+  return c.html(
+    renderRecordPage(nonce, {
+      publicId: proposal.publicId,
+      title: proposal.title,
+      brand: acceptance.senderName ?? (proposal.senderName || businessName(owner.brandName, owner.name) || null),
+      brandColor: proposal.accentColor ?? owner.brandColor,
+      clientName: acceptance.clientName ?? proposal.clientName,
+      signerName: acceptance.signerName,
+      signerEmail: isOwner ? acceptance.signerEmail : null,
+      signedText: acceptance.signedText,
+      acceptedAt: acceptance.acceptedAt,
+      total: formatMoney(acceptance.totalAmount, acceptance.currency),
+      method: acceptance.method,
+      lines,
+      contentHash: acceptance.contentHash,
+      matches: recomputedHash === acceptance.contentHash,
+      consentText: acceptance.consentText,
+      countersign: acceptance.countersignerName && acceptance.countersignedAt ? { name: acceptance.countersignerName, at: acceptance.countersignedAt } : null,
+      device: isOwner ? { ip: acceptance.ip, userAgent: acceptance.userAgent } : null,
+    }),
+  );
 });
 
 publicRoutes.get("/:publicId/record.json", async (c) => {

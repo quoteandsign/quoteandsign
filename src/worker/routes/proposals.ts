@@ -358,6 +358,10 @@ proposalRoutes.post("/:id/send", async (c) => {
       to: recipients,
       replyTo: user.email,
       subject: `Proposal: ${title}`,
+      brand: from,
+      accent: proposal.accentColor ?? user.brandColor,
+      heading: title,
+      buttons: [{ label: "Open the proposal", url: link }],
       text: `${from} sent you a proposal.
 ${message ? `\n${message}\n` : ""}
 ${title}
@@ -461,7 +465,11 @@ proposalRoutes.post("/:id/countersign", async (c) => {
       to: acceptance.signerEmail,
       replyTo: user.email,
       subject: `Countersigned: ${proposal.title}`,
-      text: `${parsed.data.name} of ${brand} has countersigned "${proposal.title}". Both signatures are now on the record.${attachments.length ? "\n\nThe fully signed PDF is attached." : ""}\n\nOpen it any time: ${link}\nRecord: ${link}/record.json`,
+      brand,
+      accent: proposal.accentColor ?? user.brandColor,
+      heading: "Both signatures are on the record",
+      buttons: [{ label: "Open the signed copy", url: link }, { label: "Signing record", url: `${link}/record` }],
+      text: `${parsed.data.name} of ${brand} has countersigned "${proposal.title}". Both signatures are now on the record.${attachments.length ? "\n\nThe fully signed PDF is attached." : ""}\n\nOpen it any time: ${link}\nSigning record: ${link}/record`,
       attachments,
     });
   }
