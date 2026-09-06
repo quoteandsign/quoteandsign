@@ -38,6 +38,8 @@ function endOfDay(value: string): number | null {
 
 // ---- Grouped list primitives. One card per topic, one hairline between rows, label left, control right.
 
+const card = "overflow-hidden rounded-[1.25rem] bg-white shadow-[0_1px_1px_rgba(25,24,22,.04),0_12px_32px_-20px_rgba(25,24,22,.35)] ring-1 ring-inset ring-stone-900/[.035] dark:bg-stone-900 dark:shadow-none dark:ring-white/[.08]";
+
 function Group({ title, hint, children, locked }: { title: string; hint?: string; children: ReactNode; locked?: "Pro" | "Business" | null }) {
   return (
     <section className="grid gap-2" aria-label={title}>
@@ -45,27 +47,52 @@ function Group({ title, hint, children, locked }: { title: string; hint?: string
         <h4 className="flex items-center gap-2 text-[13px] font-semibold text-graphite dark:text-stone-400">{title}{locked && <PlanTag plan={locked} />}</h4>
         {hint && <p className="mt-0.5 text-[12.5px] leading-snug text-stone-500">{locked ? `Part of ${locked}. ` : ""}{hint}</p>}
       </div>
-      <fieldset disabled={Boolean(locked)} className={cn("overflow-hidden rounded-[1.25rem] bg-white shadow-[0_1px_1px_rgba(25,24,22,.04),0_12px_32px_-20px_rgba(25,24,22,.35)] ring-1 ring-inset ring-stone-900/[.035] dark:bg-stone-900 dark:shadow-none dark:ring-white/[.08]", locked && "opacity-60")}>
+      <fieldset disabled={Boolean(locked)} className={cn(card, locked && "opacity-60")}>
         <div className="divide-y divide-hairline dark:divide-white/[.08]">{children}</div>
       </fieldset>
     </section>
   );
 }
 
-function Row({ label, htmlFor, children, stacked, hint }: { label: string; htmlFor?: string; children: ReactNode; stacked?: boolean; hint?: string }) {
-  if (stacked) {
-    return (
-      <div className="grid gap-1.5 px-4 py-3">
-        <label htmlFor={htmlFor} className="text-[13.5px] font-medium">{label}</label>
-        {children}
-        {hint && <p className="text-[12.5px] text-stone-500">{hint}</p>}
-      </div>
-    );
-  }
+/**
+ * A group that starts closed and says what is inside: the title on the left, the current value
+ * on the right. Open it to change things. The rarely used settings live in these.
+ */
+function Disclosure({ id, title, summary, hint, locked, open, onToggle, children }: { id: string; title: string; summary: string; hint?: string; locked?: "Pro" | "Business" | null; open: boolean; onToggle: () => void; children: ReactNode }) {
   return (
-    <div className="flex min-h-[48px] items-center justify-between gap-3 px-4 py-2">
-      <label htmlFor={htmlFor} className="shrink-0 text-[13.5px] font-medium">{label}</label>
-      <div className="flex min-w-0 flex-1 items-center justify-end gap-2">{children}</div>
+    <section className={card} aria-label={title} data-test={`opt-${id}`}>
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={`opt-body-${id}`}
+        onClick={onToggle}
+        className="flex min-h-[54px] w-full items-center gap-3 px-4 py-2 text-left transition-colors hover:bg-stone-900/[.03] active:bg-stone-900/[.06] dark:hover:bg-white/[.05]"
+      >
+        <span className="flex min-w-0 flex-1 items-center gap-2">
+          <span className="text-[13.5px] font-semibold">{title}</span>
+          {locked && <PlanTag plan={locked} />}
+        </span>
+        <span className={cn("min-w-0 max-w-[55%] truncate text-right text-[13px]", open ? "text-stone-400" : "text-stone-500")}>{summary}</span>
+        <CaretDown size={14} weight="bold" className={cn("flex-none text-stone-400 transition-transform duration-300 ease-[cubic-bezier(.32,.72,0,1)]", open && "rotate-180")} />
+      </button>
+      {open && (
+        <fieldset id={`opt-body-${id}`} disabled={Boolean(locked)} className={cn("border-t border-hairline dark:border-white/[.08]", locked && "opacity-60")}>
+          {hint && <p className="px-4 pb-1 pt-3 text-[12.5px] leading-snug text-stone-500">{locked ? `Part of ${locked}. ` : ""}{hint}</p>}
+          <div className="divide-y divide-hairline dark:divide-white/[.08]">{children}</div>
+        </fieldset>
+      )}
+    </section>
+  );
+}
+
+function Row({ label, htmlFor, children, hint }: { label: string; htmlFor?: string; children: ReactNode; hint?: string }) {
+  return (
+    <div className="px-4 py-2">
+      <div className="flex min-h-[40px] items-center justify-between gap-3">
+        <label htmlFor={htmlFor} className="shrink-0 text-[13.5px] font-medium">{label}</label>
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-2">{children}</div>
+      </div>
+      {hint && <p className="pb-1 text-[12px] text-stone-500">{hint}</p>}
     </div>
   );
 }
@@ -95,6 +122,8 @@ function ActionRow({ icon, children, onClick, href, muted, hint }: { icon: React
   );
   return href ? <a href={href} className={cls}>{body}</a> : <button type="button" onClick={onClick} className={cls}>{body}</button>;
 }
+
+const fmtDate = (ms: number) => new Date(ms).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" });
 
 /** Everything a proposal can have beyond client, pricing and send. Lives on the Options tab. */
 export function MoreOptions({
@@ -133,7 +162,8 @@ export function MoreOptions({
   const [pw, setPw] = useState("");
   const [pwBusy, setPwBusy] = useState(false);
   const [styleOpen, setStyleOpen] = useState(false);
-  const [copiedJson, setCopiedJson] = useState(false);
+  const [open, setOpen] = useState<Set<string>>(() => new Set());
+  const toggle = (id: string) => setOpen((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const effective = isHex(look.colour) ? look.colour : isHex(look.brandColour) ? look.brandColour : "#2b3f8c";
   const [hex, setHex] = useState(effective);
   useEffect(() => { setHex(effective); }, [effective]);
@@ -147,9 +177,17 @@ export function MoreOptions({
     return () => window.removeEventListener("keydown", onKey);
   }, [styleOpen]);
 
+  // What each closed group says about itself.
+  const taxText = details.taxRateBps > 0 ? `${details.taxRateBps / 100}% ${details.taxLabel || "tax"}` : "no tax";
+  const afterParts = [
+    details.paymentUrl ? "Payment link" : brandPaymentUrl ? "Brand payment link" : null,
+    details.countersign ? "Countersign" : null,
+    details.notifyEmails.filter(Boolean).length ? `${details.notifyEmails.filter(Boolean).length} extra email${details.notifyEmails.filter(Boolean).length === 1 ? "" : "s"}` : null,
+  ].filter(Boolean);
+
   return (
-    <div className="grid gap-6" data-test="more-options">
-      <Group title="Style" locked={caps.brand ? null : "Pro"}>
+    <div className="grid gap-4" data-test="more-options">
+      <Group title="Look" locked={caps.brand ? null : "Pro"}>
         {/* One row that reads as a menu: current style, current colour, a caret. Opens the full picker below it. */}
         <div ref={styleBox}>
           <button
@@ -212,82 +250,86 @@ export function MoreOptions({
         </Row>
       </Group>
 
-      <Group title="When the client signs" hint={teamEmails.length ? `You and your team (${teamEmails.join(", ")}) get an email.` : "You get an email. Add anyone else who should hear about this one."}>
-        {details.notifyEmails.map((e, i) => (
-          <div key={i} className="flex min-h-[48px] items-center gap-2 px-4 py-1.5">
-            <input aria-label={`Also notify ${i + 1}`} type="email" inputMode="email" spellCheck={false} maxLength={254} value={e} disabled={readOnly} onChange={(ev) => setNotify(i, ev.target.value)} placeholder="accounts@yourbusiness.com" autoFocus={e === ""} className={cn(inline, "text-left")} />
-            {!readOnly && (
-              <Button variant="ghost" size="icon" aria-label="Remove" onClick={() => onChange({ ...details, notifyEmails: details.notifyEmails.filter((_, k) => k !== i) })}>
-                <X size={16} weight="light" />
-              </Button>
-            )}
+      <div className="grid gap-2">
+        <h4 className="px-1 text-[13px] font-semibold text-graphite dark:text-stone-400">Settings for this proposal</h4>
+
+        <Disclosure id="money" title="Money" summary={`${details.currency}, ${taxText}`} open={open.has("money")} onToggle={() => toggle("money")}>
+          <Row label="Currency" htmlFor="currency">
+            <span className="relative inline-flex items-center">
+              <select id="currency" value={details.currency} disabled={readOnly} onChange={(e) => onChange({ ...details, currency: e.target.value })} className="h-9 appearance-none rounded-lg bg-stone-900/[.05] pl-3 pr-8 text-[13.5px] font-medium outline-none focus-visible:ring-2 focus-visible:ring-brand/40 disabled:opacity-60 dark:bg-white/[.08]">
+                {SUPPORTED_CURRENCIES.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+              <CaretDown size={13} weight="bold" className="pointer-events-none absolute right-2.5 text-stone-500" />
+            </span>
+          </Row>
+          <Row label="Tax rate" htmlFor="taxRate" hint="One rate for the whole proposal. Any line can be marked not taxable under Pricing.">
+            <span className="flex w-28 items-center gap-1.5">
+              <NumberField id="taxRate" value={details.taxRateBps === 0 ? null : details.taxRateBps} allowEmpty placeholder="0" max={10_000} decimals={2} disabled={readOnly} onChange={(v) => onChange({ ...details, taxRateBps: v ?? 0 })} />
+              <span className="text-[13px] text-stone-500">%</span>
+            </span>
+          </Row>
+          <Row label="Tax name" htmlFor="taxLabel">
+            <input id="taxLabel" value={details.taxLabel} disabled={readOnly} maxLength={40} placeholder="HST, VAT…" onChange={(e) => onChange({ ...details, taxLabel: e.target.value })} className={cn(inline, "w-32")} />
+          </Row>
+        </Disclosure>
+
+        <Disclosure id="deadline" title="Deadline" summary={details.expiresAt ? `Valid until ${fmtDate(details.expiresAt)}` : "None"} hint="After the date the client can still read the proposal, but not accept it." locked={caps.protect ? null : "Pro"} open={open.has("deadline")} onToggle={() => toggle("deadline")}>
+          <Row label="Valid until" htmlFor="expires">
+            <input id="expires" type="date" value={dateValue(details.expiresAt)} disabled={readOnly} onChange={(e) => onChange({ ...details, expiresAt: endOfDay(e.target.value) })} className={cn(inline, "w-auto")} />
+          </Row>
+          {details.expiresAt && (
+            <Row label="Remind them 3 days before">
+              <Toggle checked={details.remind} disabled={readOnly} onChange={(v) => onChange({ ...details, remind: v })} label="Remind the client 3 days before" />
+            </Row>
+          )}
+        </Disclosure>
+
+        <Disclosure id="access" title="Access" summary={details.hasPassword ? "Password set" : "Anyone with the link"} hint={details.hasPassword ? "A password is set. Enter a new one to change it, or remove it." : "Optional. Share the password with your client separately."} locked={caps.protect ? null : "Pro"} open={open.has("access")} onToggle={() => toggle("access")}>
+          <Row label="Link password" htmlFor="pw">
+            <input id="pw" type="text" autoComplete="off" spellCheck={false} maxLength={200} value={pw} disabled={readOnly} onChange={(e) => setPw(e.target.value)} placeholder={details.hasPassword ? "••••••••" : "None"} className={inline} />
+            <Button variant="secondary" size="sm" disabled={readOnly || pwBusy || (!pw && !details.hasPassword)} onClick={async () => { setPwBusy(true); try { await onPassword(pw); setPw(""); } finally { setPwBusy(false); } }}>
+              {pw ? "Set" : details.hasPassword ? "Remove" : "Set"}
+            </Button>
+          </Row>
+        </Disclosure>
+
+        <Disclosure id="after" title="After they sign" summary={afterParts.length ? afterParts.join(", ") : "Email to you"} hint={teamEmails.length ? `You and your team (${teamEmails.join(", ")}) get an email when the client signs.` : "You get an email when the client signs."} open={open.has("after")} onToggle={() => toggle("after")}>
+          <Row label="Payment link" htmlFor="paymentUrl" hint={caps.payment ? "A button on the accepted page and in their signed-copy email. Any secure link: Stripe, PayPal, Interac, an invoice." : "Part of Pro."}>
+            <input id="paymentUrl" type="url" inputMode="url" spellCheck={false} maxLength={500} value={details.paymentUrl} disabled={readOnly || !caps.payment} placeholder={brandPaymentUrl ? "Using your brand link" : "https://…"} onChange={(e) => onChange({ ...details, paymentUrl: e.target.value })} className={cn(inline, "text-left")} />
+          </Row>
+          {(details.paymentUrl || brandPaymentUrl) && (
+            <Row label="Button says" htmlFor="paymentLabel">
+              <input id="paymentLabel" value={details.paymentLabel} disabled={readOnly} maxLength={40} placeholder="Pay the deposit" onChange={(e) => onChange({ ...details, paymentLabel: e.target.value })} className={cn(inline, "w-44")} />
+            </Row>
+          )}
+          <Row label="I will countersign" hint={caps.countersign ? "Your signature after the client's. Both go on the page, the PDF and the record." : "Part of Business."}>
+            <span className="flex items-center gap-2">{!caps.countersign && <PlanTag plan="Business" />}<Toggle checked={details.countersign} disabled={readOnly || !caps.countersign} onChange={(v) => onChange({ ...details, countersign: v })} label="Countersign after the client signs" /></span>
+          </Row>
+          <div className="px-4 py-2">
+            <div className="flex min-h-[40px] items-center justify-between gap-3">
+              <span className="text-[13.5px] font-medium">Also email</span>
+              {!readOnly && details.notifyEmails.length < 10 && (
+                <button type="button" onClick={() => onChange({ ...details, notifyEmails: [...details.notifyEmails, ""] })} className="inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-[12.5px] font-medium text-brand hover:bg-brand/[.08] dark:text-indigo-300">
+                  <Plus size={13} weight="bold" /> Add an email
+                </button>
+              )}
+            </div>
+            {details.notifyEmails.map((e, i) => (
+              <div key={i} className="flex items-center gap-1 py-0.5">
+                <input aria-label={`Also notify ${i + 1}`} type="email" inputMode="email" spellCheck={false} maxLength={254} value={e} disabled={readOnly} onChange={(ev) => setNotify(i, ev.target.value)} placeholder="accounts@yourbusiness.com" autoFocus={e === ""} className={cn(inline, "text-left")} />
+                {!readOnly && (
+                  <Button variant="ghost" size="icon" aria-label="Remove" onClick={() => onChange({ ...details, notifyEmails: details.notifyEmails.filter((_, k) => k !== i) })}>
+                    <X size={16} weight="light" />
+                  </Button>
+                )}
+              </div>
+            ))}
+            {details.notifyEmails.length === 0 && <p className="pb-1 text-[12px] text-stone-500">Anyone else who should hear about this one. Clients never see them.</p>}
           </div>
-        ))}
-        {!readOnly && details.notifyEmails.length < 10 && (
-          <button type="button" onClick={() => onChange({ ...details, notifyEmails: [...details.notifyEmails, ""] })} className="flex min-h-[48px] w-full items-center gap-3 px-4 text-left text-[13.5px] font-medium text-brand transition-colors hover:bg-stone-900/[.03] dark:text-indigo-300 dark:hover:bg-white/[.05]">
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand/10"><Plus size={15} weight="bold" /></span> Add an email
-          </button>
-        )}
-      </Group>
-
-      <Group title="Money">
-        <Row label="Currency" htmlFor="currency">
-          <span className="relative inline-flex items-center">
-            <select id="currency" value={details.currency} disabled={readOnly} onChange={(e) => onChange({ ...details, currency: e.target.value })} className="h-9 appearance-none rounded-lg bg-stone-900/[.05] pl-3 pr-8 text-[13.5px] font-medium outline-none focus-visible:ring-2 focus-visible:ring-brand/40 disabled:opacity-60 dark:bg-white/[.08]">
-              {SUPPORTED_CURRENCIES.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-            <CaretDown size={13} weight="bold" className="pointer-events-none absolute right-2.5 text-stone-500" />
-          </span>
-        </Row>
-        <Row label="Tax rate" htmlFor="taxRate">
-          <span className="flex w-28 items-center gap-1.5">
-            <NumberField id="taxRate" value={details.taxRateBps === 0 ? null : details.taxRateBps} allowEmpty placeholder="0" max={10_000} decimals={2} disabled={readOnly} onChange={(v) => onChange({ ...details, taxRateBps: v ?? 0 })} />
-            <span className="text-[13px] text-stone-500">%</span>
-          </span>
-        </Row>
-        <Row label="Tax name" htmlFor="taxLabel">
-          <input id="taxLabel" value={details.taxLabel} disabled={readOnly} maxLength={40} placeholder="HST, VAT…" onChange={(e) => onChange({ ...details, taxLabel: e.target.value })} className={cn(inline, "w-32")} />
-        </Row>
-      </Group>
-
-      <Group title="Timing" hint="After the date the client can still read the proposal, but not accept it." locked={caps.protect ? null : "Pro"}>
-        <Row label="Valid until" htmlFor="expires">
-          <input id="expires" type="date" value={dateValue(details.expiresAt)} disabled={readOnly} onChange={(e) => onChange({ ...details, expiresAt: endOfDay(e.target.value) })} className={cn(inline, "w-auto")} />
-        </Row>
-        {details.expiresAt && (
-          <Row label="Remind them 3 days before">
-            <Toggle checked={details.remind} disabled={readOnly} onChange={(v) => onChange({ ...details, remind: v })} label="Remind the client 3 days before" />
-          </Row>
-        )}
-      </Group>
-
-      <Group title="After they sign" hint="A button on the accepted page and in their signed-copy email. Paste any secure link: Stripe, PayPal, Interac, an invoice." locked={caps.payment ? null : "Pro"}>
-        <Row label="Payment link" htmlFor="paymentUrl">
-          <input id="paymentUrl" type="url" inputMode="url" spellCheck={false} maxLength={500} value={details.paymentUrl} disabled={readOnly} placeholder={brandPaymentUrl ? "Using your brand link" : "https://…"} onChange={(e) => onChange({ ...details, paymentUrl: e.target.value })} className={cn(inline, "text-left")} />
-        </Row>
-        {(details.paymentUrl || brandPaymentUrl) && (
-          <Row label="Button says" htmlFor="paymentLabel">
-            <input id="paymentLabel" value={details.paymentLabel} disabled={readOnly} maxLength={40} placeholder="Pay the deposit" onChange={(e) => onChange({ ...details, paymentLabel: e.target.value })} className={cn(inline, "w-44")} />
-          </Row>
-        )}
-      </Group>
-
-      <Group title="Countersign" hint="Add your own signature after the client signs. Both names and dates go on the page, the PDF and the record, and the client gets the fully signed copy." locked={caps.countersign ? null : "Business"}>
-        <Row label="I will countersign">
-          <Toggle checked={details.countersign} disabled={readOnly || !caps.countersign} onChange={(v) => onChange({ ...details, countersign: v })} label="Countersign after the client signs" />
-        </Row>
-      </Group>
-
-      <Group title="Access" locked={caps.protect ? null : "Pro"} hint={details.hasPassword ? "A password is set. Enter a new one to change it, or remove it." : "Optional. Share the password with your client separately."}>
-        <Row label="Link password" htmlFor="pw">
-          <input id="pw" type="text" autoComplete="off" spellCheck={false} maxLength={200} value={pw} disabled={readOnly} onChange={(e) => setPw(e.target.value)} placeholder={details.hasPassword ? "••••••••" : "None"} className={inline} />
-          <Button variant="secondary" size="sm" disabled={readOnly || pwBusy || (!pw && !details.hasPassword)} onClick={async () => { setPwBusy(true); try { await onPassword(pw); setPw(""); } finally { setPwBusy(false); } }}>
-            {pw ? "Set" : details.hasPassword ? "Remove" : "Set"}
-          </Button>
-        </Row>
-      </Group>
+        </Disclosure>
+      </div>
 
       <Group title="Copies and files">
         <ActionRow icon={<BookmarkSimple size={16} weight="light" />} onClick={onSaveTemplate} hint="Reuse this content and pricing for the next one.">Save as template</ActionRow>
@@ -295,9 +337,9 @@ export function MoreOptions({
         {canPdf ? (
           <ActionRow icon={<FilePdf size={16} weight="light" />} href={exportHref.replace(/\/export$/, "/pdf")} hint="The page as a file, for email or print.">Download PDF</ActionRow>
         ) : (
-          <ActionRow icon={<FilePdf size={16} weight="light" />} href="/app/brand" muted hint="Part of Pro. See plans under Brand.">Download PDF</ActionRow>
+          <ActionRow icon={<FilePdf size={16} weight="light" />} href="/app/brand#plan" muted hint="Part of Pro. See plans under Brand.">Download PDF</ActionRow>
         )}
-        <ActionRow icon={copiedJson ? <Check size={16} weight="bold" /> : <FileArrowDown size={16} weight="light" />} href={exportHref} hint="Everything in this proposal as data.">Export JSON</ActionRow>
+        <ActionRow icon={<FileArrowDown size={16} weight="light" />} href={exportHref} hint="Everything in this proposal as data.">Export JSON</ActionRow>
       </Group>
     </div>
   );

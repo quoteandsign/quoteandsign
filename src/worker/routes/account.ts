@@ -1,10 +1,12 @@
 import { Hono } from "hono";
 import { Buffer } from "node:buffer";
-import { eq, inArray, notInArray, and, like, sql } from "drizzle-orm";
+import { eq, inArray, notInArray, and, like, sql, gt, isNull } from "drizzle-orm";
 import type { AppEnv } from "../env";
 import { clientIp } from "../env";
 import { getDb, schema } from "../lib/db";
-import { uuid, ipHash } from "../lib/crypto";
+import { uuid, ipHash, sha256Hex } from "../lib/crypto";
+import { sendEmail } from "../lib/email";
+import { rateLimit } from "../lib/ratelimit";
 import { requireAuth, requireOwner, destroySession } from "../lib/session";
 import { capsOf } from "../lib/plan";
 import { audit } from "../lib/audit";
@@ -49,13 +51,42 @@ accountRoutes.get("/export", async (c) => {
 });
 
 // ---- Delete ----------------------------------------------------------------------------------
-// Accepted proposals are a signed record for two parties, so they stay readable at their link.
-// Everything else goes now; the account is anonymised and can never sign in again.
+// Step one: a six-digit code goes to the account's email. Whoever holds the session alone cannot
+// close the account; they also need the inbox. Codes live in the magic-token table, 15 minutes.
+const deleteHash = (env: { SESSION_SECRET: string }, userId: string, code: string) => sha256Hex(`delete:${env.SESSION_SECRET}:${userId}:${code}`);
+accountRoutes.post("/delete-code", async (c) => {
+  const user = c.get("user");
+  const db = getDb(c.env.DB);
+  const limit = await rateLimit(db, `delcode:${user.id}`, 3, 60 * 60_000);
+  if (!limit.allowed) return c.json({ error: "Three codes an hour is the limit. Check your inbox for the last one." }, 429);
+  const code = String(crypto.getRandomValues(new Uint32Array(1))[0]! % 1_000_000).padStart(6, "0");
+  const now = new Date();
+  await db.insert(schema.magicTokens).values({ tokenHash: await deleteHash(c.env, user.id, code), email: user.email, createdAt: now, expiresAt: new Date(now.getTime() + 15 * 60_000) });
+  await sendEmail(c.env, {
+    to: user.email,
+    subject: "Your account deletion code",
+    heading: "Delete your account?",
+    text: `Your code is ${code}. It works once and expires in 15 minutes.\n\nEntering it on the Brand page removes your drafts, templates and unsigned proposals for good. Signed proposals stay readable at their links, because they are your clients' records too.\n\nIf you did not ask for this, ignore this email and nothing happens.`,
+  });
+  await audit(db, { userId: user.id, event: "account.delete_code" });
+  return c.json({ ok: true });
+});
+
+// Step two. Accepted proposals are a signed record for two parties, so they stay readable at
+// their link. Everything else goes now; the account is anonymised and can never sign in again.
 accountRoutes.delete("/", async (c) => {
   const user = c.get("user");
   const db = getDb(c.env.DB);
-  const body = (await c.req.json().catch(() => ({}))) as { confirm?: string };
-  if (body.confirm !== "DELETE") return c.json({ error: 'Type DELETE to confirm.' }, 400);
+  const body = (await c.req.json().catch(() => ({}))) as { code?: string };
+  const code = String(body.code ?? "").replace(/\D/g, "");
+  if (code.length !== 6) return c.json({ error: "Enter the six-digit code from the email." }, 400);
+  const used = await db
+    .update(schema.magicTokens)
+    .set({ usedAt: new Date() })
+    .where(and(eq(schema.magicTokens.tokenHash, await deleteHash(c.env, user.id, code)), eq(schema.magicTokens.email, user.email), isNull(schema.magicTokens.usedAt), gt(schema.magicTokens.expiresAt, new Date())))
+    .returning({ tokenHash: schema.magicTokens.tokenHash })
+    .get();
+  if (!used) return c.json({ error: "That code is wrong or has expired. Ask for a new one." }, 400);
   // Signed ones are kept (archived, contact details removed); everything else goes. Subqueries, not id lists: D1 caps variables at 100.
   const signed = db.select({ id: schema.acceptances.proposalId }).from(schema.acceptances);
   const keptRows = await db.select({ id: schema.proposals.id }).from(schema.proposals).where(and(eq(schema.proposals.userId, user.id), inArray(schema.proposals.id, signed))).all();

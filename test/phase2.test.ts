@@ -148,8 +148,12 @@ describe("account", () => {
     expect(a.status).toBe(200);
     const draftId = (await (await json("/api/proposals", "POST", { template: "blank" })).json()).id;
 
-    expect((await json("/api/account", "DELETE", { confirm: "nope" })).status).toBe(400);
-    const del = await json("/api/account", "DELETE", { confirm: "DELETE" });
+    expect((await json("/api/account", "DELETE", { code: "000000" })).status).toBe(400);
+    const before = logs.length;
+    expect((await json("/api/account/delete-code", "POST")).status).toBe(200);
+    const code = /Your code is (\d{6})/.exec(logs.slice(before).join("\n"))![1];
+    expect((await json("/api/account", "DELETE", { code: "123456" })).status).toBe(400);
+    const del = await json("/api/account", "DELETE", { code });
     expect(del.status).toBe(200);
     expect((await del.json()).keptSigned).toBe(1);
     expect((await (await req("/auth/me")).json()).user).toBeNull();

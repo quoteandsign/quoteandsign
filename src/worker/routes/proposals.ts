@@ -343,14 +343,15 @@ proposalRoutes.post("/:id/send", async (c) => {
   }
   const oneLine = (s: string) => s.replace(/[\r\n\t]+/g, " ").trim();
 
-  const sendBody = z.object({ message: z.string().trim().max(1000).optional() }).safeParse(await c.req.json().catch(() => ({})));
+  // email:false publishes the link (draft becomes sent) without emailing anyone: the sender shares it.
+  const sendBody = z.object({ message: z.string().trim().max(1000).optional(), email: z.boolean().optional() }).safeParse(await c.req.json().catch(() => ({})));
   const message = sendBody.success && sendBody.data.message ? sendBody.data.message.replace(/[^\S\n]+/g, " ").replace(/\n{3,}/g, "\n\n") : "";
   const now = new Date();
   const link = `${appUrl(c)}/p/${proposal.publicId}`;
   if (proposal.status === "draft" || proposal.status === "declined") {
     await db.update(schema.proposals).set({ status: "sent", sentAt: proposal.sentAt ?? now, declinedAt: null, declineReason: null, updatedAt: now }).where(eq(schema.proposals.id, proposal.id));
   }
-  const recipients = recipientsOf(proposal);
+  const recipients = sendBody.success && sendBody.data.email === false ? [] : recipientsOf(proposal);
   if (recipients.length) {
     const from = oneLine(proposal.senderName || businessName(user.brandName, user.name, user.email));
     const title = oneLine(proposal.title);

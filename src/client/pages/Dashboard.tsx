@@ -241,7 +241,7 @@ export function Dashboard() {
             )}
             <a href="/contact" className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[13.5px] font-medium text-stone-700 hover:bg-stone-900/[.05] dark:text-stone-300 dark:hover:bg-white/[.07]">Help</a>
             <Link href="/app/brand" className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[13.5px] font-medium text-stone-700 hover:bg-stone-900/[.05] dark:text-stone-300 dark:hover:bg-white/[.07]">
-              <UserCircle size={17} weight="light" /> Brand
+              <UserCircle size={17} weight="light" /> Settings
             </Link>
             <ThemeToggle />
             <Button variant="ghost" size="icon" aria-label="Sign out" title={`Sign out ${user?.email ?? ""}`} onClick={() => void logout()}>

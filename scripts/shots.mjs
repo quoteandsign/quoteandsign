@@ -38,6 +38,8 @@ for (const [label, viewport] of [["desktop", { width: 1440, height: 900 }], ["ph
 
   await shoot(ctx, `${label}-dashboard`, "/app", { wait: "main" });
   await shoot(ctx, `${label}-profile`, "/app/brand", { wait: "main", full: true });
+  await shoot(ctx, `${label}-plan`, "/app/brand#plan", { wait: "[data-test=plan]", full: true });
+  await shoot(ctx, `${label}-advanced`, "/app/brand#advanced", { wait: "[data-test=delete]", full: true });
   const created = await (await ctx.request.post(BASE + "/api/proposals", { data: { template: "web-project" } })).json();
   const href = `/app/p/${created.id}`;
   if (label === "desktop") {

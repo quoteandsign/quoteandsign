@@ -43,7 +43,7 @@ function Chip({ children, on }: { children: ReactNode; on?: boolean }) {
   );
 }
 
-export function PricingPanel({ items, currency, defaultTaxBps, onChange, onDefaultTax, readOnly }: { items: PricingLine[]; currency: string; defaultTaxBps: number; onChange: (items: PricingLine[]) => void; onDefaultTax?: (bps: number) => void; readOnly: boolean }) {
+export function PricingPanel({ items, currency, defaultTaxBps, taxLabel, onChange, onTax, readOnly }: { items: PricingLine[]; currency: string; defaultTaxBps: number; taxLabel: string; onChange: (items: PricingLine[]) => void; onTax: (bps: number, label: string) => void; readOnly: boolean }) {
   const [open, setOpen] = useState<string | null>(null);
   const justAdded = useRef<string | null>(null);
   const update = (id: string, patch: Partial<PricingLine>) => onChange(items.map((it) => (it.id === id ? { ...it, ...withValidRange(it, patch) } : it)));
@@ -114,7 +114,8 @@ export function PricingPanel({ items, currency, defaultTaxBps, onChange, onDefau
                     {billingOf(it.billing) !== "once" && <Chip on>{BILLING.find((b) => b.id === billingOf(it.billing))!.label}</Chip>}
                     {it.optional && <Chip on={it.selectedByDefault}>{it.selectedByDefault ? "Optional · on" : "Optional · off"}</Chip>}
                     {range && shownQty > 0 && <Chip>Client sets quantity</Chip>}
-                    {it.taxRateBps !== null && <Chip>{it.taxRateBps / 100}% tax on this line</Chip>}
+                    {it.taxRateBps === 0 && defaultTaxBps > 0 && <Chip>No tax</Chip>}
+                    {it.taxRateBps !== null && it.taxRateBps !== 0 && <Chip>{it.taxRateBps / 100}% tax on this line</Chip>}
                   </span>
                 </span>
                 <CaretDown size={16} weight="bold" className={cn("mt-1 shrink-0 text-stone-400 transition-transform duration-300 ease-[cubic-bezier(.32,.72,0,1)]", isOpen && "rotate-180")} />
@@ -128,26 +129,14 @@ export function PricingPanel({ items, currency, defaultTaxBps, onChange, onDefau
                   <Field label="Description" htmlFor={`d-${it.id}`}>
                     <Textarea id={`d-${it.id}`} name="itemDescription" maxLength={1000} value={it.description ?? ""} disabled={readOnly} onChange={(e) => update(it.id, { description: e.target.value })} placeholder="What is included" className="min-h-[56px]" />
                   </Field>
-                  <div className="grid grid-cols-3 gap-2.5">
+                  <div className="grid grid-cols-2 gap-2.5">
                     <Field label={`Price (${currency})`} htmlFor={`p-${it.id}`}>
                       <NumberField id={`p-${it.id}`} value={it.unitAmount} disabled={readOnly} max={MAX_UNIT_AMOUNT} onChange={(v) => update(it.id, { unitAmount: v ?? 0 })} />
                     </Field>
                     <Field label="Qty" htmlFor={`q-${it.id}`}>
                       <Input id={`q-${it.id}`} name="itemQuantity" inputMode="numeric" pattern="[0-9]*" disabled={readOnly} className="text-right tabular-nums" value={it.quantity} onChange={(e) => { const n = parseInt(e.target.value.replace(/[^0-9]/g, ""), 10); update(it.id, { quantity: Math.min(MAX_QUANTITY, Number.isFinite(n) ? n : 0) }); }} />
                     </Field>
-                    <Field label="Tax %" htmlFor={`t-${it.id}`}>
-                      <NumberField id={`t-${it.id}`} value={it.taxRateBps} disabled={readOnly} max={10_000} allowEmpty placeholder={`${defaultTaxBps / 100}`} onChange={(v) => {
-                        // The first rate typed anywhere becomes the proposal rate for every line; this line stays on "default".
-                        if (v !== null && v > 0 && defaultTaxBps === 0 && onDefaultTax) { onDefaultTax(v); update(it.id, { taxRateBps: null }); }
-                        else update(it.id, { taxRateBps: v });
-                      }} />
-                    </Field>
                   </div>
-                  <p className="-mt-1 text-[12px] text-stone-500">
-                    {defaultTaxBps > 0
-                      ? `Tax left empty means the proposal rate, ${defaultTaxBps / 100}%. Type a rate here only if this line is different.`
-                      : "No tax yet. Type a rate here and it applies to every line; you can still change one line afterwards."}
-                  </p>
                   <div className="grid gap-2.5">
                     <Field label="Billed" htmlFor={`b-${it.id}`}>
                       <div id={`b-${it.id}`} role="radiogroup" aria-label="Billing" className="grid h-11 grid-cols-4 gap-0.5 rounded-xl bg-stone-900/[.06] p-0.5 dark:bg-white/[.08]">
@@ -169,6 +158,7 @@ export function PricingPanel({ items, currency, defaultTaxBps, onChange, onDefau
                     Reads as <span className="font-medium text-stone-700 dark:text-stone-300">{priceLabel(it.unitAmount, currency, it.unit, it.billing)}</span>{billingOf(it.billing) !== "once" ? ". Recurring lines get their own total under the one-time total." : "."}
                   </p>
                   <div className="grid gap-2.5 rounded-xl bg-stone-900/[.03] p-3 dark:bg-white/[.04]">
+                    <Switch disabled={readOnly} checked={it.taxRateBps !== 0} label={defaultTaxBps > 0 ? `Taxable, ${defaultTaxBps / 100}% ${taxLabel || "tax"}` : "Taxable, once a tax rate is set"} onChange={(v) => update(it.id, { taxRateBps: v ? null : 0 })} />
                     <Switch disabled={readOnly} checked={it.optional} label="Client can leave this out" onChange={(v) => update(it.id, { optional: v, selectedByDefault: v ? it.selectedByDefault : true })} />
                     {it.optional && <Switch disabled={readOnly} checked={it.selectedByDefault} label="Included unless they switch it off" onChange={(v) => update(it.id, { selectedByDefault: v })} />}
                     <Switch
@@ -224,9 +214,23 @@ export function PricingPanel({ items, currency, defaultTaxBps, onChange, onDefau
         )}
       </div>
 
-      {items.length > 0 && totals.hasTax && (
-        <div className="px-1 text-[12px] text-stone-500 tabular-nums">
-          Subtotal {formatMoney(totals.subtotal, currency)}, tax {formatMoney(totals.tax, currency)}. The default rate lives under Options. Leave a line's tax box empty to use it.
+      {items.length > 0 && (
+        <div className="rounded-2xl bg-white px-4 py-3 ring-1 ring-stone-900/[.07] dark:bg-stone-900 dark:ring-white/[.08]" data-test="tax-row">
+          <div className="flex items-center justify-between gap-3">
+            <label htmlFor="pricing-tax-rate" className="text-[13.5px] font-medium">Tax</label>
+            <div className="flex items-center gap-2">
+              <span className="flex w-24 items-center gap-1.5">
+                <NumberField id="pricing-tax-rate" value={defaultTaxBps === 0 ? null : defaultTaxBps} allowEmpty placeholder="0" max={10_000} decimals={2} disabled={readOnly} onChange={(v) => onTax(v ?? 0, taxLabel)} />
+                <span className="text-[13px] text-stone-500">%</span>
+              </span>
+              <Input id="pricing-tax-label" aria-label="Tax name" value={taxLabel} disabled={readOnly} maxLength={40} placeholder="HST, VAT…" onChange={(e) => onTax(defaultTaxBps, e.target.value)} className="h-11 w-28" />
+            </div>
+          </div>
+          <p className="mt-1.5 text-[12px] text-stone-500 tabular-nums">
+            {totals.hasTax
+              ? `Applies to every taxable line. Subtotal ${formatMoney(totals.subtotal, currency)}, tax ${formatMoney(totals.tax, currency)}.`
+              : "One rate for the whole proposal. Switch a line to not taxable if it is exempt."}
+          </p>
         </div>
       )}
     </div>

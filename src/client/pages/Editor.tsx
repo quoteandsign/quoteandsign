@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BlockNoteView } from "@blocknote/shadcn";
 import { FormattingToolbar, FormattingToolbarController, SideMenuController, SuggestionMenuController, blockTypeSelectItems, useCreateBlockNote } from "@blocknote/react";
-import { ArrowLeft, PaperPlaneTilt, Eye, Check, LinkSimple, X, Plus, DeviceMobile } from "@phosphor-icons/react";
+import { ArrowLeft, PaperPlaneTilt, Eye, Check, LinkSimple, X, Plus, DeviceMobile, Globe } from "@phosphor-icons/react";
 import { api, ApiError } from "../lib/api";
 import { Link, useRouter } from "../lib/router";
 import { useTheme, ThemeToggle } from "../lib/theme";
@@ -287,27 +287,31 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
   };
   const [sendBusy, setSendBusy] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
-  const [link, setLink] = useState<string | null>(status !== "draft" ? `${location.origin}/p/${proposal.publicId}` : null);
+  const link = `${location.origin}/p/${proposal.publicId}`;
+  const live = status !== "draft";
   const [copied, setCopied] = useState(false);
   const [message, setMessage] = useState("");
-  const send = async () => {
+  // email=false publishes the link without emailing anyone.
+  const send = async (email = true) => {
     setSendBusy(true);
     setSendError(null);
     try {
       flushAll();
       const ok = (await save({ content: editor.document, title: title || "Untitled proposal", ...detailsPatch(latest.current.details) })) && (await putItems(latest.current.items));
       if (!ok) throw new Error(lastError.current ?? "Could not save.");
-      const r = await api<{ link: string }>(`/api/proposals/${proposal.id}/send`, { method: "POST", json: { message: message.trim() || undefined } });
-      setLink(r.link);
-      if (status === "draft") setStatus("sent");
+      const r = await api<{ link: string; emailed: number }>(`/api/proposals/${proposal.id}/send`, { method: "POST", json: { message: message.trim() || undefined, email } });
+      if (status === "draft" || status === "declined") setStatus("sent");
+      setSendOpen(false);
+      setNotice(r.emailed ? `Sent to ${r.emailed === 1 ? recipients[0] : `${r.emailed} people`}.` : "The link is live. Share it however you like.");
+      setTimeout(() => setNotice(null), 5000);
     } catch (e) {
       setSendError((e as Error).message);
     } finally {
       setSendBusy(false);
     }
   };
+  const recipients = [details.clientEmail, ...details.ccEmails].map((e) => e.trim()).filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
   const copy = async () => {
-    if (!link) return;
     await navigator.clipboard.writeText(link);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
@@ -440,6 +444,59 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
 
           <aside className="px-4 pb-24 pt-4 lg:sticky lg:top-14 lg:h-[calc(100dvh-3.5rem)] lg:overflow-y-auto lg:pl-2 lg:pr-5" aria-label="Proposal settings">
             <div className="grid gap-4">
+              <section className="min-w-0 rounded-[1.25rem] bg-white p-4 shadow-[0_1px_1px_rgba(25,24,22,.04),0_12px_32px_-20px_rgba(25,24,22,.35)] ring-1 ring-inset ring-stone-900/[.035] dark:bg-stone-900 dark:shadow-none dark:ring-white/[.08]" data-test="send-card">
+                <h3 className="mb-3 text-[13px] font-semibold text-graphite dark:text-stone-400">Send to</h3>
+                <div className="grid gap-3">
+                  <Field label="Client" htmlFor="clientName">
+                    <Input id="clientName" maxLength={200} value={details.clientName} disabled={readOnly} onChange={(e) => onDetails({ ...details, clientName: e.target.value })} placeholder="Acme Bakery" />
+                  </Field>
+                  <Field label="Their email" htmlFor="clientEmail">
+                    <div className="grid gap-2">
+                      <Input id="clientEmail" type="email" inputMode="email" spellCheck={false} maxLength={254} value={details.clientEmail} disabled={readOnly} onChange={(e) => onDetails({ ...details, clientEmail: e.target.value })} placeholder="owner@acmebakery.com" />
+                      {details.ccEmails.map((e, i) => (
+                        <div key={i} className="flex gap-1.5">
+                          <Input aria-label={`Recipient ${i + 2}`} type="email" inputMode="email" spellCheck={false} maxLength={254} value={e} disabled={readOnly} autoFocus={e === ""} placeholder="another@acmebakery.com" onChange={(ev) => onDetails({ ...details, ccEmails: details.ccEmails.map((x, k) => (k === i ? ev.target.value : x)) })} />
+                          {!readOnly && (
+                            <Button variant="ghost" size="icon" aria-label="Remove recipient" onClick={() => onDetails({ ...details, ccEmails: details.ccEmails.filter((_, k) => k !== i) })}>
+                              <X size={16} weight="light" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                      {!readOnly && details.ccEmails.length < 10 && (
+                        <button type="button" onClick={() => onDetails({ ...details, ccEmails: [...details.ccEmails, ""] })} className="inline-flex w-fit items-center gap-1 rounded-full px-2 py-1 text-[13px] font-medium text-brand hover:bg-brand/[.08] dark:text-indigo-300">
+                          <Plus size={14} weight="bold" /> Add another recipient
+                        </button>
+                      )}
+                    </div>
+                  </Field>
+                  {!readOnly && (
+                    <Button size="lg" className="mt-1 w-full" onClick={() => { setSendError(null); setSendOpen(true); }} data-test="send-button">
+                      <PaperPlaneTilt size={16} weight="light" /> {status === "draft" ? "Send" : "Send again"}
+                    </Button>
+                  )}
+                  {/* The client link, always here: copy it from the panel without opening anything. */}
+                  <div className="min-w-0 overflow-hidden rounded-xl bg-stone-900/[.04] p-1.5 pl-3 dark:bg-white/[.06]" data-test="link-row">
+                    <div className="flex items-center gap-2">
+                      <Globe size={15} weight="light" className="flex-none text-stone-500" />
+                      <span className="min-w-0 flex-1 truncate font-mono text-[12.5px] text-stone-700 dark:text-stone-300" title={link}>{link.replace(/^https?:\/\//, "")}</span>
+                      {live || readOnly ? (
+                        <Button size="sm" variant="secondary" onClick={() => void copy()} aria-label="Copy link" className="bg-white dark:bg-stone-800" data-test="copy-link">
+                          {copied ? <Check size={14} weight="bold" /> : <LinkSimple size={14} weight="light" />} {copied ? "Copied" : "Copy"}
+                        </Button>
+                      ) : (
+                        <Button size="sm" variant="secondary" disabled={sendBusy} onClick={() => void send(false).then(() => copy())} className="bg-white dark:bg-stone-800" data-test="publish-link">
+                          <LinkSimple size={14} weight="light" /> {sendBusy ? "…" : "Publish and copy"}
+                        </Button>
+                      )}
+                    </div>
+                    <p className="px-0.5 pb-1 pt-1.5 text-[12px] text-stone-500">
+                      {live ? "Live. Anyone with the link can read it." : "Not live yet. Send it by email, or publish the link and share it yourself."}
+                    </p>
+                  </div>
+                </div>
+              </section>
+
               <div role="tablist" aria-label="Proposal settings" className="grid grid-cols-2 gap-1 rounded-full bg-stone-900/[.06] p-1 dark:bg-white/[.08]">
                 {(["pricing", "options"] as const).map((t) => (
                   <button
@@ -463,7 +520,7 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
 
               {tab === "pricing" && (
                 <section id="pricing-panel" role="tabpanel" aria-labelledby="tab-pricing" className="rounded-[1.25rem] bg-white p-4 shadow-[0_1px_1px_rgba(25,24,22,.04),0_12px_32px_-20px_rgba(25,24,22,.35)] ring-1 ring-inset ring-stone-900/[.035] dark:bg-stone-900 dark:shadow-none dark:ring-white/[.08]">
-                  <PricingPanel items={items} currency={details.currency} defaultTaxBps={details.taxRateBps} onChange={onItems} onDefaultTax={(bps) => onDetails({ ...details, taxRateBps: bps })} readOnly={readOnly} />
+                  <PricingPanel items={items} currency={details.currency} defaultTaxBps={details.taxRateBps} taxLabel={details.taxLabel} onChange={onItems} onTax={(bps, label) => onDetails({ ...details, taxRateBps: bps, taxLabel: label })} readOnly={readOnly} />
                 </section>
               )}
 
@@ -484,53 +541,6 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
                 brandPaymentUrl={user?.paymentUrl ?? null}
                 caps={user?.caps ?? { brand: true, protect: true, payment: true, countersign: false }}
               /></section>}
-
-              <section className="rounded-[1.25rem] bg-white p-4 shadow-[0_1px_1px_rgba(25,24,22,.04),0_12px_32px_-20px_rgba(25,24,22,.35)] ring-1 ring-inset ring-stone-900/[.035] dark:bg-stone-900 dark:shadow-none dark:ring-white/[.08]" data-test="send-card">
-                <h3 className="mb-3 text-[13px] font-semibold text-graphite dark:text-stone-400">Send to</h3>
-                <div className="grid gap-3">
-                  <Field label="Client" htmlFor="clientName">
-                    <Input id="clientName" maxLength={200} value={details.clientName} disabled={readOnly} onChange={(e) => onDetails({ ...details, clientName: e.target.value })} placeholder="Acme Bakery" />
-                  </Field>
-                  <Field label="Their email" htmlFor="clientEmail" hint="Optional. Without it you get a link to share yourself.">
-                    <div className="grid gap-2">
-                      <Input id="clientEmail" type="email" inputMode="email" spellCheck={false} maxLength={254} value={details.clientEmail} disabled={readOnly} onChange={(e) => onDetails({ ...details, clientEmail: e.target.value })} placeholder="owner@acmebakery.com" />
-                      {details.ccEmails.map((e, i) => (
-                        <div key={i} className="flex gap-1.5">
-                          <Input aria-label={`Recipient ${i + 2}`} type="email" inputMode="email" spellCheck={false} maxLength={254} value={e} disabled={readOnly} autoFocus={e === ""} placeholder="another@acmebakery.com" onChange={(ev) => onDetails({ ...details, ccEmails: details.ccEmails.map((x, k) => (k === i ? ev.target.value : x)) })} />
-                          {!readOnly && (
-                            <Button variant="ghost" size="icon" aria-label="Remove recipient" onClick={() => onDetails({ ...details, ccEmails: details.ccEmails.filter((_, k) => k !== i) })}>
-                              <X size={16} weight="light" />
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-                      {!readOnly && details.ccEmails.length < 10 && (
-                        <button type="button" onClick={() => onDetails({ ...details, ccEmails: [...details.ccEmails, ""] })} className="inline-flex w-fit items-center gap-1 rounded-full px-2 py-1 text-[13px] font-medium text-brand hover:bg-brand/[.08] dark:text-indigo-300">
-                          <Plus size={14} weight="bold" /> Add another recipient
-                        </button>
-                      )}
-                    </div>
-                  </Field>
-                  {!readOnly && (
-                    <div className="mt-1 flex gap-2">
-                      <Button size="lg" className="flex-1" onClick={() => { setSendError(null); setSendOpen(true); }} data-test="send-button">
-                        <PaperPlaneTilt size={16} weight="light" /> {status === "draft" ? "Send" : "Send again"}
-                      </Button>
-                      {link && (
-                        <Button size="lg" variant="secondary" onClick={() => void copy()} aria-label="Copy link" title="Copy the client link">
-                          {copied ? <Check size={16} weight="bold" /> : <LinkSimple size={16} weight="light" />} {copied ? "Copied" : "Copy link"}
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                  {readOnly && link && (
-                    <Button size="lg" variant="secondary" onClick={() => void copy()}>
-                      {copied ? <Check size={16} weight="bold" /> : <LinkSimple size={16} weight="light" />} {copied ? "Copied" : "Copy link"}
-                    </Button>
-                  )}
-                </div>
-              </section>
-
 
               {questions.length > 0 && (
                 <section className="rounded-2xl bg-amber-500/[.08] p-4 ring-1 ring-inset ring-amber-500/20" aria-label="Questions from your client">
@@ -580,39 +590,53 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
         )}
         {sendOpen && (
           <div role="dialog" aria-modal="true" aria-label="Send proposal" className="fixed inset-0 z-30 grid place-items-end bg-stone-950/40 backdrop-blur-sm sm:place-items-center" onClick={() => setSendOpen(false)}>
-            <div className="w-full rounded-t-2xl bg-white p-6 text-stone-900 shadow-2xl sm:w-[440px] sm:rounded-2xl dark:bg-stone-900 dark:text-stone-50" onClick={(e) => e.stopPropagation()}>
+            <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl bg-white p-6 text-stone-900 shadow-2xl sm:w-[460px] sm:rounded-2xl dark:bg-stone-900 dark:text-stone-50" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-start justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold tracking-tight">{link && status !== "draft" ? "Ready to share" : "Send proposal"}</h2>
+                  <h2 className="text-lg font-semibold tracking-tight">{live ? "Send again" : "Send proposal"}</h2>
                   <p className="mt-1 text-sm text-stone-500">
-                    {link && status !== "draft"
-                      ? details.clientEmail ? `Emailed to ${details.clientEmail}. You can also share the link directly.` : "Share this link with your client."
-                      : details.clientEmail ? `We email the link to ${details.clientEmail} and mark this proposal as sent.` : "Add their email and we send it, or get a link and share it yourself."}
+                    {recipients.length
+                      ? `We email the link to ${recipients.length === 1 ? recipients[0] : recipients.length === 2 ? recipients.join(" and ") : `${recipients.length} people`}${live ? "." : " and mark this proposal as sent."}`
+                      : "Add an email and we send it, or publish the link and share it yourself."}
                   </p>
                 </div>
                 <Button variant="ghost" size="icon" aria-label="Close" onClick={() => setSendOpen(false)}>
                   <X size={18} weight="light" />
                 </Button>
               </div>
-              {link && status !== "draft" ? (
-                <div className="mt-5 flex gap-2">
-                  <Input readOnly value={link} onFocus={(e) => e.currentTarget.select()} className="font-mono text-[13px]" />
-                  <Button variant="secondary" onClick={() => void copy()}>{copied ? <Check size={16} weight="bold" /> : <LinkSimple size={16} weight="light" />} {copied ? "Copied" : "Copy"}</Button>
-                </div>
-              ) : (
-                <div className="mt-5 grid gap-3">
-                  <Field label="Their email" htmlFor="sendEmail" hint="Leave it blank to get a link you share yourself.">
+              <div className="mt-5 grid gap-3">
+                <Field label={details.ccEmails.length ? "Recipients" : "Their email"} htmlFor="sendEmail">
+                  <div className="grid gap-2">
                     <Input id="sendEmail" type="email" inputMode="email" spellCheck={false} maxLength={254} value={details.clientEmail} autoFocus={!details.clientEmail} onChange={(e) => onDetails({ ...details, clientEmail: e.target.value })} placeholder="owner@acmebakery.com" />
+                    {details.ccEmails.map((e, i) => (
+                      <div key={i} className="flex gap-1.5">
+                        <Input aria-label={`Recipient ${i + 2}`} type="email" inputMode="email" spellCheck={false} maxLength={254} value={e} placeholder="another@acmebakery.com" onChange={(ev) => onDetails({ ...details, ccEmails: details.ccEmails.map((x, k) => (k === i ? ev.target.value : x)) })} />
+                        <Button variant="ghost" size="icon" aria-label="Remove recipient" onClick={() => onDetails({ ...details, ccEmails: details.ccEmails.filter((_, k) => k !== i) })}>
+                          <X size={16} weight="light" />
+                        </Button>
+                      </div>
+                    ))}
+                    {details.ccEmails.length < 10 && (
+                      <button type="button" onClick={() => onDetails({ ...details, ccEmails: [...details.ccEmails, ""] })} className="inline-flex w-fit items-center gap-1 rounded-full px-2 py-1 text-[13px] font-medium text-brand hover:bg-brand/[.08] dark:text-indigo-300">
+                        <Plus size={14} weight="bold" /> Add another recipient
+                      </button>
+                    )}
+                  </div>
+                </Field>
+                {recipients.length > 0 && (
+                  <Field label="A note in the email" htmlFor="sendMessage" hint="Optional. Goes above the link, in your words.">
+                    <textarea id="sendMessage" value={message} maxLength={1000} rows={3} onChange={(e) => setMessage(e.target.value)} placeholder={`Hi ${details.clientName || "there"}, here is the proposal we talked about. Happy to answer anything.`} className="w-full resize-none rounded-xl border border-hairline bg-transparent px-3 py-2 text-[14px] outline-none placeholder:text-stone-400 focus:border-brand/60 focus:ring-2 focus:ring-brand/20 dark:border-white/15" />
                   </Field>
-                  {details.clientEmail && (
-                    <Field label="A note in the email" htmlFor="sendMessage" hint="Optional. Goes above the link, in your words.">
-                      <textarea id="sendMessage" value={message} maxLength={1000} rows={3} onChange={(e) => setMessage(e.target.value)} placeholder={`Hi ${details.clientName || "there"}, here is the proposal we talked about. Happy to answer anything.`} className="w-full resize-none rounded-xl border border-hairline bg-transparent px-3 py-2 text-[14px] outline-none placeholder:text-stone-400 focus:border-brand/60 focus:ring-2 focus:ring-brand/20 dark:border-white/15" />
-                    </Field>
-                  )}
-                  {sendError && <p className="rounded-xl bg-red-600/10 p-3 text-sm text-red-800 dark:text-red-300">{sendError}</p>}
-                  <Button size="lg" disabled={sendBusy} onClick={() => void send()}>{sendBusy ? "Sending…" : details.clientEmail ? "Send" : "Get link"}</Button>
+                )}
+                {sendError && <p className="rounded-xl bg-red-600/10 p-3 text-sm text-red-800 dark:text-red-300">{sendError}</p>}
+                <Button size="lg" disabled={sendBusy} onClick={() => void send(recipients.length > 0)} data-test="send-confirm">
+                  {sendBusy ? "Sending…" : recipients.length ? (live ? "Send again" : "Send") : live ? "Done" : "Publish the link"}
+                </Button>
+                <div className="flex min-w-0 items-center gap-2 overflow-hidden rounded-xl bg-stone-900/[.04] p-1.5 pl-3 dark:bg-white/[.06]">
+                  <span className="min-w-0 flex-1 truncate font-mono text-[12px] text-stone-600 dark:text-stone-300" title={link}>{link.replace(/^https?:\/\//, "")}</span>
+                  <Button size="sm" variant="secondary" onClick={() => void copy()} className="bg-white dark:bg-stone-800">{copied ? <Check size={14} weight="bold" /> : <LinkSimple size={14} weight="light" />} {copied ? "Copied" : "Copy"}</Button>
                 </div>
-              )}
+              </div>
             </div>
           </div>
         )}
