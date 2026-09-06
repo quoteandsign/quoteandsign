@@ -21,7 +21,7 @@ nav.main{display:flex;align-items:center;justify-content:space-between;height:76
 nav.main .links{display:flex;gap:28px;align-items:center;font-size:15px}
 nav.main .links a{color:var(--fg);text-decoration:none}
 nav.main .links a.cta{background:var(--fg);color:var(--bg);padding:10px 18px;border-radius:999px;font-weight:600}
-.brand.home{text-decoration:none;color:inherit;font-size:17px}
+.brand.home{text-decoration:none;color:var(--accent);font-size:17px}
 @media(max-width:600px){nav.main .links a.sm-hide{display:none}nav.main .links{gap:16px}}
 
 .hero{display:grid;gap:40px;padding:24px 0 56px;align-items:center;overflow:visible}
