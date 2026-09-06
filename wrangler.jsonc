@@ -28,6 +28,11 @@
     "APP_URL": "https://quoteandsign.com",
     "ENVIRONMENT": "production",
     "EMAIL_FROM": "Quote and Sign <noreply@quoteandsign.com>",
-    "TURNSTILE_SITE_KEY": "0x4AAAAAAEpvqKEqyfNcFF65"
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAEpvqKEqyfNcFF65",
+    "POLAR_SERVER": "production",
+    "POLAR_PRODUCT_PRO": "09c9f272-be4b-44dc-88d4-76bea4082db5",
+    "POLAR_PRODUCT_PRO_YEAR": "a24a854f-2966-4359-90b9-c5918dd94ee0",
+    "POLAR_PRODUCT_BUSINESS": "e631dbbf-6ab1-416c-8a33-35d8fa71ebd3",
+    "POLAR_PRODUCT_BUSINESS_YEAR": "1a6ff8b6-9ce9-4e93-966c-edae7a07ea92"
   }
 }
