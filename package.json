@@ -20,7 +20,7 @@
     "deploy": "npm run build && wrangler deploy",
     "audit": "npm audit --audit-level=moderate",
     "dev:lan": "vite dev --host",
-    "db:seed:local": "wrangler d1 execute quoteandsign --local --file ./drizzle/seed.dev.sql",
+    "db:seed:local": "wrangler d1 execute quoteandsign --local --file ./scripts/seed.dev.sql",
     "types": "wrangler types",
     "e2e": "node scripts/e2e.mjs",
     "shots": "node scripts/shots.mjs .shots"
