@@ -34,6 +34,7 @@
     "APP_URL": "https://quoteandsign.com",
     "ENVIRONMENT": "production",
     "EMAIL_FROM": "Quote and Sign <noreply@quoteandsign.com>",
+    // ADMIN_EMAILS and SUPPORT_EMAIL are secrets (wrangler secret put), not published here.
     "TURNSTILE_SITE_KEY": "0x4AAAAAAEpvqKEqyfNcFF65",
     "POLAR_SERVER": "production",
     "POLAR_PRODUCT_PRO": "09c9f272-be4b-44dc-88d4-76bea4082db5",

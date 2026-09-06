@@ -47,6 +47,8 @@ function SectionTitle({ children, tag, hint }: { children: React.ReactNode; tag?
 export function Profile() {
   const { user, refresh } = useAuth();
   const [tab, setTab] = useState<Tab>(tabFromHash);
+  // Arriving by an in-app link ("See plans") mounts this page with the hash already set; follow it.
+  useEffect(() => { setTab(tabFromHash()); }, [location.hash]);
   const [name, setName] = useState(businessName(user?.brandName, user?.name));
   const [color, setColour] = useState(user?.brandColor ?? "#2b3f8c");
   const [hex, setHex] = useState(user?.brandColor ?? "#2b3f8c");

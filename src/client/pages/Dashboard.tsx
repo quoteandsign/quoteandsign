@@ -267,7 +267,7 @@ export function Dashboard() {
           <div>
             <h1 className="text-[40px] font-[650] leading-none tracking-[-0.035em] sm:text-[48px]">Proposals</h1>
             {user?.workspace && <p className="mt-2 text-[13.5px] text-stone-500">Working in {user.workspace.ownerName}&apos;s team</p>}
-            {!user?.workspace && user?.trial && <p className="mt-2 text-[13.5px] text-stone-500">Pro trial, {user.trialDaysLeft} {user.trialDaysLeft === 1 ? "day" : "days"} left. <Link href="/app/brand" className="font-medium text-brand underline underline-offset-4 dark:text-indigo-300">See plans</Link></p>}
+            {!user?.workspace && user?.trial && <p className="mt-2 text-[13.5px] text-stone-500">Pro trial, {user.trialDaysLeft} {user.trialDaysLeft === 1 ? "day" : "days"} left. <Link href="/app/brand#plan" className="font-medium text-brand underline underline-offset-4 dark:text-indigo-300">See plans</Link></p>}
             {!user?.workspace && user?.plan === "free" && rows && rows.length > 0 && <p className="mt-2 text-[13.5px] text-stone-500">{Math.max(0, 3 - live)} of 3 live proposals left on Free</p>}
           </div>
           <Button onClick={() => navigate("/app/templates")} aria-label="New proposal">

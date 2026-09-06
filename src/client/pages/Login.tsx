@@ -70,6 +70,12 @@ export function Login() {
   }, [siteKey, sent]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(ERRORS[search.get("error") ?? ""] ?? null);
+  // A plan picked on the homepage: keep it through the email round-trip, then land on the Plan tab.
+  const wantedPlan = search.get("plan") === "pro" ? "Pro" : search.get("plan") === "business" ? "Business" : null;
+  useEffect(() => {
+    if (!wantedPlan) return;
+    try { localStorage.setItem("qs-after-login", "/app/brand#plan"); } catch { /* private mode */ }
+  }, [wantedPlan]);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -158,8 +164,8 @@ export function Login() {
               ) : (
                 <form onSubmit={submit} className="grid gap-6">
                   <div>
-                    <h2 className="text-[24px] font-[650] tracking-[-0.02em]">Sign in</h2>
-                    <p className="mt-1.5 text-[15px] text-graphite dark:text-stone-400">No password. We email you a link.</p>
+                    <h2 className="text-[24px] font-[650] tracking-[-0.02em]">{wantedPlan ? `Start with ${wantedPlan}` : "Sign in"}</h2>
+                    <p className="mt-1.5 text-[15px] text-graphite dark:text-stone-400">{wantedPlan ? `No password. We email you a link, and the ${wantedPlan} plan is one click away once you are in.` : "No password. We email you a link."}</p>
                   </div>
                   <Field label="Email" htmlFor="email" error={error}>
                     <Input

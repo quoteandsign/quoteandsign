@@ -23,7 +23,13 @@ function Routes() {
   useEffect(() => {
     if (loading) return;
     if (isApp && !user) navigate("/login", { replace: true });
-    if ((path === "/login" || path === "/") && user) navigate("/app", { replace: true });
+    if ((path === "/login" || path === "/" || path === "/app") && user) {
+      // Somewhere they meant to go before signing in (a plan picked on the homepage).
+      let after: string | null = null;
+      try { after = localStorage.getItem("qs-after-login"); localStorage.removeItem("qs-after-login"); } catch { /* private mode */ }
+      if (after && after.startsWith("/app")) { navigate(after, { replace: true }); return; }
+      if (path !== "/app") navigate("/app", { replace: true });
+    }
     if (path === "/" && !user) navigate("/login", { replace: true });
   }, [loading, user, path, isApp, navigate]);
 

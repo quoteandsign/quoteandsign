@@ -105,6 +105,23 @@ try {
   ok("the export is one JSON file with the profile in it", exp.status() === 200 && (await exp.json()).profile.email === "e2e@example.com");
   await page.goto(BASE + "/app", { waitUntil: "networkidle" });
   ok("the setup step goes away once the profile has a name", (await page.locator("[data-test=setup-step]").count()) === 0);
+  // "See plans" lands on the Plan tab, not the Brand tab; a plan picked on the homepage survives sign-in.
+  await page.getByRole("link", { name: "See plans" }).click();
+  await page.waitForTimeout(400);
+  ok("See plans opens the Plan tab", (await page.getByRole("tab", { name: "Plan" }).getAttribute("aria-selected")) === "true" && (await page.locator("[data-test=plan-cards]").count()) === 1);
+  // Signed out, with a plan picked on the homepage.
+  const fresh = await browser.newContext();
+  const fp = await fresh.newPage();
+  await fp.goto(BASE + "/login?plan=pro", { waitUntil: "load" });
+  await fp.waitForSelector("#email", { timeout: 15000 });
+  ok("the sign-in page carries the chosen plan", (await fp.getByRole("heading", { name: "Start with Pro" }).count()) === 1);
+  ok("the chosen plan is remembered for after sign-in", (await fp.evaluate(() => localStorage.getItem("qs-after-login"))) === "/app/brand#plan");
+  await fresh.close();
+  await page.evaluate(() => localStorage.setItem("qs-after-login", "/app/brand#plan"));
+  await page.goto(BASE + "/app", { waitUntil: "networkidle" });
+  await page.waitForTimeout(500);
+  ok("a signed-in person with a remembered plan lands on the Plan tab once", page.url().includes("/app/brand") && (await page.getByRole("tab", { name: "Plan" }).getAttribute("aria-selected")) === "true" && (await page.evaluate(() => localStorage.getItem("qs-after-login"))) === null);
+  await page.goto(BASE + "/app", { waitUntil: "networkidle" });
 
   // ---- New proposal: pick a template, land in the editor -------------------------------
   await page.goto(BASE + "/app", { waitUntil: "networkidle" });
