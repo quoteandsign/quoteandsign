@@ -170,7 +170,7 @@ export function Wordmark({ className, href = "/" }: { className?: string; href?:
   const inner = (
     <>
       <span className="h-2.5 w-2.5 rounded-full bg-brand" aria-hidden="true" />
-      Quote and Sign
+      <span>Quote <span className="font-light">and</span> Sign</span>
     </>
   );
   const cls = cn("inline-flex items-center gap-2 whitespace-nowrap font-semibold tracking-tight text-ink dark:text-stone-50", className);

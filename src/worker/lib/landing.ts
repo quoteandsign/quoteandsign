@@ -14,6 +14,7 @@ const DEMO_ITEMS = [
 
 const LANDING_CSS = `
 html,body{overflow-x:hidden}
+.brand .and,.foot-brand .and{font-weight:300}
 .site{max-width:1160px;margin:0 auto;padding:0 24px}
 nav.main{display:flex;align-items:center;justify-content:space-between;height:76px}
 nav.main .links{display:flex;gap:28px;align-items:center;font-size:15px}
@@ -234,7 +235,7 @@ export function renderLanding(o: { nonce: string; appUrl: string; githubUrl: str
 <body>
 <div class="site">
 <nav class="main" aria-label="Main">
-  <a href="/" class="brand home"><span class="dot" aria-hidden="true"></span><span>Quote and Sign</span></a>
+  <a href="/" class="brand home"><span class="dot" aria-hidden="true"></span><span>Quote <span class="and">and</span> Sign</span></a>
   <div class="links">
     <a href="#plans" class="sm-hide">Pricing</a>
     <a href="${esc(o.githubUrl)}" rel="noopener" class="sm-hide">GitHub</a>
@@ -385,7 +386,7 @@ export function renderLanding(o: { nonce: string; appUrl: string; githubUrl: str
 </section>
 
 <footer class="site-foot">
-  <span class="foot-brand"><i aria-hidden="true"></i>Quote and Sign</span>
+  <span class="foot-brand"><i aria-hidden="true"></i>Quote <span class="and">and</span> Sign</span>
   <nav aria-label="Product"><a href="/login">Sign in</a><a href="${esc(o.githubUrl)}" rel="noopener">GitHub</a><a href="/contact">Contact</a></nav>
   <nav aria-label="Legal"><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/acceptable-use">Acceptable use</a><a href="/dpa">DPA</a></nav>
   <p class="foot-licence">Open-source software released under the AGPL-3.0 licence.</p>

@@ -26,7 +26,7 @@ h1{font-size:84px;line-height:1.02;letter-spacing:-.045em;font-weight:650;margin
 h1 span{color:#2b3f8c}
 p{font-size:28px;color:#5f5b55;margin:0}
 .halo{position:absolute;right:-160px;top:-160px;width:640px;height:640px;border-radius:50%;background:radial-gradient(circle,rgba(43,63,140,.16),transparent 62%)}
-</style></head><body><div class="halo"></div><div class="wrap"><div class="brand"><i></i>Quote and Sign</div><h1>Proposals your clients accept <span>on their phone.</span></h1><p>Open-source proposal software. Flat pricing, no per-document fees.</p></div></body></html>`);
+</style></head><body><div class="halo"></div><div class="wrap"><div class="brand"><i></i>Quote <span style="font-weight:300">and</span> Sign</div><h1>Proposals your clients accept <span>on their phone.</span></h1><p>Open-source proposal software. Flat pricing, no per-document fees.</p></div></body></html>`);
 await og.waitForTimeout(300);
 await og.screenshot({ path: out("og.png") });
 await browser.close();
