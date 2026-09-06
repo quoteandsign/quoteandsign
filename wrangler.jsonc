@@ -8,6 +8,11 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/", "/api/*", "/p/*", "/t/*", "/auth/*", "/files/*", "/billing/*", "/terms", "/privacy", "/acceptable-use", "/dpa", "/contact"]
   },
+  "workers_dev": false,
+  "routes": [
+    { "pattern": "quoteandsign.com", "custom_domain": true },
+    { "pattern": "www.quoteandsign.com", "custom_domain": true }
+  ],
   "observability": { "enabled": true },
   "triggers": { "crons": ["0 14 * * *"] },
   "d1_databases": [
@@ -23,5 +28,6 @@
     "APP_URL": "https://quoteandsign.com",
     "ENVIRONMENT": "production",
     "EMAIL_FROM": "Quote and Sign <noreply@quoteandsign.com>",
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAEpvqKEqyfNcFF65"
   }
 }

@@ -26,6 +26,20 @@ export type { Bindings };
 
 const app = new Hono<AppEnv>();
 
+// One address. In production, www and any other host the Worker is reached on redirect to APP_URL,
+// so cookies, links and the bot check all see a single origin.
+app.use("*", async (c, next) => {
+  if (c.env.ENVIRONMENT !== "production") return next();
+  const url = new URL(c.req.url);
+  const canonical = new URL(c.env.APP_URL);
+  if (url.host !== canonical.host) {
+    url.protocol = canonical.protocol;
+    url.host = canonical.host;
+    return c.redirect(url.toString(), 301);
+  }
+  return next();
+});
+
 // Cross-site writes are refused before any handler runs. Browsers always send Sec-Fetch-Site
 // (and Origin on cross-site POSTs); same-origin fetches from our own pages pass. The Polar webhook
 // is a server-to-server call and is verified by signature instead.
