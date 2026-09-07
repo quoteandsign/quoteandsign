@@ -1,9 +1,11 @@
-import { and, eq, gt, inArray, isNull, isNotNull, lt, lte, or } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, isNotNull, lt, lte, or, sql } from "drizzle-orm";
 import type { Bindings } from "../env";
 import { getDb, schema } from "./db";
 import { sendEmail } from "./email";
 import { businessName } from "../../shared/names";
 import { capsOf, effectivePlan } from "./plan";
+import { getSetting, setSetting } from "./analytics";
+import { STORAGE_LIMIT, STORAGE_WARN } from "../routes/support";
 
 export const REMIND_DAYS_BEFORE = 3;
 // A proposal nobody has opened gets one gentle nudge after this many days.
@@ -56,6 +58,27 @@ export const AUDIT_DAYS = 365; // also closed contact-form tickets
  * rate-limit windows older than a day, webhook ids older than a week, sign-in links and sessions a
  * day past their expiry, and security-log rows older than AUDIT_DAYS.
  */
+/** Emails support once when images in the database pass the warning line, so the paid tier is switched on in time. */
+export async function warnOnStorage(env: Bindings): Promise<boolean> {
+  const db = getDb(env.DB);
+  const row = await db.select({ bytes: sql<number>`coalesce(sum(bytes), 0)` }).from(schema.files).get();
+  const bytes = row?.bytes ?? 0;
+  if (bytes < STORAGE_WARN) {
+    if (await getSetting(db, "storage_warned")) await setSetting(db, "storage_warned", null);
+    return false;
+  }
+  if (await getSetting(db, "storage_warned")) return false;
+  const to = env.SUPPORT_EMAIL || env.EMAIL_FROM.replace(/^.*<|>$/g, "");
+  await sendEmail(env, {
+    to,
+    subject: "Quote and Sign: image storage is past the warning line",
+    heading: "Time to move the database to the paid tier",
+    text: `Images in the database now take ${Math.round(bytes / 1048576)} MB. The free database tier stops at ${Math.round(STORAGE_LIMIT / 1048576)} MB and uploads would start failing there.\n\nIn the Cloudflare dashboard, Workers & Pages, Plans: choose Workers Paid (5 USD a month). That raises the database to 10 GB. Nothing else changes.\n\nThis email is sent once; it is sent again only if storage drops below the line and passes it again.`,
+  });
+  await setSetting(db, "storage_warned", new Date().toISOString());
+  return true;
+}
+
 export async function pruneOldRows(env: Bindings, now = new Date()): Promise<void> {
   const db = getDb(env.DB);
   await db.delete(schema.rateLimits).where(lt(schema.rateLimits.windowStart, new Date(now.getTime() - DAY)));

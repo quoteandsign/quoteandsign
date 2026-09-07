@@ -11,7 +11,7 @@ import { formatMoney } from "../../shared/pricing";
 // The admin area: who is here, what they are doing, and the messages waiting for an answer.
 // Only accounts listed in ADMIN_EMAILS see it; everyone else gets a 404 from the API.
 
-type Overview = { users: number; byPlan: Record<string, number>; trialing: number; newUsers30: number; proposals: number; sent30: number; accepted30: number; acceptedTotal30: number; openTickets: number; subscribers: number };
+type Overview = { users: number; byPlan: Record<string, number>; trialing: number; newUsers30: number; proposals: number; sent30: number; accepted30: number; acceptedTotal30: number; openTickets: number; subscribers: number; images: number; storageBytes: number; storageLimitBytes: number };
 type Person = { id: string; email: string; brandName: string | null; plan: string; effective: string; interval: string | null; trialEndsAt: number | null; createdAt: number; marketingOptIn: boolean; proposals: number; accepted: number; lastSeen: number | null };
 type Ticket = { id: string; kind: string; name: string; email: string; subject: string; status: string; userId: string | null; createdAt: number; updatedAt: number };
 type Message = { id: string; from: string; body: string; createdAt: number };
@@ -130,6 +130,7 @@ export function Admin() {
               <Stat label="Proposals" value={String(overview.proposals)} sub={`${overview.sent30} sent in 30 days`} />
               <Stat label="Open tickets" value={String(overview.openTickets)} />
               <Stat label="Email subscribers" value={String(overview.subscribers)} sub="Ticked the box at sign-in" />
+              <Stat label="Image storage" value={`${(overview.storageBytes / 1048576).toFixed(0)} MB`} sub={`${overview.images} images · free tier stops at ${Math.round(overview.storageLimitBytes / 1048576)} MB${overview.storageBytes > overview.storageLimitBytes * 0.7 ? " · time to move to Workers Paid" : ""}`} />
             </div>
           )
         )}

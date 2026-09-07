@@ -159,16 +159,16 @@ accountRoutes.delete("/logo", async (c) => {
 // and the response forbids scripts and framing.
 export const fileRoutes = new Hono<AppEnv>();
 // Images for proposals. Same checks as logos, plus a per-plan quota so the service never becomes storage.
-const MAX_IMAGE = 600_000;
+const MAX_IMAGE = 400_000;
 accountRoutes.post("/images", async (c) => {
   const owner = c.get("owner");
   const db = getDb(c.env.DB);
   const len = Number(c.req.header("content-length") ?? "0");
-  if (len > MAX_IMAGE * 1.05) return c.json({ error: "Images are limited to 600 KB. The editor shrinks them for you; try a smaller file." }, 413);
+  if (len > MAX_IMAGE * 1.05) return c.json({ error: "Images are limited to 400 KB. The editor shrinks them for you; try a smaller file." }, 413);
   const form = await c.req.formData().catch(() => null);
   const file = form?.get("file");
   if (!(file instanceof File)) return c.json({ error: "Choose an image file." }, 400);
-  if (file.size > MAX_IMAGE) return c.json({ error: "Images are limited to 600 KB." }, 413);
+  if (file.size > MAX_IMAGE) return c.json({ error: "Images are limited to 400 KB." }, 413);
   const quota = capsOf(owner).images;
   const used = await db.select({ n: sql<number>`count(*)` }).from(schema.files).where(and(eq(schema.files.userId, owner.id), like(schema.files.key, "images/%"))).get();
   if ((used?.n ?? 0) >= quota) return c.json({ error: `Your plan includes ${quota} images. Remove one from a proposal, or upgrade under Settings for more.`, code: "plan" }, 402);

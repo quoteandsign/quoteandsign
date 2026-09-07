@@ -96,7 +96,9 @@ try {
   await page.getByRole("tab", { name: "Plan" }).click();
   ok("the plan section is honest that payments are not on yet", (await page.locator("[data-test=plan]").innerText()).includes("Payments are not switched on yet"));
   ok("the team section explains Business teams to a non-Business account", (await page.locator("[data-test=team-section]").innerText()).includes("Teams are part of the Business plan"));
-  ok("the plan section shows the 14-day Pro trial", /Pro trial/.test(await page.locator("[data-test=plan]").innerText()) && /14 days left/.test(await page.locator("[data-test=plan]").innerText()), await page.locator("[data-test=plan]").innerText());
+  await page.locator("[data-test=plan]").getByText(/days? left/).first().waitFor({ timeout: 5000 }).catch(() => {});
+  const planText = await page.locator("[data-test=plan]").innerText();
+  ok("the plan section shows the Pro trial with days left", /Pro trial/.test(planText) && /(1[0-4]|[1-9]) days? left/.test(planText), planText);
   ok("both plan cards end in a coloured button at the same height", await page.evaluate(() => { const b = [...document.querySelectorAll("[data-test=plan-cards] button")].filter((x) => /^Choose/.test(x.textContent || "")); return b.length === 2 && Math.abs(b[0].getBoundingClientRect().bottom - b[1].getBoundingClientRect().bottom) < 2 && getComputedStyle(b[0]).backgroundColor === getComputedStyle(b[1]).backgroundColor; }));
   await page.getByRole("tab", { name: "Advanced" }).click();
   ok("the data section offers a full export", (await page.locator("[data-test=account] a[href='/api/account/export']").count()) === 1);

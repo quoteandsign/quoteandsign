@@ -94,11 +94,15 @@ adminRoutes.put("/settings", async (c) => {
   return c.json({ analyticsId: raw || null });
 });
 
+/** Free-tier D1 database ceiling. The nightly job emails support once when images pass STORAGE_WARN. */
+export const STORAGE_LIMIT = 500 * 1024 * 1024;
+export const STORAGE_WARN = 350 * 1024 * 1024;
+
 adminRoutes.get("/overview", async (c) => {
   const db = getDb(c.env.DB);
   const day = 24 * 60 * 60_000;
   const since30 = new Date(Date.now() - 30 * day);
-  const [users, byPlan, trials, newUsers, proposals, sent30, accepted30, openTickets, subscribers] = await Promise.all([
+  const [users, byPlan, trials, newUsers, proposals, sent30, accepted30, openTickets, subscribers, files] = await Promise.all([
     db.select({ n: sql<number>`count(*)` }).from(schema.users).where(sql`deleted_at is null`).get(),
     db.select({ plan: schema.users.plan, n: sql<number>`count(*)` }).from(schema.users).where(sql`deleted_at is null`).groupBy(schema.users.plan).all(),
     db.select({ n: sql<number>`count(*)` }).from(schema.users).where(sql`deleted_at is null and plan = 'free' and trial_ends_at > ${Date.now()}`).get(),
@@ -108,6 +112,7 @@ adminRoutes.get("/overview", async (c) => {
     db.select({ n: sql<number>`count(*)`, total: sql<number>`coalesce(sum(total_amount), 0)` }).from(schema.acceptances).where(sql`accepted_at > ${since30.getTime()}`).get(),
     db.select({ n: sql<number>`count(*)` }).from(schema.tickets).where(eq(schema.tickets.status, "open")).get(),
     db.select({ n: sql<number>`count(*)` }).from(schema.users).where(sql`deleted_at is null and marketing_opt_in = 1`).get(),
+    db.select({ n: sql<number>`count(*)`, bytes: sql<number>`coalesce(sum(bytes), 0)` }).from(schema.files).get(),
   ]);
   return c.json({
     users: users?.n ?? 0,
@@ -120,6 +125,10 @@ adminRoutes.get("/overview", async (c) => {
     acceptedTotal30: accepted30?.total ?? 0,
     openTickets: openTickets?.n ?? 0,
     subscribers: subscribers?.n ?? 0,
+    // Images live in the database. The free database tier stops at 500 MB; Workers Paid raises it to 10 GB.
+    images: files?.n ?? 0,
+    storageBytes: files?.bytes ?? 0,
+    storageLimitBytes: STORAGE_LIMIT,
   });
 });
 

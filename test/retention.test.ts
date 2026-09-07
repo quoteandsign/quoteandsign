@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { env } from "cloudflare:test";
 import { getDb, schema } from "../src/worker/lib/db";
-import { pruneOldRows, AUDIT_DAYS } from "../src/worker/lib/reminders";
+import { pruneOldRows, AUDIT_DAYS, warnOnStorage } from "../src/worker/lib/reminders";
 import { count, sql } from "drizzle-orm";
 
 // The privacy policy states retention periods. The nightly job is what makes them true.
@@ -38,5 +38,20 @@ describe("nightly prune enforces the retention periods in the privacy policy", (
     expect(await ids(schema.magicTokens, schema.magicTokens.tokenHash)).toEqual(["t-new"]);
     expect(await ids(schema.sessions, schema.sessions.id)).toEqual(["s-new"]);
     expect((await db.select({ n: count() }).from(schema.rateLimits)).length).toBe(1);
+  });
+});
+
+describe("storage warning", () => {
+  it("emails support once when images pass the warning line, and resets when they drop below it", async () => {
+    const db = getDb(env.DB);
+    expect(await warnOnStorage(env)).toBe(false);
+    await db.insert(schema.users).values({ id: "u-store", email: "store@example.com", createdAt: new Date() } as any);
+    await db.insert(schema.files).values({ id: "f-big", sha256: "x", key: "images/u-store/big.webp", userId: "u-store", mime: "image/webp", bytes: 360 * 1024 * 1024, data: new Uint8Array(1), createdAt: new Date() } as any);
+    expect(await warnOnStorage(env)).toBe(true);
+    expect(await warnOnStorage(env)).toBe(false);
+    await db.delete(schema.files).where(sql`key = 'images/u-store/big.webp'`);
+    expect(await warnOnStorage(env)).toBe(false);
+    await db.insert(schema.files).values({ id: "f-big2", sha256: "y", key: "images/u-store/big2.webp", userId: "u-store", mime: "image/webp", bytes: 360 * 1024 * 1024, data: new Uint8Array(1), createdAt: new Date() } as any);
+    expect(await warnOnStorage(env)).toBe(true);
   });
 });
