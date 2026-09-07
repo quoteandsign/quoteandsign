@@ -134,6 +134,12 @@ export async function applyPolarEvent(env: Bindings, ev: PolarEvent): Promise<{ 
   let user = userId ? await db.select().from(schema.users).where(eq(schema.users.id, userId)).get() : undefined;
   if (!user && customerId) user = await db.select().from(schema.users).where(eq(schema.users.polarCustomerId, customerId)).get();
   if (!user) return null;
+  // Once an account is tied to a Polar customer, an event from a different customer that merely
+  // names this account in its metadata is not about this account.
+  if (user.polarCustomerId && customerId && customerId !== user.polarCustomerId) {
+    await audit(db, { userId: user.id, event: "billing.customer_mismatch", meta: { event: ev.type } });
+    return null;
+  }
 
   const active = new Set(["subscription.active", "subscription.updated", "subscription.created", "order.paid", "checkout.updated"]);
   const ended = new Set(["subscription.canceled", "subscription.revoked"]);

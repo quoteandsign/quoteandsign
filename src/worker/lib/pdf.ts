@@ -119,6 +119,8 @@ export type PdfInput = {
   items: PricingItem[];
   acceptance: Acceptance | null;
   appUrl: string;
+  /** False for the copy anyone with the link can download: the signer's address is the sender's to see. */
+  showSignerEmail?: boolean;
 };
 
 export async function proposalPdf(inp: PdfInput): Promise<Uint8Array> {
@@ -275,7 +277,7 @@ export async function proposalPdf(inp: PdfInput): Promise<Uint8Array> {
   w.rule();
   if (acceptance) {
     w.text("Accepted", { size: 14, bold: true, gap: 4 });
-    w.text(`Accepted by ${acceptance.signerName}${acceptance.signerEmail ? ` (${acceptance.signerEmail})` : ""} on ${acceptance.acceptedAt.toUTCString()} for ${formatMoney(acceptance.totalAmount, acceptance.currency)}.`);
+    w.text(`Accepted by ${acceptance.signerName}${inp.showSignerEmail !== false && acceptance.signerEmail ? ` (${acceptance.signerEmail})` : ""} on ${acceptance.acceptedAt.toUTCString()} for ${formatMoney(acceptance.totalAmount, acceptance.currency)}.`);
     w.text(`Typed signature: ${acceptance.signedText}`, { size: 9.5, color: rgb(0.35, 0.33, 0.3), gap: 2 });
     if (acceptance.countersignerName && acceptance.countersignedAt) w.text(`Countersigned by ${acceptance.countersignerName}${brand ? ` for ${brand}` : ""} on ${acceptance.countersignedAt.toUTCString()}.`, { gap: 2 });
     w.text(`Consent: ${acceptance.consentText}`, { size: 9, color: rgb(0.35, 0.33, 0.3), gap: 2 });

@@ -24,8 +24,9 @@ export const users = sqliteTable(
     polarCustomerId: text("polar_customer_id"),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
     deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
+    deletedEmailHash: text("deleted_email_hash"), // keyed hash of the address a deleted account had, so a re-signup does not restart the trial
   },
-  (t) => [uniqueIndex("users_email_uq").on(t.email)],
+  (t) => [uniqueIndex("users_email_uq").on(t.email), index("users_deleted_email_idx").on(t.deletedEmailHash)],
 );
 
 // One-time magic-link tokens. Stored hashed; the raw token only ever lives in the email.

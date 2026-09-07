@@ -464,7 +464,7 @@ export function renderProposalPage(p: PageProps): string {
   }));
 
   const banner = p.justAccepted && acceptance
-    ? `<div class="notice ok">Thank you. This proposal is now accepted. Your signed copy is on its way to ${esc(acceptance.signerEmail ?? "you")}.</div>`
+    ? `<div class="notice ok">Thank you. This proposal is now accepted. Your signed copy is on its way to the address you entered.</div>`
     : "";
   const ribbonSpec = p.ribbon ?? (p.isOwner ? { href: `${p.appUrl}/app/p/${proposal.id}`, label: "← Back to the editor", note: "Preview. This is what your client will see." } : null);
   const ribbon = ribbonSpec && !("hidden" in ribbonSpec) ? `<div class="ribbon"><div class="in"><a href="${esc(ribbonSpec.href)}">${esc(ribbonSpec.label)}</a><span class="note">${esc(ribbonSpec.note)}</span><span></span></div></div>` : "";
@@ -759,14 +759,15 @@ ${r.device ? row("Signer's device", esc([r.device.ip, r.device.userAgent].filter
 </main><footer class="made"><a href="/">Quote and Sign</a></footer></body></html>`;
 }
 
-export function renderSimplePage(title: string, message: string): string {
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><link rel="icon" href="/brand/mark.svg" type="image/svg+xml"><link rel="icon" href="/brand/favicon-32.png" sizes="32x32" type="image/png"><link rel="apple-touch-icon" href="/brand/apple-touch-icon.png"><link rel="manifest" href="/brand/site.webmanifest"><meta name="theme-color" content="#2b3f8c"><title>${esc(title)}</title><style>${CSS}</style></head>
+export function renderSimplePage(title: string, message: string, nonce = ""): string {
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><link rel="icon" href="/brand/mark.svg" type="image/svg+xml"><link rel="icon" href="/brand/favicon-32.png" sizes="32x32" type="image/png"><link rel="apple-touch-icon" href="/brand/apple-touch-icon.png"><link rel="manifest" href="/brand/site.webmanifest"><meta name="theme-color" content="#2b3f8c"><title>${esc(title)}</title><style nonce="${nonce}">${CSS}</style></head>
 <body><div class="wrap"><article class="pad"><h1>${esc(title)}</h1><p>${esc(message)}</p></article><footer class="made">Quote and Sign</footer></div></body></html>`;
 }
 
-export function renderUnlockPage(o: { publicId: string; brandName: string | null; brandColor?: string | null; wrong: boolean }): string {
+export function renderUnlockPage(o: { publicId: string; brandName: string | null; brandColor?: string | null; wrong: boolean; nonce?: string }): string {
   const color = accent(o.brandColor);
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><link rel="icon" href="/brand/mark.svg" type="image/svg+xml"><link rel="icon" href="/brand/favicon-32.png" sizes="32x32" type="image/png"><link rel="apple-touch-icon" href="/brand/apple-touch-icon.png"><link rel="manifest" href="/brand/site.webmanifest"><meta name="theme-color" content="#2b3f8c"><title>Enter password</title><style>${CSS}:root{--accent:${color};--accent-fg:${readableOn(color)}}.unlock{min-height:100dvh;display:grid;place-items:center;padding:24px}.unlock article{width:100%;max-width:420px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-card);padding:28px 28px 24px}.unlock .brand{margin-bottom:22px;font-size:14px}</style></head>
+  const nonce = o.nonce ?? "";
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><link rel="icon" href="/brand/mark.svg" type="image/svg+xml"><link rel="icon" href="/brand/favicon-32.png" sizes="32x32" type="image/png"><link rel="apple-touch-icon" href="/brand/apple-touch-icon.png"><link rel="manifest" href="/brand/site.webmanifest"><meta name="theme-color" content="#2b3f8c"><title>Enter password</title><style nonce="${nonce}">${CSS}:root{--accent:${color};--accent-fg:${readableOn(color)}}.unlock{min-height:100dvh;display:grid;place-items:center;padding:24px}.unlock article{width:100%;max-width:420px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-card);padding:28px 28px 24px}.unlock .brand{margin-bottom:22px;font-size:14px}</style></head>
 <body><div class="unlock"><article>
 ${o.brandName ? `<p class="brand"><span class="dot"></span>${esc(o.brandName)}</p>` : ""}
 <h1 class="h-sm">This proposal is protected</h1>

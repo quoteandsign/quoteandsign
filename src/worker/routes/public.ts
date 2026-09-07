@@ -103,20 +103,29 @@ export function contentHashInput(p: HashProposal, owner: HashOwner, items: (type
   });
 }
 
+/** A small page (not found, unlock, errors) with the same strict policy as the proposal page. */
+function strictPage(c: Context<AppEnv>, html: (nonce: string) => string, status: 200 | 401 | 402 | 404 | 409 | 410 | 429 = 200) {
+  const nonce = uuid().replace(/-/g, "");
+  c.header("content-security-policy", `default-src 'none'; style-src 'nonce-${nonce}'; img-src 'self'; manifest-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`);
+  c.header("cache-control", "private, no-store");
+  return c.html(html(nonce), status);
+}
+const simple = (c: Context<AppEnv>, title: string, message: string, status: number) => strictPage(c, (nonce) => renderSimplePage(title, message, nonce), status as 404);
+
 publicRoutes.get("/:publicId", async (c) => {
   const publicId = c.req.param("publicId");
   const loaded = await loadProposal(c, publicId);
-  if (!loaded) return c.html(renderSimplePage("Not found", "This proposal link is not valid."), 404);
+  if (!loaded) return simple(c, "Not found", "This proposal link is not valid.", 404);
   const { db, proposal, owner, items, acceptance } = loaded;
 
   const viewer = await getSessionUser(c);
   const isOwner = viewer?.id === owner.id;
 
   if (proposal.status === "archived" && !isOwner && !acceptance) {
-    return c.html(renderSimplePage("Proposal unavailable", "This proposal is no longer available."), 410);
+    return simple(c, "Proposal unavailable", "This proposal is no longer available.", 410);
   }
   if (proposal.status === "draft" && !isOwner) {
-    return c.html(renderSimplePage("Not published yet", "This proposal has not been sent yet."), 404);
+    return simple(c, "Not published yet", "This proposal has not been sent yet.", 404);
   }
   const expired = Boolean(proposal.expiresAt && proposal.expiresAt.getTime() < Date.now() && !acceptance);
 
@@ -124,7 +133,7 @@ publicRoutes.get("/:publicId", async (c) => {
     const ok = await unlocked(c, proposal);
     if (!ok) {
       const wrong = c.req.query("wrong") === "1";
-      return c.html(renderUnlockPage({ publicId, brandName: owner.brandName, brandColor: owner.brandColor, wrong }), wrong ? 401 : 200);
+      return strictPage(c, (nonce) => renderUnlockPage({ publicId, brandName: owner.brandName, brandColor: owner.brandColor, wrong, nonce }), wrong ? 401 : 200);
     }
   }
 
@@ -206,7 +215,7 @@ publicRoutes.post("/:publicId/unlock", async (c) => {
   const db = loaded.db;
   const ip = await ipHash(c.env.SESSION_SECRET, clientIp(c.req.raw));
   const rl = await rateLimit(db, `unlock:${ip}:${publicId}`, 8, 15 * 60_000);
-  if (!rl.allowed) return c.html(renderSimplePage("Too many attempts", "Try again later."), 429);
+  if (!rl.allowed) return simple(c, "Too many attempts", "Try again later.", 429);
 
   const form = await c.req.parseBody();
   const password = typeof form.password === "string" ? form.password : "";
@@ -214,7 +223,7 @@ publicRoutes.post("/:publicId/unlock", async (c) => {
     // Only failures count towards the shared cap, so a flood of wrong guesses from strangers
     // cannot lock out the client who knows the password.
     const rlAll = await rateLimit(db, `unlock:all:${publicId}`, 400, 60 * 60_000);
-    if (!rlAll.allowed) return c.html(renderSimplePage("Too many attempts", "Try again later."), 429);
+    if (!rlAll.allowed) return simple(c, "Too many attempts", "Try again later.", 429);
     return c.redirect(`/p/${publicId}?wrong=1`);
   }
   setCookie(c, unlockCookie(publicId), await signValue(c.env.SESSION_SECRET, await unlockToken(loaded.proposal)), {
@@ -242,7 +251,7 @@ publicRoutes.post("/:publicId/accept", async (c) => {
   const { db, proposal, owner, items, acceptance } = loaded;
   const wantsJson = (c.req.header("accept") ?? "").includes("application/json");
   const fail = (msg: string, status: 400 | 409 | 410 | 429) =>
-    wantsJson ? c.json({ error: msg }, status) : c.html(renderSimplePage("Could not accept", msg), status);
+    wantsJson ? c.json({ error: msg }, status) : simple(c, "Could not accept", msg, status);
 
   // Browsers always send Origin on cross-site POSTs. If it is present it must be ours.
   const origin = c.req.header("origin");
@@ -507,23 +516,23 @@ publicRoutes.post("/:publicId/engage", async (c) => {
 publicRoutes.get("/:publicId/pdf", async (c) => {
   const publicId = c.req.param("publicId");
   const loaded = await loadProposal(c, publicId);
-  if (!loaded) return c.html(renderSimplePage("Not found", "This proposal link is not valid."), 404);
+  if (!loaded) return simple(c, "Not found", "This proposal link is not valid.", 404);
   const { db, proposal, owner, items, acceptance } = loaded;
   const viewer = await getSessionUser(c);
   const isOwner = viewer?.id === owner.id;
-  if (proposal.status === "draft" && !isOwner) return c.html(renderSimplePage("Not published yet", "This proposal has not been sent yet."), 404);
-  if (proposal.status === "archived" && !isOwner && !acceptance) return c.html(renderSimplePage("Proposal unavailable", "This proposal is no longer available."), 410);
+  if (proposal.status === "draft" && !isOwner) return simple(c, "Not published yet", "This proposal has not been sent yet.", 404);
+  if (proposal.status === "archived" && !isOwner && !acceptance) return simple(c, "Proposal unavailable", "This proposal is no longer available.", 410);
   if (proposal.passwordHash && !isOwner) {
     const ok = await unlocked(c, proposal);
     if (!ok) return c.redirect(`/p/${publicId}`);
   }
   // The signed copy is always free for both parties; an unsigned PDF is a Pro feature.
-  if (!acceptance && !PLANS[effectivePlan(owner).id].pdf) return c.html(renderSimplePage("PDF export is part of Pro", "Upgrade under Brand to download unsigned proposals as PDF. Signed copies are always free."), 402);
+  if (!acceptance && !PLANS[effectivePlan(owner).id].pdf) return simple(c, "PDF export is part of Pro", "Upgrade under Brand to download unsigned proposals as PDF. Signed copies are always free.", 402);
   // Building a PDF is real CPU time, so a link alone does not buy unlimited renders.
   const pdfViewer = await rateLimit(db, `pdf:${publicId}:${await ipHash(c.env.SESSION_SECRET, clientIp(c.req.raw))}`, 10, 10 * 60_000);
   const pdfTotal = await rateLimit(db, `pdf:${publicId}`, 100, 60 * 60_000);
-  if (!pdfViewer.allowed || !pdfTotal.allowed) return c.html(renderSimplePage("Slow down", "Too many downloads for now. Try again in a few minutes."), 429);
-  const bytes = await proposalPdf({ proposal, owner, items, acceptance, appUrl: appUrl(c) });
+  if (!pdfViewer.allowed || !pdfTotal.allowed) return simple(c, "Slow down", "Too many downloads for now. Try again in a few minutes.", 429);
+  const bytes = await proposalPdf({ proposal, owner, items, acceptance, appUrl: appUrl(c), showSignerEmail: isOwner });
   const name = proposal.title.replace(/[^\w\d-]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "proposal";
   c.header("content-type", "application/pdf");
   c.header("content-disposition", `attachment; filename="${name}${acceptance ? "-signed" : ""}.pdf"`);
@@ -535,7 +544,7 @@ publicRoutes.get("/:publicId/pdf", async (c) => {
 publicRoutes.get("/:publicId/record", async (c) => {
   const publicId = c.req.param("publicId");
   const loaded = await loadProposal(c, publicId);
-  if (!loaded || !loaded.acceptance) return c.html(renderSimplePage("No signing record", "This proposal has not been accepted."), 404);
+  if (!loaded || !loaded.acceptance) return simple(c, "No signing record", "This proposal has not been accepted.", 404);
   const { proposal, items, acceptance, owner } = loaded;
   const viewer = await getSessionUser(c);
   const isOwner = viewer?.id === owner.id;

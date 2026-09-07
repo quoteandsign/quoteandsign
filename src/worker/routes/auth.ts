@@ -1,10 +1,11 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { eq, and, isNull, gt } from "drizzle-orm";
+import { eq, and, isNull, gt, desc } from "drizzle-orm";
+import { getCookie, setCookie } from "hono/cookie";
 import type { AppEnv } from "../env";
 import { clientIp, appUrl } from "../env";
 import { getDb, schema } from "../lib/db";
-import { randomToken, sha256Hex, ipHash, uuid } from "../lib/crypto";
+import { randomToken, sha256Hex, ipHash, uuid, hmacHex, signValue, verifyValue } from "../lib/crypto";
 import { rateLimit } from "../lib/ratelimit";
 import { sendEmail } from "../lib/email";
 import { createSession, destroySession, getSessionUser } from "../lib/session";
@@ -16,6 +17,8 @@ import { isAdmin } from "./support";
 import { workspaceOwner } from "../lib/session";
 import { businessName } from "../../shared/names";
 
+const LOGIN_COOKIE = "op_login";
+const esc = (s: string) => s.replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]!);
 const TOKEN_MINUTES = 15;
 
 export const authRoutes = new Hono<AppEnv>();
@@ -70,6 +73,10 @@ authRoutes.post("/request", async (c) => {
   });
 
   const link = `${appUrl(c)}/auth/verify?token=${raw}`;
+  // Remembers that this browser asked. The verify page only signs in automatically when the
+  // same browser opens the link; anyone else is shown the address and must press Continue, so a
+  // link handed to a stranger cannot quietly sign them into someone else's account.
+  setCookie(c, LOGIN_COOKIE, await signValue(c.env.SESSION_SECRET, email), { httpOnly: true, secure: new URL(c.req.url).protocol === "https:", sameSite: "Lax", path: "/auth/verify", maxAge: TOKEN_MINUTES * 60 });
   await sendEmail(c.env, {
     to: email,
     subject: "Your Quote and Sign sign-in link",
@@ -89,14 +96,19 @@ authRoutes.post("/request", async (c) => {
 authRoutes.get("/verify", async (c) => {
   const raw = c.req.query("token") ?? "";
   if (raw.length < 20 || raw.length > 128) return c.redirect("/login?error=invalid");
+  // Looked up, not consumed. Same browser that asked: continue at once. Otherwise say whose link it is.
+  const pending = await getDb(c.env.DB).select({ email: schema.magicTokens.email }).from(schema.magicTokens).where(and(eq(schema.magicTokens.tokenHash, await sha256Hex(raw)), isNull(schema.magicTokens.usedAt), gt(schema.magicTokens.expiresAt, new Date()))).get();
+  if (!pending) return c.redirect("/login?error=expired");
+  const asked = await verifyValue(c.env.SESSION_SECRET, getCookie(c, LOGIN_COOKIE));
+  const auto = asked === pending.email;
   const nonce = uuid().replace(/-/g, "");
   c.header("content-security-policy", `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`);
   c.header("cache-control", "no-store");
   c.header("referrer-policy", "no-referrer");
   return c.html(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Signing you in</title>
 <style nonce="${nonce}">body{margin:0;min-height:100dvh;display:grid;place-items:center;background:#fbfaf7;color:#191816;font:16px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}form{text-align:center;padding:24px}h1{font-size:22px;letter-spacing:-.02em;margin:0 0 8px}p{color:#5f5b55;margin:0 0 20px}button{font:inherit;font-weight:600;color:#fff;background:#2b3f8c;border:0;border-radius:999px;padding:12px 22px;cursor:pointer}</style></head>
-<body><form method="post" action="/auth/verify" id="f"><input type="hidden" name="token" value="${raw.replace(/[^A-Za-z0-9_-]/g, "")}"><h1>Signing you in</h1><p>One moment. If nothing happens, press the button.</p><button type="submit">Continue</button></form>
-<script nonce="${nonce}">document.getElementById("f").submit()</script></body></html>`);
+<body><form method="post" action="/auth/verify" id="f"><input type="hidden" name="token" value="${raw.replace(/[^A-Za-z0-9_-]/g, "")}"><h1>${auto ? "Signing you in" : "Sign in as " + esc(pending.email) + "?"}</h1><p>${auto ? "One moment. If nothing happens, press the button." : "This link was requested from another browser or device. Continue only if that is you."}</p><button type="submit">${auto ? "Continue" : "Continue as " + esc(pending.email)}</button></form>
+${auto ? `<script nonce="${nonce}">document.getElementById("f").submit()</script>` : ""}</body></html>`);
 });
 
 // Step 2b: redeem. One use, enforced in a single UPDATE, then a session cookie and a redirect.
@@ -124,7 +136,9 @@ authRoutes.post("/verify", async (c) => {
   let user = await db.select().from(schema.users).where(eq(schema.users.email, token.email)).get();
   if (!user) {
     const id = uuid();
-    await db.insert(schema.users).values({ id, email: token.email, createdAt: now, plan: "free", trialEndsAt: trialEnd(now) });
+    // An address that deleted an account before keeps whatever trial it had left; deleting is not a reset.
+    const before = await db.select({ trialEndsAt: schema.users.trialEndsAt }).from(schema.users).where(eq(schema.users.deletedEmailHash, await hmacHex(c.env.SESSION_SECRET, token.email))).orderBy(desc(schema.users.deletedAt)).get();
+    await db.insert(schema.users).values({ id, email: token.email, createdAt: now, plan: "free", trialEndsAt: before ? before.trialEndsAt : trialEnd(now) });
     user = (await db.select().from(schema.users).where(eq(schema.users.id, id)).get())!;
     await audit(db, { userId: id, event: "user.created" });
   } else if (user.deletedAt) {

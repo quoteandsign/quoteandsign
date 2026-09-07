@@ -118,7 +118,7 @@ describe("logo", () => {
     expect(served.status).toBe(200);
     expect(served.headers.get("content-type")).toBe("image/png");
     expect(served.headers.get("content-security-policy")).toContain("sandbox");
-    expect(served.headers.get("cache-control")).toContain("immutable");
+    expect(served.headers.get("cache-control")).toBe("public, max-age=86400");
     expect((await app.request(`${APP}/files/logos/x/y.svg`, {}, env)).status).toBe(404);
     const list = (await (await req("/api/proposals")).json()).proposals;
     const sent = list.find((p: { status: string }) => p.status === "sent" || p.status === "viewed");
@@ -163,7 +163,8 @@ describe("account", () => {
     expect(signed.status).toBe(200);
     expect(await signed.text()).toContain("Accepted by");
 
-    // The same email can start over as a brand-new account, not as the deleted one.
+    // The same email can start over as a brand-new account, not as the deleted one. It was a paying
+    // account, so there is no trial to inherit: deleting is not a way to a fresh 14 days.
     const n = logs.length;
     await json("/auth/request", "POST", { email: "paying@example.com" });
     const token = logs.slice(n).join("\n").match(/verify\?token=([A-Za-z0-9_-]+)/)![1]!;
@@ -173,6 +174,6 @@ describe("account", () => {
     const me2 = (await (await app.request(`${APP}/auth/me`, { headers: { cookie: c2 } }, env)).json()).user;
     expect(me2.id).not.toBe(userId);
     expect(me2.paidPlan).toBe("free");
-    expect(me2.trial).toBe(true);
+    expect(me2.trial).toBe(false);
   });
 });

@@ -153,7 +153,9 @@ adminRoutes.get("/people", async (c) => {
 adminRoutes.get("/subscribers.csv", async (c) => {
   const db = getDb(c.env.DB);
   const rows = await db.select({ email: schema.users.email, at: schema.users.marketingOptInAt, name: schema.users.brandName }).from(schema.users).where(sql`deleted_at is null and marketing_opt_in = 1`).orderBy(desc(schema.users.marketingOptInAt)).all();
-  const csv = ["email,business,consented_at", ...rows.map((r) => `${r.email},"${(r.name ?? "").replace(/"/g, '""')}",${r.at ? r.at.toISOString() : ""}`)].join("\n");
+  // Every cell quoted, and anything a spreadsheet would run as a formula gets a leading apostrophe.
+  const cell = (v: string) => `"${(/^[=+\-@\t\r]/.test(v) ? "'" + v : v).replace(/"/g, '""')}"`;
+  const csv = ["email,business,consented_at", ...rows.map((r) => `${cell(r.email)},${cell(r.name ?? "")},${r.at ? r.at.toISOString() : ""}`)].join("\n");
   c.header("content-type", "text/csv; charset=utf-8");
   c.header("content-disposition", `attachment; filename="subscribers-${new Date().toISOString().slice(0, 10)}.csv"`);
   await audit(getDb(c.env.DB), { userId: c.get("user").id, event: "admin.subscribers_export", meta: { n: rows.length } });

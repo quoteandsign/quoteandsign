@@ -98,6 +98,16 @@ function ownerProposal(db: ReturnType<typeof getDb>, id: string, userId: string)
     .get();
 }
 
+/**
+ * The free plan's live-proposal cap, as a condition on the UPDATE that makes a proposal live, so two
+ * requests racing each other cannot both pass a count taken a moment earlier.
+ */
+function withinLiveCap(userId: string, liveLimit: number, now: Date) {
+  if (liveLimit === Infinity) return sql`1 = 1`;
+  return sql`(select count(*) from ${schema.proposals} where ${schema.proposals.userId} = ${userId} and ${schema.proposals.status} in ('sent', 'viewed') and (${schema.proposals.expiresAt} is null or ${schema.proposals.expiresAt} > ${now.getTime()})) < ${liveLimit}`;
+}
+const LIVE_LIMIT_MESSAGE = (n: number) => `The free plan allows ${n} live proposals at a time. Archive one, or upgrade under Settings for unlimited.`;
+
 proposalRoutes.get("/", async (c) => {
   const user = c.get("owner");
   const actor = c.get("user");
@@ -276,7 +286,7 @@ proposalRoutes.put("/:id", async (c) => {
   const changed = await db
     .update(schema.proposals)
     .set(set)
-    .where(and(eq(schema.proposals.id, proposal.id), inArray(schema.proposals.status, ["draft", "sent", "viewed", "expired"])))
+    .where(and(eq(schema.proposals.id, proposal.id), inArray(schema.proposals.status, ["draft", "sent", "viewed", "declined"])))
     .returning({ id: schema.proposals.id })
     .get();
   if (!changed) return c.json({ error: "This proposal was accepted while you were editing. Reload to see the signed version." }, 409);
@@ -357,7 +367,13 @@ proposalRoutes.post("/:id/send", async (c) => {
   const now = new Date();
   const link = `${appUrl(c)}/p/${proposal.publicId}`;
   if (proposal.status === "draft" || proposal.status === "declined") {
-    await db.update(schema.proposals).set({ status: "sent", sentAt: proposal.sentAt ?? now, declinedAt: null, declineReason: null, updatedAt: now }).where(eq(schema.proposals.id, proposal.id));
+    const went = await db
+      .update(schema.proposals)
+      .set({ status: "sent", sentAt: proposal.sentAt ?? now, declinedAt: null, declineReason: null, updatedAt: now })
+      .where(and(eq(schema.proposals.id, proposal.id), inArray(schema.proposals.status, ["draft", "declined"]), withinLiveCap(user.id, plan.liveLimit, now)))
+      .returning({ id: schema.proposals.id })
+      .get();
+    if (!went) return c.json({ error: LIVE_LIMIT_MESSAGE(plan.liveLimit), code: "limit" }, 402);
   }
   const recipients = sendBody.success && sendBody.data.email === false ? [] : recipientsOf(proposal);
   if (recipients.length) {
@@ -535,7 +551,14 @@ proposalRoutes.post("/:id/mark", async (c) => {
   // Reopen: back to live if it was ever sent, otherwise a draft.
   if (existing) return c.json({ error: "Accepted proposals stay accepted." }, 409);
   const status = proposal.sentAt ? "sent" : "draft";
-  await db.update(schema.proposals).set({ status, declinedAt: null, declineReason: null, updatedAt: now }).where(eq(schema.proposals.id, proposal.id));
+  const plan = PLANS[effectivePlan(user).id];
+  const reopened = await db
+    .update(schema.proposals)
+    .set({ status, declinedAt: null, declineReason: null, updatedAt: now })
+    .where(and(eq(schema.proposals.id, proposal.id), inArray(schema.proposals.status, ["draft", "sent", "viewed", "declined"]), status === "sent" ? withinLiveCap(user.id, plan.liveLimit, now) : sql`1 = 1`))
+    .returning({ id: schema.proposals.id })
+    .get();
+  if (!reopened) return c.json({ error: LIVE_LIMIT_MESSAGE(plan.liveLimit), code: "limit" }, 402);
   return c.json({ ok: true, status });
 });
 
@@ -565,7 +588,13 @@ proposalRoutes.post("/:id/restore", async (c) => {
       if ((live?.n ?? 0) >= plan.liveLimit) return c.json({ error: `The free plan allows ${plan.liveLimit} live proposals at a time. Archive one first, or upgrade under Brand.`, code: "limit" }, 402);
     }
   }
-  await db.update(schema.proposals).set({ status, updatedAt: new Date() }).where(eq(schema.proposals.id, proposal.id));
+  const restored = await db
+    .update(schema.proposals)
+    .set({ status, updatedAt: new Date() })
+    .where(and(eq(schema.proposals.id, proposal.id), eq(schema.proposals.status, "archived"), status === "sent" ? withinLiveCap(user.id, PLANS[effectivePlan(user).id].liveLimit, new Date()) : sql`1 = 1`))
+    .returning({ id: schema.proposals.id })
+    .get();
+  if (!restored) return c.json({ error: LIVE_LIMIT_MESSAGE(PLANS[effectivePlan(user).id].liveLimit), code: "limit" }, 402);
   return c.json({ ok: true, status });
 });
 

@@ -33,7 +33,8 @@ app.use("*", async (c, next) => {
   if (c.env.ENVIRONMENT !== "production") return next();
   const url = new URL(c.req.url);
   const canonical = new URL(c.env.APP_URL);
-  if (url.host !== canonical.host) {
+  // Plain http never serves a page: cookies and sign-in links must only ever travel over TLS.
+  if (url.host !== canonical.host || url.protocol !== canonical.protocol) {
     url.protocol = canonical.protocol;
     url.host = canonical.host;
     return c.redirect(url.toString(), 301);
@@ -64,6 +65,11 @@ app.use("*", async (c, next) => {
   await next();
   if (new URL(c.req.url).protocol === "https:") c.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   c.header("X-Content-Type-Options", "nosniff");
+  // Account and proposal JSON is personal: never let a browser or shared cache keep a copy.
+  const p = new URL(c.req.url).pathname;
+  if ((p.startsWith("/api/") || p.startsWith("/auth/") || p.startsWith("/files/")) && !c.res.headers.has("cache-control")) {
+    c.header("Cache-Control", p.startsWith("/files/") ? "private, max-age=3600" : "no-store");
+  }
   c.header("Referrer-Policy", "strict-origin-when-cross-origin");
   c.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
   if (!c.res.headers.has("x-frame-options")) c.header("X-Frame-Options", "DENY");
@@ -194,7 +200,7 @@ export { app };
 export default {
   fetch(request: Request, env: Bindings, ctx: ExecutionContext) {
     // A short or missing session secret would make every cookie forgeable. Refuse to serve.
-    if (env.ENVIRONMENT !== "development" && env.ENVIRONMENT !== "test" && (env.SESSION_SECRET?.length ?? 0) < 32) {
+    if (env.ENVIRONMENT !== "development" && (env.SESSION_SECRET?.length ?? 0) < 32) {
       return new Response("Server misconfigured: SESSION_SECRET must be at least 32 characters.", { status: 500 });
     }
     return app.fetch(request, env, ctx);

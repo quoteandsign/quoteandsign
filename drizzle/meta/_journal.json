@@ -134,6 +134,13 @@
       "when": 1788738583743,
       "tag": "0018_site_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1788742110106,
+      "tag": "0019_trial_tombstone",
+      "breakpoints": true
     }
   ]
 }

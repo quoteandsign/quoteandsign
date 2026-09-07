@@ -4,7 +4,7 @@ import { eq, inArray, notInArray, and, or, like, sql, gt, isNull } from "drizzle
 import type { AppEnv } from "../env";
 import { clientIp } from "../env";
 import { getDb, schema } from "../lib/db";
-import { uuid, ipHash, sha256Hex } from "../lib/crypto";
+import { uuid, ipHash, sha256Hex, hmacHex } from "../lib/crypto";
 import { sendEmail } from "../lib/email";
 import { rateLimit } from "../lib/ratelimit";
 import { requireAuth, requireOwner, destroySession } from "../lib/session";
@@ -104,11 +104,11 @@ accountRoutes.delete("/", async (c) => {
   await db.delete(schema.sessions).where(eq(schema.sessions.userId, user.id));
   await db.delete(schema.files).where(eq(schema.files.userId, user.id));
   // Out of every team, and no more copies of anyone's signed proposals to this address.
-  await db.delete(schema.teamMembers).where(or(eq(schema.teamMembers.memberId, user.id), eq(schema.teamMembers.email, user.email)));
+  await db.delete(schema.teamMembers).where(or(eq(schema.teamMembers.memberId, user.id), eq(schema.teamMembers.email, user.email), eq(schema.teamMembers.ownerId, user.id)));
   const now = new Date();
   await db
     .update(schema.users)
-    .set({ email: `deleted-${user.id}@deleted.invalid`, name: null, brandLogoKey: null, notifyEmails: null, polarCustomerId: null, plan: "free", deletedAt: now })
+    .set({ email: `deleted-${user.id}@deleted.invalid`, name: null, brandLogoKey: null, notifyEmails: null, polarCustomerId: null, plan: "free", deletedAt: now, deletedEmailHash: await hmacHex(c.env.SESSION_SECRET, user.email) })
     .where(eq(schema.users.id, user.id));
   await audit(db, { userId: user.id, event: "account.deleted", ipHash: await ipHash(c.env.SESSION_SECRET, clientIp(c.req.raw)), meta: { removed: drop.length, keptSigned: keep.size } });
   await destroySession(c);
@@ -198,7 +198,7 @@ fileRoutes.get("/*", async (c) => {
   const obj = await getDb(c.env.DB).select({ mime: schema.files.mime, data: schema.files.data }).from(schema.files).where(eq(schema.files.key, key)).get();
   if (!obj) return c.notFound();
   c.header("content-type", obj.mime.startsWith("image/") ? obj.mime : "application/octet-stream");
-  c.header("cache-control", "public, max-age=31536000, immutable");
+  c.header("cache-control", "public, max-age=86400");
   c.header("content-disposition", "inline");
   c.header("x-content-type-options", "nosniff");
   c.header("content-security-policy", "default-src 'none'; sandbox");
