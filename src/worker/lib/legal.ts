@@ -120,7 +120,7 @@ export function renderTerms(nonce: string, analytics: string | null = null): str
 <li>A paid plan renews automatically at the end of each period, at the same price, until you cancel. The trial never turns into a charge: no card is taken for it.</li>
 <li>Prices are shown on the pricing page and in your account before you pay. We may change prices with at least 30 days' notice by email; changes apply at your next renewal.</li>
 <li>You can cancel at any time from your account. Cancelling stops future charges; the current period runs to its end and is not refunded, except where the law requires a refund or we choose to give one.</li>
-<li>Unlimited proposals on paid plans means unlimited for ordinary business use. Automated or bulk creation, or use as general storage, is not ordinary use and we may limit it after telling you.</li>
+<li>Unlimited proposals on paid plans means unlimited for ordinary business use. To keep the service fast for everyone, each account can create or duplicate up to 200 proposals a day and send up to 40 a day (5 per proposal), and can keep up to 30 saved templates. Images are limited by plan: 10 on Free, 200 on Pro, 500 on Business. Automated or bulk creation, or use as general storage, is not ordinary use and we may limit it further after telling you. If your business genuinely needs more, ask through the contact form.</li>
 </ul>
 
 <h2>4. Electronic acceptance</h2>
