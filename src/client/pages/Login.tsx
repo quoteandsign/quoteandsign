@@ -41,7 +41,7 @@ export function Login() {
     return () => window.clearTimeout(t);
   }, [sent]);
   const [devLink, setDevLink] = useState<string | null>(null);
-  const [marketing, setMarketing] = useState(true);
+  const [marketing, setMarketing] = useState(false);
   // Turnstile: the server says whether a challenge is required. The widget script is loaded only then.
   const [siteKey, setSiteKey] = useState<string | null>(null);
   const [challenge, setChallenge] = useState<string | null>(null);

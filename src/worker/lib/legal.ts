@@ -117,6 +117,7 @@ export function renderTerms(nonce: string, analytics: string | null = null): str
 <ul>
 <li>New accounts get a 14-day trial of the Pro plan. When it ends the account moves to the Free plan; nothing is deleted, and signed proposals stay online.</li>
 <li>Paid plans are billed monthly or yearly in advance through our payment provider, Polar, which is the merchant of record and handles payment details and applicable sales tax. We never see your card number.</li>
+<li>A paid plan renews automatically at the end of each period, at the same price, until you cancel. The trial never turns into a charge: no card is taken for it.</li>
 <li>Prices are shown on the pricing page and in your account before you pay. We may change prices with at least 30 days' notice by email; changes apply at your next renewal.</li>
 <li>You can cancel at any time from your account. Cancelling stops future charges; the current period runs to its end and is not refunded, except where the law requires a refund or we choose to give one.</li>
 <li>Unlimited proposals on paid plans means unlimited for ordinary business use. Automated or bulk creation, or use as general storage, is not ordinary use and we may limit it after telling you.</li>
@@ -130,6 +131,7 @@ export function renderTerms(nonce: string, analytics: string | null = null): str
 <ul>
 <li>You own what you put in the service. You give us the limited licence needed to store it, show it to the people you send it to, email copies, and produce PDFs, for as long as your account or the signed record exists.</li>
 <li>You are responsible for having the right to use everything you upload, including logos and images, and for what your proposals say.</li>
+<li>Emails to your recipients are sent at your request and in your name. You confirm you may contact each recipient under the anti-spam laws that apply to you (in Canada, CASL), and that you have any consent your privacy law requires for the personal data you put in a proposal.</li>
 <li>Signed proposals are a record for two parties. If you delete your account, drafts and unsigned proposals are removed, and signed proposals remain readable at their links with your contact details removed, so your former clients keep their copy.</li>
 <li>You can export everything at any time as JSON and PDF, from the Settings page.</li>
 </ul>
@@ -156,7 +158,7 @@ export function renderTerms(nonce: string, analytics: string | null = null): str
 <p>You will defend and indemnify us against claims, losses and costs (including reasonable legal fees) arising from your content, your proposals, your dealings with your clients, or your breach of these terms.</p>
 
 <h2>12. Termination</h2>
-<p>You may close your account at any time from the Settings page. We may suspend or close an account for breach of these terms or the Acceptable Use Policy, for non-payment, or where required by law. Sections 4, 5, 9, 10, 11 and 14 survive termination.</p>
+<p>You may close your account at any time from the Settings page. We may suspend or close an account for breach of these terms or the Acceptable Use Policy, for non-payment, or where required by law. Sections 4, 5, 9, 10, 11, 14 and 15 survive termination.</p>
 
 <h2>13. Changes to these terms</h2>
 <p>We may update these terms. For material changes we will email account holders at least 14 days before they take effect. Continued use after that date is acceptance of the new terms.</p>
@@ -164,7 +166,17 @@ export function renderTerms(nonce: string, analytics: string | null = null): str
 <h2>14. Governing law</h2>
 <p>These terms are governed by the laws of ${esc(LEGAL.province)} and the federal laws of Canada that apply there. Courts located in ${esc(LEGAL.province)} have exclusive jurisdiction, except that either party may seek an injunction anywhere. If you are a consumer with non-waivable rights under the law of your own country, those rights are unaffected.</p>
 
-<h2>15. Contact</h2>
+<h2>15. General</h2>
+<ul>
+<li>These terms, the Acceptable Use Policy, the Privacy Policy and the Data Processing Addendum are the whole agreement between us about the service.</li>
+<li>If a court finds part of these terms unenforceable, the rest still applies.</li>
+<li>If we do not enforce a term right away, we can still enforce it later.</li>
+<li>You may not transfer your account or this agreement to someone else without our consent. We may transfer it to a successor of the business, with notice to you.</li>
+<li>Neither of us is responsible for delays caused by events outside reasonable control, such as outages at our providers, except that you still owe any amounts due.</li>
+<li>If you send us suggestions, we may use them without owing you anything.</li>
+</ul>
+
+<h2>16. Contact</h2>
 <p>Use the <a href="/contact">contact form</a>. Reports about a proposal page or email go through the <a href="/contact?kind=abuse">same form</a> and are handled first.</p>
 `, nonce, "", analytics);
 }
@@ -190,7 +202,7 @@ export function renderPrivacy(nonce: string, analytics: string | null = null): s
 <li>Your proposals: the text, prices, client names and client email addresses you enter.</li>
 <li>Billing status from our payment provider (which plan, whether it is active). Card details never reach us.</li>
 <li>A security log of sign-ins, sends and account changes, with a hashed IP address, kept 12 months.</li>
-<li>If you leave the product-news box ticked when signing up, or tick it later, we record that choice with the time and a hashed IP address, and send you occasional product emails (a few a year). Every one has an unsubscribe link, and the setting is under Settings, Notifications.</li>
+<li>If you tick the product-news box when signing up (it is unticked by default), or turn it on later, we record that choice with the time and a hashed IP address, and send you occasional product emails (a few a year). Every one has an unsubscribe link, and the setting is under Settings, Notifications.</li>
 <li>Messages you send through the contact form, with the email address you give, so we can reply.</li>
 </ul>
 <h3>Recipients</h3>
@@ -226,6 +238,7 @@ export function renderPrivacy(nonce: string, analytics: string | null = null): s
 <li>Signed proposals and acceptance records: as long as either party may need them, because they are the proof of an agreement. When an account is deleted, signed records stay readable at their links with the sender's contact details removed.</li>
 <li>Sign-in links: 15 minutes. Sessions: 30 days. Security logs: 12 months. Rate-limit counters: 24 hours. Expired rows are removed by a nightly job.</li>
 <li>Contact form messages: 12 months after the conversation closes.</li>
+<li>Encrypted backups: 60 days, then removed. Anything you delete is out of every backup within that time.</li>
 <li>Deleted accounts: your email address, name, logo and notification addresses are erased at once. An anonymous stub of the account remains only so that signed proposals keep working for your former clients.</li>
 <li>Emails sent through Resend: per Resend's retention, typically 30 days of logs.</li>
 </ul>
@@ -234,7 +247,7 @@ export function renderPrivacy(nonce: string, analytics: string | null = null): s
 <p>You can access, correct, export or delete your data. Account holders can do all of this from the Settings page: export everything as one file, or delete the account with a code we email you. Recipients, and anyone else, can ask through the <a href="/contact?kind=other">contact form</a> what we hold about them and have it corrected or deleted; we may ask you to confirm the email address the request is about. We answer within 30 days and never charge for it. Nothing changes in how we treat you for exercising a right. You may also complain to your privacy regulator: in Canada the Office of the Privacy Commissioner, in the EU your national authority, in the UK the ICO.</p>
 
 <h2>Security</h2>
-<p>Passwordless sign-in, encryption at rest and in transit, unguessable proposal links, optional link passwords and expiry, rate limits, strict content security policies, and uploads limited to images checked by content. No system is perfectly secure; if a breach creates a real risk of significant harm we will notify affected people and the regulator as soon as feasible, and in any case within 72 hours of confirming it where the GDPR applies.</p>
+<p>Passwordless sign-in, encryption at rest and in transit, nightly encrypted backups, unguessable proposal links, optional link passwords and expiry, rate limits, strict content security policies, and uploads limited to images checked by content. No system is perfectly secure; if a breach creates a real risk of significant harm we will notify affected people and the regulator as soon as feasible, and in any case within 72 hours of confirming it where the GDPR applies.</p>
 
 <h2>Children</h2>
 <p>The service is for business use by adults. We do not knowingly collect data from anyone under 18.</p>
@@ -294,10 +307,10 @@ export function renderDpa(nonce: string, analytics: string | null = null): strin
 <ul>
 <li>Process personal data only on your documented instructions, which are the Terms and your use of the product features, unless the law requires otherwise, in which case we tell you first where we may.</li>
 <li>Keep the data confidential and ensure anyone with access is bound by confidentiality.</li>
-<li>Apply the security measures in the Privacy Policy, and not reduce them during the term.</li>
+<li>Apply the security measures in section 8 below, and not reduce them during the term.</li>
 <li>Help you respond to data subject requests: the product lets you export and delete, and we assist with the rest within 30 days.</li>
 <li>Tell you without undue delay, and within 72 hours, if we become aware of a personal data breach affecting your data, with the information you need for your own notifications.</li>
-<li>Delete or return the data at the end of the service, subject to the signed-record retention that protects both parties to an agreement and to legal holds.</li>
+<li>Delete or return the data at the end of the service: you can export everything yourself first, and deleting the account removes it at once from the live system and within 60 days from encrypted backups. Signed records that protect both parties to an agreement, and data under a legal hold, are the only exceptions.</li>
 <li>Make available the information needed to show compliance and allow audits, at your cost and on reasonable notice, no more than once a year unless a regulator requires otherwise.</li>
 </ul>
 
@@ -312,5 +325,18 @@ export function renderDpa(nonce: string, analytics: string | null = null): strin
 
 <h2>7. Contact</h2>
 <p>The Privacy Officer, ${esc(LEGAL.operator)}, through the <a href="/contact?kind=other">contact form</a>.</p>
+
+<h2>8. Security measures</h2>
+<ul>
+<li>All traffic over TLS; data encrypted at rest by the hosting provider.</li>
+<li>No passwords to steal: sign-in by one-time emailed links that expire in 15 minutes, sessions that expire after 30 days.</li>
+<li>Every read and write is scoped to the signed-in account; proposal pages use unguessable links, with optional passwords and expiry dates set by you.</li>
+<li>Uploads limited to images, checked by content, size-limited, and served with a policy that stops them running as code.</li>
+<li>Strict content security policy, security headers, and rate limits on sign-in, sending and acceptance.</li>
+<li>Recipients' IP addresses are stored only as keyed hashes, except in the acceptance record where the address itself is the evidence.</li>
+<li>A security log of sign-ins and changes, kept 12 months.</li>
+<li>Nightly encrypted backups kept 60 days; a removed backup leaves history as well.</li>
+<li>Access to production limited to the operator, with the source code public for review under the AGPL.</li>
+</ul>
 `, nonce, "", analytics);
 }
