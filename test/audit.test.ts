@@ -164,3 +164,18 @@ describe("small public pages", () => {
     expect(r.headers.get("cache-control")).toBe("private, no-store");
   });
 });
+
+describe("unlimited means a working business, not a script", () => {
+  it("stops new proposals after 200 in a day, with a fair-use code", async () => {
+    const c = await signIn("bulk@example.com");
+    let ok = 0;
+    let stopped: Response | null = null;
+    for (let batch = 0; batch < 21 && !stopped; batch++) {
+      const rs = await Promise.all(Array.from({ length: 10 }, () => as(c)("/api/proposals", "POST", { template: "blank" })));
+      for (const r of rs) { if (r.ok) ok++; else if (!stopped) stopped = r; }
+    }
+    expect(ok).toBe(200);
+    expect(stopped!.status).toBe(429);
+    expect((await stopped!.json()).code).toBe("fair-use");
+  });
+});

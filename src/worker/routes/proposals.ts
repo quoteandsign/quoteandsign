@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { z } from "zod";
 import { eq, and, or, desc, inArray, sql, gt, isNull } from "drizzle-orm";
 import type { AppEnv } from "../env";
@@ -160,10 +160,15 @@ proposalRoutes.get("/", async (c) => {
   });
 });
 
+const CREATE_PER_DAY = 200;
+const tooMany = (c: Context<AppEnv>) =>
+  c.json({ error: `That is ${CREATE_PER_DAY} new proposals today, which is more than any business writes by hand. The limit resets tomorrow; if you really need more, use the contact form.`, code: "fair-use" }, 429);
+
 proposalRoutes.post("/", async (c) => {
   const user = c.get("owner");
   const actor = c.get("user");
   const db = getDb(c.env.DB);
+  if (!(await rateLimit(db, `create:u:${user.id}`, CREATE_PER_DAY, 24 * 60 * 60_000)).allowed) return tooMany(c);
   const body = z.object({ template: z.string().max(40).optional(), userTemplate: z.string().uuid().optional(), accentColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(), style: z.enum(STYLE_IDS).optional(), currency: z.enum(SUPPORTED_CURRENCIES).optional() }).safeParse(await c.req.json().catch(() => ({})));
   let template = getTemplate(body.success ? body.data.template : undefined);
   let savedAccent: string | null = null;
@@ -406,6 +411,7 @@ proposalRoutes.post("/:id/duplicate", async (c) => {
   const user = c.get("owner");
   const actor = c.get("user");
   const db = getDb(c.env.DB);
+  if (!(await rateLimit(db, `create:u:${user.id}`, CREATE_PER_DAY, 24 * 60 * 60_000)).allowed) return tooMany(c);
   const proposal = await ownerProposal(db, c.req.param("id"), user.id);
   if (!proposal) return c.json({ error: "not found" }, 404);
   const items = await db.select().from(schema.pricingItems).where(eq(schema.pricingItems.proposalId, proposal.id)).orderBy(schema.pricingItems.position).all();
