@@ -102,7 +102,7 @@ adminRoutes.get("/overview", async (c) => {
   const db = getDb(c.env.DB);
   const day = 24 * 60 * 60_000;
   const since30 = new Date(Date.now() - 30 * day);
-  const [users, byPlan, trials, newUsers, proposals, sent30, accepted30, openTickets, subscribers, files] = await Promise.all([
+  const [users, byPlan, trials, newUsers, proposals, sent30, accepted30, openTickets, subscribers, files, mailRows] = await Promise.all([
     db.select({ n: sql<number>`count(*)` }).from(schema.users).where(sql`deleted_at is null`).get(),
     db.select({ plan: schema.users.plan, n: sql<number>`count(*)` }).from(schema.users).where(sql`deleted_at is null`).groupBy(schema.users.plan).all(),
     db.select({ n: sql<number>`count(*)` }).from(schema.users).where(sql`deleted_at is null and plan = 'free' and trial_ends_at > ${Date.now()}`).get(),
@@ -113,7 +113,11 @@ adminRoutes.get("/overview", async (c) => {
     db.select({ n: sql<number>`count(*)` }).from(schema.tickets).where(eq(schema.tickets.status, "open")).get(),
     db.select({ n: sql<number>`count(*)` }).from(schema.users).where(sql`deleted_at is null and marketing_opt_in = 1`).get(),
     db.select({ n: sql<number>`count(*)`, bytes: sql<number>`coalesce(sum(bytes), 0)` }).from(schema.files).get(),
+    db.select({ key: schema.settings.key, value: schema.settings.value }).from(schema.settings).where(sql`key like 'mail:%'`).all(),
   ]);
+  const today = new Date().toISOString().slice(0, 10);
+  const mailToday = Number(mailRows.find((r) => r.key === `mail:${today}`)?.value ?? 0);
+  const mailMonth = Number(mailRows.find((r) => r.key === `mail:${today.slice(0, 7)}`)?.value ?? 0);
   return c.json({
     users: users?.n ?? 0,
     byPlan: Object.fromEntries(byPlan.map((r) => [r.plan, r.n])),
@@ -129,6 +133,9 @@ adminRoutes.get("/overview", async (c) => {
     images: files?.n ?? 0,
     storageBytes: files?.bytes ?? 0,
     storageLimitBytes: STORAGE_LIMIT,
+    // Emails sent, against the provider's free quota (100 a day, 3,000 a month on Resend's free plan).
+    mailToday,
+    mailMonth,
   });
 });
 

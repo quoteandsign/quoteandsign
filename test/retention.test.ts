@@ -2,6 +2,9 @@ import { describe, it, expect } from "vitest";
 import { env } from "cloudflare:test";
 import { getDb, schema } from "../src/worker/lib/db";
 import { pruneOldRows, AUDIT_DAYS, warnOnStorage } from "../src/worker/lib/reminders";
+import { sendEmail, MAIL_WARN_DAY } from "../src/worker/lib/email";
+import { getSetting } from "../src/worker/lib/analytics";
+import { vi } from "vitest";
 import { count, sql } from "drizzle-orm";
 
 // The privacy policy states retention periods. The nightly job is what makes them true.
@@ -53,5 +56,22 @@ describe("storage warning", () => {
     expect(await warnOnStorage(env)).toBe(false);
     await db.insert(schema.files).values({ id: "f-big2", sha256: "y", key: "images/u-store/big2.webp", userId: "u-store", mime: "image/webp", bytes: 360 * 1024 * 1024, data: new Uint8Array(1), createdAt: new Date() } as any);
     expect(await warnOnStorage(env)).toBe(true);
+  });
+});
+
+describe("email quota warning", () => {
+  it("counts every email and warns support once when a day nears the free quota", async () => {
+    const logs: string[] = [];
+    const spy = vi.spyOn(console, "log").mockImplementation((...a: unknown[]) => { logs.push(a.map(String).join(" ")); });
+    const db = getDb(env.DB);
+    const today = new Date().toISOString().slice(0, 10);
+    const start = Number((await getSetting(db, `mail:${today}`)) ?? 0);
+    for (let i = start; i < MAIL_WARN_DAY - 1; i++) await sendEmail(env, { to: "x@example.com", subject: "s", text: "t" });
+    expect(logs.filter((l) => l.includes("close to the free email quota")).length).toBe(0);
+    await sendEmail(env, { to: "x@example.com", subject: "s", text: "t" });
+    await sendEmail(env, { to: "x@example.com", subject: "s", text: "t" });
+    expect(logs.filter((l) => l.includes("close to the free email quota")).length).toBe(1);
+    expect(Number(await getSetting(db, `mail:${today}`))).toBe(MAIL_WARN_DAY + 1);
+    spy.mockRestore();
   });
 });

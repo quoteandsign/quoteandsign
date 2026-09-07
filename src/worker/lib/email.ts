@@ -1,4 +1,6 @@
 import type { Bindings } from "../env";
+import { getDb } from "./db";
+import { getSetting, setSetting } from "./analytics";
 
 export type Mail = {
   to: string | string[];
@@ -6,6 +8,8 @@ export type Mail = {
   text: string;
   html?: string;
   replyTo?: string;
+  /** Internal notices about the quota itself are not counted, so the warning cannot count itself. */
+  uncounted?: boolean;
   attachments?: { filename: string; content: Uint8Array }[];
   /** Who the message is from, as the reader sees it: the sender's business, or Quote and Sign. */
   brand?: string | null;
@@ -29,9 +33,40 @@ function base64(bytes: Uint8Array): string {
  * Sends through Resend when RESEND_API_KEY is set. In development (no key) the message is
  * printed to the terminal instead, including any magic link, so the whole loop works offline.
  */
+/** Resend's free tier: 100 a day, 3,000 a month. Warn well before, once per period, so the plan is upgraded in time. */
+export const MAIL_WARN_DAY = 80;
+export const MAIL_WARN_MONTH = 2500;
+
+/** Counts what goes out and emails support once when a period is close to its quota. */
+async function countMail(env: Bindings, n: number): Promise<void> {
+  try {
+    const db = getDb(env.DB);
+    const today = new Date().toISOString().slice(0, 10);
+    const month = today.slice(0, 7);
+    const day = Number((await getSetting(db, `mail:${today}`)) ?? 0) + n;
+    const mon = Number((await getSetting(db, `mail:${month}`)) ?? 0) + n;
+    await setSetting(db, `mail:${today}`, String(day));
+    await setSetting(db, `mail:${month}`, String(mon));
+    const hit = day >= MAIL_WARN_DAY && !(await getSetting(db, `mailwarn:${today}`)) ? "day" : mon >= MAIL_WARN_MONTH && !(await getSetting(db, `mailwarn:${month}`)) ? "month" : null;
+    if (!hit) return;
+    await setSetting(db, `mailwarn:${hit === "day" ? today : month}`, "1");
+    const to = env.SUPPORT_EMAIL || env.EMAIL_FROM.replace(/^.*<|>$/g, "");
+    await sendEmail(env, {
+      to,
+      subject: `Quote and Sign: ${hit === "day" ? day + " emails today" : mon + " emails this month"}, close to the free email quota`,
+      heading: "Time to upgrade the email plan",
+      text: `The service has sent ${hit === "day" ? `${day} emails today (free tier: 100 a day)` : `${mon} emails this month (free tier: 3,000 a month)`}. When the quota is hit, sign-in links stop arriving.\n\nIn the Resend dashboard, Billing: choose the Pro plan (about 20 USD a month for 50,000 emails). Nothing in the code changes.\n\nThis email is sent once per ${hit}.`,
+      uncounted: true,
+    });
+  } catch (e) {
+    console.error("mail count", e);
+  }
+}
+
 export async function sendEmail(env: Bindings, mail: Mail): Promise<void> {
   const to = Array.isArray(mail.to) ? mail.to : [mail.to];
   if (!to.length) return;
+  if (!mail.uncounted) await countMail(env, to.length);
   if (!env.RESEND_API_KEY) {
     if (env.ENVIRONMENT !== "development") {
       // Refuse to run a production Worker with no email provider: nothing should be printed to logs.
