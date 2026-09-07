@@ -54,6 +54,12 @@ export function ConsentBanner() {
   );
 }
 
+/** An analytics event, only if the visitor allowed analytics and Google's script is loaded. Never carries personal data. */
+export function trackEvent(name: string, params: Record<string, string | number> = {}) {
+  const w = window as unknown as { gtag?: (...a: unknown[]) => void };
+  if (loaded && typeof w.gtag === "function") w.gtag("event", name, params);
+}
+
 /** For a "Cookie settings" control anywhere in the app. */
 export function openCookieSettings() {
   window.dispatchEvent(new Event("qs-cookie-settings"));

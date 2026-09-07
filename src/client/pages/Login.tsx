@@ -1,4 +1,5 @@
 import { useState, useRef, type FormEvent, useEffect } from "react";
+import { trackEvent } from "../components/ConsentBanner";
 import { motion, useReducedMotion } from "motion/react";
 import { api, ApiError } from "../lib/api";
 import { useRouter } from "../lib/router";
@@ -86,6 +87,8 @@ export function Login() {
       setChallenge(null);
       setDevLink(r.devLink ?? null);
       setSent(true);
+      // The conversion Google Ads counts: a sign-in link was requested. No email or name is sent.
+      trackEvent("sign_up", { method: "email_link", plan: wantedPlan ?? "none" });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong. Try again.");
     } finally {
