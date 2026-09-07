@@ -47,11 +47,24 @@ export async function sendTrialNotices(env: Bindings, now = new Date()): Promise
 }
 const PLANS_YEARLY_PRO = 19;
 
-/** Daily housekeeping: rate-limit windows older than a day, webhook ids older than a week. */
+const DAY = 24 * 60 * 60_000;
+/** How long the security log is kept. The privacy policy states this number; change both together. */
+export const AUDIT_DAYS = 365; // also closed contact-form tickets
+
+/**
+ * Daily housekeeping, so the retention periods in the privacy policy are what actually happens:
+ * rate-limit windows older than a day, webhook ids older than a week, sign-in links and sessions a
+ * day past their expiry, and security-log rows older than AUDIT_DAYS.
+ */
 export async function pruneOldRows(env: Bindings, now = new Date()): Promise<void> {
   const db = getDb(env.DB);
-  await db.delete(schema.rateLimits).where(lt(schema.rateLimits.windowStart, new Date(now.getTime() - 24 * 60 * 60_000)));
-  await db.delete(schema.webhookEvents).where(lt(schema.webhookEvents.seenAt, new Date(now.getTime() - 7 * 24 * 60 * 60_000)));
+  await db.delete(schema.rateLimits).where(lt(schema.rateLimits.windowStart, new Date(now.getTime() - DAY)));
+  await db.delete(schema.webhookEvents).where(lt(schema.webhookEvents.seenAt, new Date(now.getTime() - 7 * DAY)));
+  await db.delete(schema.magicTokens).where(lt(schema.magicTokens.expiresAt, new Date(now.getTime() - DAY)));
+  await db.delete(schema.sessions).where(lt(schema.sessions.expiresAt, new Date(now.getTime() - DAY)));
+  await db.delete(schema.auditLog).where(lt(schema.auditLog.createdAt, new Date(now.getTime() - AUDIT_DAYS * DAY)));
+  // Contact-form conversations a year after they closed (their messages go with them).
+  await db.delete(schema.tickets).where(and(eq(schema.tickets.status, "closed"), lt(schema.tickets.updatedAt, new Date(now.getTime() - AUDIT_DAYS * DAY))));
 }
 
 export async function sendExpiryReminders(env: Bindings, now = new Date()): Promise<number> {

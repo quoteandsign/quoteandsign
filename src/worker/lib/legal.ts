@@ -9,7 +9,7 @@ export const LEGAL = {
   shortName: "Quote and Sign",
   privacyOfficer: "the Privacy Officer", // the person's name is given on request, as PIPEDA allows
   province: "Ontario", // governing law and courts; change if the business is registered elsewhere
-  effective: "September 5, 2026",
+  effective: "September 6, 2026",
   contact: "hello@quoteandsign.com",
   abuse: "abuse@quoteandsign.com",
   privacyEmail: "privacy@quoteandsign.com",
@@ -110,6 +110,7 @@ export function renderTerms(nonce: string, analytics: string | null = null): str
 <li>You sign in with a one-time link sent to your email. Keep that inbox secure; anyone with access to it can use your account.</li>
 <li>You must be at least 18 and provide a working email address. One person may hold one account; a Business plan may add team members who each use their own email.</li>
 <li>You are responsible for everything done through your account, including by team members you invite.</li>
+<li>Service emails (sign-in links, "your proposal was accepted", trial and billing notices) are part of the service. Product news is separate, optional, and can be turned off from any such email or under Settings, Notifications.</li>
 </ul>
 
 <h2>3. Plans, trials and billing</h2>
@@ -130,7 +131,7 @@ export function renderTerms(nonce: string, analytics: string | null = null): str
 <li>You own what you put in the service. You give us the limited licence needed to store it, show it to the people you send it to, email copies, and produce PDFs, for as long as your account or the signed record exists.</li>
 <li>You are responsible for having the right to use everything you upload, including logos and images, and for what your proposals say.</li>
 <li>Signed proposals are a record for two parties. If you delete your account, drafts and unsigned proposals are removed, and signed proposals remain readable at their links with your contact details removed, so your former clients keep their copy.</li>
-<li>You can export everything at any time as JSON and PDF.</li>
+<li>You can export everything at any time as JSON and PDF, from the Settings page.</li>
 </ul>
 
 <h2>6. Acceptable use</h2>
@@ -155,7 +156,7 @@ export function renderTerms(nonce: string, analytics: string | null = null): str
 <p>You will defend and indemnify us against claims, losses and costs (including reasonable legal fees) arising from your content, your proposals, your dealings with your clients, or your breach of these terms.</p>
 
 <h2>12. Termination</h2>
-<p>You may close your account at any time from the Brand page. We may suspend or close an account for breach of these terms or the Acceptable Use Policy, for non-payment, or where required by law. Sections 4, 5, 9, 10, 11 and 14 survive termination.</p>
+<p>You may close your account at any time from the Settings page. We may suspend or close an account for breach of these terms or the Acceptable Use Policy, for non-payment, or where required by law. Sections 4, 5, 9, 10, 11 and 14 survive termination.</p>
 
 <h2>13. Changes to these terms</h2>
 <p>We may update these terms. For material changes we will email account holders at least 14 days before they take effect. Continued use after that date is acceptance of the new terms.</p>
@@ -171,7 +172,8 @@ export function renderTerms(nonce: string, analytics: string | null = null): str
 export function renderPrivacy(nonce: string, analytics: string | null = null): string {
   return shell("Privacy Policy", `
 <h1>Privacy Policy</h1>
-<p class="eff">Effective ${LEGAL.effective}. This policy explains what ${esc(LEGAL.shortName)} collects, why, and what you can do about it. It is written to meet Canada's PIPEDA, the EU and UK GDPR, and the California CCPA. A designated Privacy Officer is accountable for this policy and can be reached through the <a href="/contact?kind=other">contact form</a>; their name is provided on request.</p>
+<p class="eff">Effective ${LEGAL.effective}. This policy explains what ${esc(LEGAL.shortName)} collects, why, and what you can do about it. It is written to meet Canada's PIPEDA, the EU and UK GDPR, and the California CCPA. The service is operated by ${esc(LEGAL.operator)}, based in ${esc(LEGAL.province)}, Canada, which is the controller of the data described here (except your clients' data in your proposals, where you are the controller and we act for you under the <a href="/dpa">Data Processing Addendum</a>). A designated Privacy Officer is accountable for this policy and can be reached through the <a href="/contact?kind=other">contact form</a>; their name and a postal address are provided on request.</p>
+<div class="box"><p><strong>In short:</strong> we collect what is needed to send proposals and record acceptances, we never sell or share personal information for advertising, we use no trackers on proposal pages, and Google Analytics runs on the public pages only if you allow it. Account holders can export or delete everything themselves.</p></div>
 
 <h2>Who this covers</h2>
 <ul>
@@ -187,16 +189,18 @@ export function renderPrivacy(nonce: string, analytics: string | null = null): s
 <li>Business name, color, logo, page style, payment link and team email addresses, to put on your proposals.</li>
 <li>Your proposals: the text, prices, client names and client email addresses you enter.</li>
 <li>Billing status from our payment provider (which plan, whether it is active). Card details never reach us.</li>
-<li>A security log of sign-ins, sends and account changes, with a hashed IP address.</li>
+<li>A security log of sign-ins, sends and account changes, with a hashed IP address, kept 12 months.</li>
+<li>If you leave the product-news box ticked when signing up, or tick it later, we record that choice with the time and a hashed IP address, and send you occasional product emails (a few a year). Every one has an unsubscribe link, and the setting is under Settings, Notifications.</li>
+<li>Messages you send through the contact form, with the email address you give, so we can reply.</li>
 </ul>
 <h3>Recipients</h3>
 <ul>
-<li>When a proposal is opened: the time, a hashed IP address, the browser type and country, and how long each section stayed on screen. The sender sees counts and timings, never your IP address.</li>
+<li>When a proposal is opened: the time, a hashed IP address, the browser type and country, and how long each section stayed on screen. The sender sees counts and timings, never your IP address. These records belong to the proposal and are deleted with it.</li>
 <li>When you ask a question or decline: the name, email and message you type, sent to the sender.</li>
 <li>When you accept: the name you type, your email address, the time, your IP address and browser, the options you chose and the consent sentence you agreed to. This is the acceptance record. It exists to prove who agreed to what and when, and is shared with the sender and emailed to you. Your IP address is kept in the record because it is part of that proof.</li>
 </ul>
 <h3>Visitors</h3>
-<p>Standard server logs and privacy-preserving, cookieless analytics from our hosting provider. On the public pages (the homepage, sign-in, contact and these legal pages) we may also use Google Analytics, but only after you allow it in the cookie notice. If you allow it, Google receives the pages you view, a shortened IP address, and a browser identifier stored in a cookie; we use it to see which pages help people. Google's handling of that data is described in Google's privacy policy. Proposal pages your clients open never carry Google Analytics. No advertising trackers anywhere.</p>
+<p>Our hosting provider keeps short-lived server logs (IP address, page requested, time) to run the network and stop attacks. On the public pages (the homepage, sign-in, contact and these legal pages) we may also use Google Analytics, but only after you allow it in the cookie notice. If you allow it, Google receives the pages you view, a shortened IP address, and a browser identifier stored in a cookie; we use it to see which pages help people. Google's handling of that data is described in Google's privacy policy. Proposal pages your clients open never carry Google Analytics. No advertising trackers anywhere.</p>
 
 <h2>Cookies</h2>
 <p><b>Strictly necessary:</b> one cookie keeps you signed in, and one remembers a proposal password you entered. Neither tracks you across sites. Your theme choice is stored in your browser only.</p>
@@ -211,7 +215,7 @@ export function renderPrivacy(nonce: string, analytics: string | null = null): s
 </ul>
 
 <h2>Who else sees data</h2>
-<p>We use three subprocessors and no others: <strong>Cloudflare</strong> (hosting, database, file storage and network security; data is encrypted at rest and in transit), <strong>Polar</strong> (payments; they see your email and billing details), and <strong>Resend</strong> (email delivery; they see the addresses and content of emails we send). We do not sell personal information and we do not share it for advertising. We disclose data when the law requires it or to protect people from harm, and we will tell you if we lawfully can.</p>
+<p>We use three service providers for the product and no others: <strong>Cloudflare</strong> (hosting, database, image storage and network security; data is encrypted at rest and in transit), <strong>Polar</strong> (payments; they see your email and billing details), and <strong>Resend</strong> (email delivery; they see the addresses and content of emails we send). <strong>Google</strong> (Google Analytics) receives data only from visitors to the public pages who clicked Allow, and never anything from proposals or accounts. We do not sell personal information and we do not share it for advertising. We disclose data when the law requires it or to protect people from harm, and we will tell you if we lawfully can.</p>
 
 <h2>Where data lives</h2>
 <p>Our infrastructure runs on Cloudflare's global network; data may be stored and processed in Canada, the United States and the EU. Transfers out of the EU and UK rely on standard contractual clauses held by our subprocessors.</p>
@@ -220,12 +224,14 @@ export function renderPrivacy(nonce: string, analytics: string | null = null): s
 <ul>
 <li>Drafts and unsigned proposals: until you delete them or your account.</li>
 <li>Signed proposals and acceptance records: as long as either party may need them, because they are the proof of an agreement. When an account is deleted, signed records stay readable at their links with the sender's contact details removed.</li>
-<li>Sign-in links: 15 minutes. Sessions: 30 days. Security logs: 12 months. Rate-limit counters: 24 hours.</li>
+<li>Sign-in links: 15 minutes. Sessions: 30 days. Security logs: 12 months. Rate-limit counters: 24 hours. Expired rows are removed by a nightly job.</li>
+<li>Contact form messages: 12 months after the conversation closes.</li>
+<li>Deleted accounts: your email address, name, logo and notification addresses are erased at once. An anonymous stub of the account remains only so that signed proposals keep working for your former clients.</li>
 <li>Emails sent through Resend: per Resend's retention, typically 30 days of logs.</li>
 </ul>
 
 <h2>Your rights</h2>
-<p>You can access, correct, export or delete your data. Account holders can do all of this from the Brand page: export everything as one file, or delete the account. Recipients can email us to ask what we hold about them. We answer within 30 days. You may also complain to your privacy regulator: in Canada the Office of the Privacy Commissioner, in the EU your national authority, in the UK the ICO.</p>
+<p>You can access, correct, export or delete your data. Account holders can do all of this from the Settings page: export everything as one file, or delete the account with a code we email you. Recipients, and anyone else, can ask through the <a href="/contact?kind=other">contact form</a> what we hold about them and have it corrected or deleted; we may ask you to confirm the email address the request is about. We answer within 30 days and never charge for it. Nothing changes in how we treat you for exercising a right. You may also complain to your privacy regulator: in Canada the Office of the Privacy Commissioner, in the EU your national authority, in the UK the ICO.</p>
 
 <h2>Security</h2>
 <p>Passwordless sign-in, encryption at rest and in transit, unguessable proposal links, optional link passwords and expiry, rate limits, strict content security policies, and uploads limited to images checked by content. No system is perfectly secure; if a breach creates a real risk of significant harm we will notify affected people and the regulator as soon as feasible, and in any case within 72 hours of confirming it where the GDPR applies.</p>
@@ -296,7 +302,7 @@ export function renderDpa(nonce: string, analytics: string | null = null): strin
 </ul>
 
 <h2>4. Subprocessors</h2>
-<p>You authorise the subprocessors listed in the Privacy Policy: Cloudflare, Polar and Resend. We will email account holders at least 14 days before adding a new one; you may object, and if we cannot resolve it you may close your account and export your data.</p>
+<p>You authorise the subprocessors listed in the Privacy Policy: Cloudflare, Polar and Resend. Google Analytics, when enabled, processes only our own visitor data on the public pages and never your proposals or your clients' data, so it is not a subprocessor under this addendum. We will email account holders at least 14 days before adding a new one; you may object, and if we cannot resolve it you may close your account and export your data.</p>
 
 <h2>5. International transfers</h2>
 <p>Data may be processed in Canada, the United States and the EU. Canada holds an EU adequacy decision for PIPEDA-covered organisations. Transfers to the United States rely on standard contractual clauses in our subprocessors' agreements.</p>
