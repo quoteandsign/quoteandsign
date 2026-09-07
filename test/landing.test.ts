@@ -38,3 +38,29 @@ describe("homepage", () => {
     expect(html).not.toContain("—");
   });
 });
+
+describe("what crawlers are told", () => {
+  it("serves a real robots.txt, sitemap and llms.txt that list only the public pages", async () => {
+    const robots = await app.request("http://localhost:5173/robots.txt", {}, env);
+    expect(robots.headers.get("content-type")).toContain("text/plain");
+    const r = await robots.text();
+    expect(r).toContain("Content-Signal: search=yes, ai-input=yes, ai-train=no");
+    for (const p of ["/p/", "/app", "/api/", "/auth/", "/files/", "/t/", "/admin"]) expect(r).toContain("Disallow: " + p);
+    expect(r).toContain("Sitemap: http://localhost:5173/sitemap.xml");
+    const sitemap = await app.request("http://localhost:5173/sitemap.xml", {}, env);
+    expect(sitemap.headers.get("content-type")).toContain("application/xml");
+    const x = await sitemap.text();
+    expect((x.match(/<url>/g) ?? []).length).toBe(7);
+    expect(x).not.toContain("/p/");
+    expect(x).not.toContain("/app");
+    const llms = await (await app.request("http://localhost:5173/llms.txt", {}, env)).text();
+    expect(llms).toContain("# Quote and Sign");
+    expect(llms).toContain("Pro: $19 a month billed yearly or $24 monthly");
+    expect(llms).toContain("16 currencies");
+    expect(llms).toContain("AGPL");
+    expect(llms).not.toContain("Cloudflare");
+    // Client-facing pages stay out of every index.
+    const notFound = await (await app.request("http://localhost:5173/p/00000000-0000-4000-8000-000000000000", {}, env)).text();
+    expect(notFound).toContain('name="robots" content="noindex"');
+  });
+});

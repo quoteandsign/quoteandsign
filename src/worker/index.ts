@@ -11,6 +11,7 @@ import { teamRoutes } from "./routes/team";
 import { renderTerms, renderPrivacy, renderAcceptableUse, renderDpa, renderContact } from "./lib/legal";
 import { contactRoutes, adminRoutes } from "./routes/support";
 import { analyticsId, analyticsCsp } from "./lib/analytics";
+import { robotsTxt, sitemapXml, llmsTxt } from "./lib/seo";
 import { getSessionUser } from "./lib/session";
 import { businessName } from "../shared/names";
 import { eq, and } from "drizzle-orm";
@@ -96,8 +97,14 @@ app.get("/", async (c) => {
     `default-src 'none'; script-src 'nonce-${nonce}'${csp.script}; style-src 'nonce-${nonce}'; img-src 'self' data:${csp.img}; connect-src 'self'${csp.connect}; font-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`,
   );
   c.header("cache-control", "public, max-age=300");
-  return c.html(renderLanding({ nonce, appUrl: appUrl(c), githubUrl: "https://github.com/quoteandsign/quoteandsign", analytics: ga }));
+  return c.html(renderLanding({ nonce, appUrl: appUrl(c), githubUrl: GITHUB_URL, analytics: ga }));
 });
+
+// What crawlers and AI assistants may read: the public pages only, described once.
+const GITHUB_URL = "https://github.com/quoteandsign/quoteandsign";
+app.get("/robots.txt", (c) => { c.header("cache-control", "public, max-age=3600"); return c.text(robotsTxt(appUrl(c))); });
+app.get("/sitemap.xml", (c) => { c.header("cache-control", "public, max-age=3600"); return c.body(sitemapXml(appUrl(c)), 200, { "content-type": "application/xml; charset=utf-8" }); });
+app.get("/llms.txt", (c) => { c.header("cache-control", "public, max-age=3600"); return c.text(llmsTxt(appUrl(c), GITHUB_URL)); });
 
 // Legal pages, server-rendered like the homepage.
 const legalPages: Record<string, (nonce: string, analytics: string | null) => string> = { "/terms": renderTerms, "/privacy": renderPrivacy, "/acceptable-use": renderAcceptableUse, "/dpa": renderDpa };
