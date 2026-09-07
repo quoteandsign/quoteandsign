@@ -93,6 +93,11 @@ describe("contact and admin", () => {
     expect(ov.openTickets).toBeGreaterThanOrEqual(1);
     expect(ov.storageBytes).toBeGreaterThan(0);
     expect(ov.storageLimitBytes).toBe(500 * 1024 * 1024);
+    // The admin's own account stays out of the numbers unless asked for.
+    const mine = await (await as(owner)("/api/admin/overview?mine=1")).json();
+    expect(mine.users).toBe(ov.users + 1);
+    expect(ov.includeMine).toBe(false);
+    expect(mine.includeMine).toBe(true);
     const list = (await (await as(owner)("/api/admin/tickets")).json()).tickets;
     const t = list.find((x: { subject: string }) => x.subject === "Invoice question");
     expect(t).toBeTruthy();

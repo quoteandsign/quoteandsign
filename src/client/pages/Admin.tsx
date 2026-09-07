@@ -11,7 +11,7 @@ import { formatMoney } from "../../shared/pricing";
 // The admin area: who is here, what they are doing, and the messages waiting for an answer.
 // Only accounts listed in ADMIN_EMAILS see it; everyone else gets a 404 from the API.
 
-type Overview = { users: number; byPlan: Record<string, number>; trialing: number; newUsers30: number; proposals: number; sent30: number; accepted30: number; acceptedTotal30: number; openTickets: number; subscribers: number; images: number; storageBytes: number; storageLimitBytes: number; mailToday: number; mailMonth: number };
+type Overview = { users: number; byPlan: Record<string, number>; trialing: number; newUsers30: number; proposals: number; sent30: number; accepted30: number; acceptedTotal30: number; openTickets: number; subscribers: number; images: number; storageBytes: number; storageLimitBytes: number; mailToday: number; mailMonth: number; includeMine: boolean; adminAccounts: number };
 type Person = { id: string; email: string; brandName: string | null; plan: string; effective: string; interval: string | null; trialEndsAt: number | null; createdAt: number; marketingOptIn: boolean; proposals: number; accepted: number; lastSeen: number | null };
 type Ticket = { id: string; kind: string; name: string; email: string; subject: string; status: string; userId: string | null; createdAt: number; updatedAt: number };
 type Message = { id: string; from: string; body: string; createdAt: number };
@@ -50,6 +50,8 @@ export function Admin() {
     }
   };
   const [overview, setOverview] = useState<Overview | null>(null);
+  const [includeMine, setIncludeMine] = useState<boolean>(() => { try { return localStorage.getItem("qs-admin-mine") === "1"; } catch { return false; } });
+  const toggleMine = (v: boolean) => { setIncludeMine(v); setOverview(null); try { localStorage.setItem("qs-admin-mine", v ? "1" : "0"); } catch { /* private mode */ } };
   const [people, setPeople] = useState<Person[] | null>(null);
   const [tickets, setTickets] = useState<Ticket[] | null>(null);
   const [ticketStatus, setTicketStatus] = useState<"open" | "closed">("open");
@@ -62,9 +64,9 @@ export function Admin() {
 
   const loadTickets = () => api<{ tickets: Ticket[] }>(`/api/admin/tickets?status=${ticketStatus}`).then((r) => setTickets(r.tickets), (e) => setError((e as Error).message));
   useEffect(() => {
-    api<Overview>("/api/admin/overview").then(setOverview, (e) => setError((e as Error).message));
+    api<Overview>(`/api/admin/overview${includeMine ? "?mine=1" : ""}`).then(setOverview, (e) => setError((e as Error).message));
     api<{ people: Person[] }>("/api/admin/people").then((r) => setPeople(r.people), () => {});
-  }, []);
+  }, [includeMine]);
   useEffect(() => { void loadTickets(); }, [ticketStatus]);
   useEffect(() => {
     if (!openId) return setThread(null);
@@ -122,8 +124,14 @@ export function Admin() {
         {error && <p className="mt-6 rounded-xl bg-red-600/10 p-3 text-sm text-red-800 dark:text-red-300">{error}</p>}
 
         {tab === "overview" && (
-          !overview ? <div className="mt-8 grid gap-3 sm:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-24 rounded-[1.25rem]" />)}</div> : (
-            <div className="mt-8 grid gap-3 sm:grid-cols-3">
+          <label className="mt-6 inline-flex cursor-pointer select-none items-center gap-2 text-[13px] text-stone-600 dark:text-stone-400" data-test="admin-include-mine">
+            <input type="checkbox" className="h-4 w-4 rounded accent-brand" checked={includeMine} onChange={(e) => toggleMine(e.target.checked)} />
+            Include my own account in the numbers
+          </label>
+        )}
+        {tab === "overview" && (
+          !overview ? <div className="mt-4 grid gap-3 sm:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-24 rounded-[1.25rem]" />)}</div> : (
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
               <Stat label="Accounts" value={String(overview.users)} sub={`${overview.newUsers30} new in 30 days · ${overview.trialing} on trial`} />
               <Stat label="Paying" value={String((overview.byPlan.pro ?? 0) + (overview.byPlan.business ?? 0))} sub={`${overview.byPlan.pro ?? 0} Pro · ${overview.byPlan.business ?? 0} Business`} />
               <Stat label="Signed in 30 days" value={String(overview.accepted30)} sub={`${formatMoney(overview.acceptedTotal30, "USD")} one-time, across currencies`} />

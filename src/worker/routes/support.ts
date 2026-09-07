@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { eq, desc, sql, and } from "drizzle-orm";
+import { eq, desc, sql, and, inArray } from "drizzle-orm";
 import type { AppEnv } from "../env";
 import { clientIp, appUrl } from "../env";
 import { getDb, schema } from "../lib/db";
@@ -102,16 +102,24 @@ adminRoutes.get("/overview", async (c) => {
   const db = getDb(c.env.DB);
   const day = 24 * 60 * 60_000;
   const since30 = new Date(Date.now() - 30 * day);
+  // Admin accounts are test accounts as far as the numbers go; leave them out unless asked.
+  const includeMine = c.req.query("mine") === "1";
+  const adminEmails = (c.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
+  const adminIds = includeMine || !adminEmails.length ? [] : (await db.select({ id: schema.users.id }).from(schema.users).where(inArray(schema.users.email, adminEmails)).all()).map((r) => r.id);
+  const idList = sql.join(adminIds.map((id) => sql`${id}`), sql`, `);
+  const notAdminUser = adminIds.length ? sql`and id not in (${idList})` : sql``;
+  const notAdminOwner = adminIds.length ? sql`and user_id not in (${idList})` : sql``;
+  const notAdminProposal = adminIds.length ? sql`and proposal_id in (select id from proposals where user_id not in (${idList}))` : sql``;
   const [users, byPlan, trials, newUsers, proposals, sent30, accepted30, openTickets, subscribers, files, mailRows] = await Promise.all([
-    db.select({ n: sql<number>`count(*)` }).from(schema.users).where(sql`deleted_at is null`).get(),
-    db.select({ plan: schema.users.plan, n: sql<number>`count(*)` }).from(schema.users).where(sql`deleted_at is null`).groupBy(schema.users.plan).all(),
-    db.select({ n: sql<number>`count(*)` }).from(schema.users).where(sql`deleted_at is null and plan = 'free' and trial_ends_at > ${Date.now()}`).get(),
-    db.select({ n: sql<number>`count(*)` }).from(schema.users).where(sql`deleted_at is null and created_at > ${since30.getTime()}`).get(),
-    db.select({ n: sql<number>`count(*)` }).from(schema.proposals).get(),
-    db.select({ n: sql<number>`count(*)` }).from(schema.proposals).where(sql`sent_at > ${since30.getTime()}`).get(),
-    db.select({ n: sql<number>`count(*)`, total: sql<number>`coalesce(sum(total_amount), 0)` }).from(schema.acceptances).where(sql`accepted_at > ${since30.getTime()}`).get(),
+    db.select({ n: sql<number>`count(*)` }).from(schema.users).where(sql`deleted_at is null ${notAdminUser}`).get(),
+    db.select({ plan: schema.users.plan, n: sql<number>`count(*)` }).from(schema.users).where(sql`deleted_at is null ${notAdminUser}`).groupBy(schema.users.plan).all(),
+    db.select({ n: sql<number>`count(*)` }).from(schema.users).where(sql`deleted_at is null and plan = 'free' and trial_ends_at > ${Date.now()} ${notAdminUser}`).get(),
+    db.select({ n: sql<number>`count(*)` }).from(schema.users).where(sql`deleted_at is null and created_at > ${since30.getTime()} ${notAdminUser}`).get(),
+    db.select({ n: sql<number>`count(*)` }).from(schema.proposals).where(sql`1 = 1 ${notAdminOwner}`).get(),
+    db.select({ n: sql<number>`count(*)` }).from(schema.proposals).where(sql`sent_at > ${since30.getTime()} ${notAdminOwner}`).get(),
+    db.select({ n: sql<number>`count(*)`, total: sql<number>`coalesce(sum(total_amount), 0)` }).from(schema.acceptances).where(sql`accepted_at > ${since30.getTime()} ${notAdminProposal}`).get(),
     db.select({ n: sql<number>`count(*)` }).from(schema.tickets).where(eq(schema.tickets.status, "open")).get(),
-    db.select({ n: sql<number>`count(*)` }).from(schema.users).where(sql`deleted_at is null and marketing_opt_in = 1`).get(),
+    db.select({ n: sql<number>`count(*)` }).from(schema.users).where(sql`deleted_at is null and marketing_opt_in = 1 ${notAdminUser}`).get(),
     db.select({ n: sql<number>`count(*)`, bytes: sql<number>`coalesce(sum(bytes), 0)` }).from(schema.files).get(),
     db.select({ key: schema.settings.key, value: schema.settings.value }).from(schema.settings).where(sql`key like 'mail:%'`).all(),
   ]);
@@ -136,6 +144,8 @@ adminRoutes.get("/overview", async (c) => {
     // Emails sent, against the provider's free quota (100 a day, 3,000 a month on Resend's free plan).
     mailToday,
     mailMonth,
+    includeMine,
+    adminAccounts: adminEmails.length,
   });
 });
 
