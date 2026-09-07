@@ -36,6 +36,7 @@ async function pdfText(buf: ArrayBuffer): Promise<string> {
     const start = m.index + m[0].length;
     const end = raw.indexOf("endstream", start);
     if (end < 0) break;
+    re.lastIndex = end + 9; // never match "stream" inside this stream's own bytes
     let stop = end;
     while (stop > start && (bytes[stop - 1] === 0x0a || bytes[stop - 1] === 0x0d)) stop--;
     const chunk = bytes.subarray(start, stop);

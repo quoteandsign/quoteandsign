@@ -168,7 +168,7 @@ export function PricingPanel({ items, currency, defaultTaxBps, taxLabel, onChang
                     {it.taxRateBps !== null && it.taxRateBps !== 0 && <Chip>{it.taxRateBps / 100}% tax on this line</Chip>}
                   </span>
                   <span className={cn("flex h-6 shrink-0 items-center gap-1 rounded-full pl-2 pr-1.5 text-[11.5px] font-medium transition-colors", isOpen ? "bg-brand/10 text-brand dark:text-indigo-300" : "bg-stone-900/[.05] text-stone-500 group-hover:bg-stone-900/[.09] group-hover:text-ink dark:bg-white/[.07] dark:group-hover:bg-white/[.12] dark:group-hover:text-stone-100")}>
-                    {isOpen ? "Close" : <><PencilSimple size={11} weight="bold" /> Edit</>}
+                    {isOpen ? "Close" : readOnly ? "View" : <><PencilSimple size={11} weight="bold" /> Edit</>}
                     <CaretDown size={11} weight="bold" className={cn("transition-transform duration-300 ease-[cubic-bezier(.32,.72,0,1)]", isOpen && "rotate-180")} />
                   </span>
                 </span>

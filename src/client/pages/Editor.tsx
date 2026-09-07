@@ -145,6 +145,7 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
   const [saveState, setSaveState] = useState<"saved" | "saving" | "error">("saved");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [splash, setSplash] = useState<string | null>(null); // a moment of confirmation after Send
   const [tab, setTab] = useState<"pricing" | "options">("pricing");
 
   // Every write goes through one chain so requests can never land out of order.
@@ -320,6 +321,8 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
       const r = await api<{ link: string; emailed: number }>(`/api/proposals/${proposal.id}/send`, { method: "POST", json: { message: message.trim() || undefined, email } });
       if (status === "draft" || status === "declined") setStatus("sent");
       setSendOpen(false);
+      setSplash(r.emailed ? `Sent to ${r.emailed === 1 ? recipients[0] : `${r.emailed} people`}` : "Link is live");
+      setTimeout(() => setSplash(null), 1700);
       setNotice(r.emailed ? `Sent to ${r.emailed === 1 ? recipients[0] : `${r.emailed} people`}.` : "The link is live. Share it however you like.");
       setTimeout(() => setNotice(null), 5000);
     } catch (e) {
@@ -629,6 +632,17 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
                 <X size={16} weight="bold" />
               </button>
               <p className="mt-3 text-center text-[13px] text-white/80">This is the live client page at phone width.</p>
+            </div>
+          </div>
+        )}
+        {splash && (
+          <div role="status" aria-live="polite" className="pointer-events-none fixed inset-0 z-40 grid place-items-center">
+            <div className="qs-splash flex flex-col items-center gap-3 rounded-[2rem] bg-white/95 px-10 py-8 shadow-[0_30px_80px_-30px_rgba(25,24,22,.45)] ring-1 ring-inset ring-stone-900/[.06] backdrop-blur dark:bg-stone-900/95 dark:ring-white/10">
+              <svg width="72" height="72" viewBox="0 0 72 72" aria-hidden="true">
+                <circle cx="36" cy="36" r="33" fill="none" stroke="currentColor" strokeWidth="3" className="qs-splash-ring text-brand" />
+                <path d="M22 37.5 L31.5 47 L50 27" fill="none" stroke="currentColor" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" className="qs-splash-check text-brand" />
+              </svg>
+              <div className="text-[17px] font-semibold tracking-[-0.01em]">{splash}</div>
             </div>
           </div>
         )}

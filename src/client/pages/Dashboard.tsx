@@ -37,6 +37,8 @@ type Row = {
   acceptedTotal: number | null;
   signerName: string | null;
   acceptMethod: string | null;
+  countersign: boolean;
+  countersignedAt: number | null;
   currency: string;
   expiresAt: number | null;
   declinedAt: number | null;
@@ -87,7 +89,7 @@ function Journey({ row, onResend, note }: { row: Row; onResend: () => void; note
       : {
           key: "signed",
           label: row.acceptedAt ? (row.acceptMethod === "manual" ? "Marked accepted" : `Signed by ${row.signerName ?? "the client"}`) : "Signed",
-          sub: row.acceptedAt ? `${fmtDay(row.acceptedAt)}${row.acceptedTotal !== null ? ` · ${formatMoney(row.acceptedTotal, row.currency)}` : ""}` : row.status === "expired" ? "Expired" : "Not yet",
+          sub: row.acceptedAt ? `${fmtDay(row.acceptedAt)}${row.acceptedTotal !== null ? ` · ${formatMoney(row.acceptedTotal, row.currency)}` : ""}${row.countersignedAt ? " · countersigned" : ""}` : row.status === "expired" ? "Expired" : "Not yet",
           done: Boolean(row.acceptedAt),
           icon: <PenNib size={12} weight="bold" />,
         },
@@ -123,6 +125,11 @@ function Journey({ row, onResend, note }: { row: Row; onResend: () => void; note
         ))}
       </ol>
       <span className="flex items-center gap-1">
+        {row.acceptedAt && row.countersign && !row.countersignedAt && (
+          <Link href={`/app/p/${row.id}`} className="inline-flex h-8 items-center gap-1.5 rounded-full bg-brand px-3 text-[12.5px] font-semibold text-white shadow-[0_1px_2px_rgba(43,63,140,.3)] hover:bg-brand-strong">
+            <PenNib size={13} weight="bold" /> Your turn: countersign
+          </Link>
+        )}
         {row.acceptedAt && (
           <a href={`/p/${row.publicId}`} target="_blank" rel="noreferrer" data-test="signed-copy" className="inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[12.5px] font-medium text-brand hover:bg-brand/[.08] dark:text-indigo-300" title="The signed page, with the PDF and the record">
             Signed copy <ArrowSquareOut size={13} weight="bold" />

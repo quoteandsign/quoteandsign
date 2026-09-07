@@ -135,6 +135,8 @@ proposalRoutes.get("/", async (c) => {
       acceptedTotal: sql<number | null>`(select a.total_amount from acceptances a where a.proposal_id = proposals.id)`,
       signerName: sql<string | null>`(select a.signer_name from acceptances a where a.proposal_id = proposals.id)`,
       acceptMethod: sql<string | null>`(select a.method from acceptances a where a.proposal_id = proposals.id)`,
+      countersign: schema.proposals.countersign,
+      countersignedAt: sql<number | null>`(select a.countersigned_at from acceptances a where a.proposal_id = proposals.id)`,
       unreadQuestions: sql<number>`(select count(*) from messages m where m.proposal_id = proposals.id and m.read_at is null)`,
       uniqueViewers: sql<number>`(select count(distinct v.ip_hash) from views v where v.proposal_id = proposals.id)`,
       lastViewedAt: sql<number | null>`(select max(v.viewed_at) from views v where v.proposal_id = proposals.id)`,
