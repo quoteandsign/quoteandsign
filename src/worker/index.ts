@@ -8,6 +8,8 @@ import { templateRoutes } from "./routes/templates";
 import { billingRoutes, billingWebhook } from "./routes/billing";
 import { accountRoutes, fileRoutes } from "./routes/account";
 import { teamRoutes } from "./routes/team";
+import { webhookRoutes } from "./routes/webhooks";
+import { retryWebhooks } from "./lib/webhooks";
 import { renderTerms, renderPrivacy, renderAcceptableUse, renderDpa, renderContact } from "./lib/legal";
 import { contactRoutes, adminRoutes } from "./routes/support";
 import { analyticsId, analyticsCsp } from "./lib/analytics";
@@ -193,6 +195,7 @@ app.route("/api/billing", billingRoutes);
 app.route("/billing/webhook", billingWebhook);
 app.route("/api/account", accountRoutes);
 app.route("/api/team", teamRoutes);
+app.route("/api/webhooks", webhookRoutes);
 app.route("/api/contact", contactRoutes);
 app.route("/api/admin", adminRoutes);
 app.route("/files", fileRoutes);
@@ -218,5 +221,6 @@ export default {
     ctx.waitUntil(sendTrialNotices(env));
     ctx.waitUntil(pruneOldRows(env));
     ctx.waitUntil(warnOnStorage(env));
+    ctx.waitUntil(retryWebhooks(env));
   },
 };

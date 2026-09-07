@@ -95,6 +95,31 @@ Backups: D1 keeps a few days of point-in-time history on its own. For longer ret
 `npx wrangler d1 export quoteandsign --remote --output db.sql`, encrypted and stored somewhere
 private, is enough. A GitHub Actions job is a free place to run it.
 
+## Webhooks (Business)
+
+Settings, Advanced, Webhooks: one https address per workspace. A JSON message is POSTed when a proposal
+is sent, first opened, accepted, declined or countersigned. The body carries ids, the title, client name,
+currency, total and timestamps, never the client's email, the content or any IP address.
+
+Headers: `X-QS-Event`, `X-QS-Delivery` (unique id, use it to ignore repeats), `X-QS-Timestamp` (ms),
+`X-QS-Signature: v1=<hex>` where hex is HMAC-SHA256 over `timestamp + "." + rawBody` with the secret
+shown once when the webhook is created or rotated. Verify before trusting a message:
+
+```js
+import { createHmac, timingSafeEqual } from "node:crypto";
+export function verify(rawBody, headers, secret) {
+  const ts = headers["x-qs-timestamp"];
+  if (Math.abs(Date.now() - Number(ts)) > 5 * 60_000) return false; // five-minute window
+  const expected = "v1=" + createHmac("sha256", secret).update(ts + "." + rawBody).digest("hex");
+  const given = headers["x-qs-signature"] ?? "";
+  return given.length === expected.length && timingSafeEqual(Buffer.from(given), Buffer.from(expected));
+}
+```
+
+Delivery: two attempts right away, then one a night for up to five in total. Twenty consecutive
+failures switch the webhook off and email the owner. At most 60 deliveries an hour per workspace.
+Addresses must be public https on port 443; IP literals, local names and our own hosts are refused.
+
 ## Security
 
 - Every read and write is scoped to the signed-in workspace. Public proposal pages are reachable

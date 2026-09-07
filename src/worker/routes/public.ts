@@ -16,6 +16,7 @@ import { splitSections, type Block } from "../lib/render";
 import { PLANS, effectivePlan, capsOf } from "../lib/plan";
 import { businessName } from "../../shared/names";
 import { proposalPdf } from "../lib/pdf";
+import { emitWebhook } from "../lib/webhooks";
 
 export const publicRoutes = new Hono<AppEnv>();
 const oneLine = (t: string) => t.replace(/[\r\n\t]+/g, " ").trim();
@@ -157,6 +158,7 @@ publicRoutes.get("/:publicId", async (c) => {
     const firstOpen = proposal.status === "sent"
       ? await db.update(schema.proposals).set({ status: "viewed" }).where(and(eq(schema.proposals.id, proposal.id), eq(schema.proposals.status, "sent"))).returning({ id: schema.proposals.id }).get()
       : null;
+    if (firstOpen) await emitWebhook(c, owner.id, "proposal.opened", proposal);
     if (firstOpen && capsOf(owner).notify) {
       await sendEmail(c.env, {
         to: owner.email,
@@ -334,6 +336,7 @@ publicRoutes.post("/:publicId/accept", async (c) => {
       clientName: proposal.clientName,
     });
   await audit(db, { userId: owner.id, proposalId: proposal.id, event: "proposal.accepted", ipHash: await ipHash(c.env.SESSION_SECRET, ip), meta: { total: totals.total } });
+  await emitWebhook(c, owner.id, "proposal.accepted", proposal, { total: totals.total, acceptedAt: new Date() });
 
   const total = describeTotals(totals, proposal.currency);
   const link = `${appUrl(c)}/p/${proposal.publicId}`;
@@ -412,6 +415,7 @@ publicRoutes.post("/:publicId/decline", async (c) => {
     text: `${proposal.clientName || "Your client"} passed on "${oneLine(proposal.title)}".${parsed.data.reason ? `\n\nThey said:\n${parsed.data.reason}` : "\n\nThey did not leave a reason."}\n\nYou can revise it and send it again from the editor:\n${appUrl(c)}/app/p/${proposal.id}`,
   });
   await audit(db, { userId: owner.id, proposalId: proposal.id, event: "proposal.declined", ipHash: viewerHash });
+  await emitWebhook(c, owner.id, "proposal.declined", proposal);
   return c.json({ ok: true });
 });
 

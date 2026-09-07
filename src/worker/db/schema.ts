@@ -309,6 +309,41 @@ export const webhookEvents = sqliteTable("webhook_events", {
   seenAt: integer("seen_at", { mode: "timestamp_ms" }).notNull(),
 });
 
+// Outbound webhooks: one address per Business workspace, and what was sent to it.
+export const webhooks = sqliteTable(
+  "webhooks",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    url: text("url").notNull(),
+    secret: text("secret").notNull(), // shown once; signs every delivery
+    events: text("events", { mode: "json" }).$type<string[]>().notNull(),
+    active: integer("active", { mode: "boolean" }).notNull().default(true),
+    failures: integer("failures").notNull().default(0), // consecutive; reset on success
+    lastOkAt: integer("last_ok_at", { mode: "timestamp_ms" }),
+    lastError: text("last_error"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [uniqueIndex("webhooks_user_uq").on(t.userId)],
+);
+
+export const webhookDeliveries = sqliteTable(
+  "webhook_deliveries",
+  {
+    id: text("id").primaryKey(),
+    webhookId: text("webhook_id").notNull().references(() => webhooks.id, { onDelete: "cascade" }),
+    event: text("event").notNull(),
+    payload: text("payload").notNull(), // the exact bytes that were signed
+    attempts: integer("attempts").notNull().default(0),
+    status: text("status").notNull().default("pending"), // pending | ok | failed
+    responseCode: integer("response_code"),
+    nextAt: integer("next_at", { mode: "timestamp_ms" }), // when the nightly job may try again
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [index("webhook_deliveries_hook_idx").on(t.webhookId, t.createdAt), index("webhook_deliveries_due_idx").on(t.status, t.nextAt)],
+);
+
 // Site-wide settings the admin can change without a deploy (the analytics id, for now).
 export const settings = sqliteTable("settings", {
   key: text("key").primaryKey(),

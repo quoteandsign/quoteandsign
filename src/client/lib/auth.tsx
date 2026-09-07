@@ -14,7 +14,7 @@ export type Me = {
   hideMadeWith: boolean;
   marketingOptIn: boolean;
   isAdmin: boolean;
-  caps: { liveLimit: number; seats: number; pdf: boolean; brand: boolean; protect: boolean; notify: boolean; payment: boolean; countersign: boolean; footerOff: boolean };
+  caps: { liveLimit: number; seats: number; pdf: boolean; brand: boolean; protect: boolean; notify: boolean; payment: boolean; countersign: boolean; footerOff: boolean; webhooks: boolean };
   plan: string; // what the account can do right now (a trial reads as "pro")
   paidPlan: string;
   trial: boolean;

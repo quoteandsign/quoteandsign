@@ -19,6 +19,7 @@ import { PLANS, effectivePlan, capsOf } from "../lib/plan";
 import { contentHashInput, CONSENT_MANUAL } from "./public";
 import { computeTotals } from "../../shared/pricing";
 import { sha256Hex } from "../lib/crypto";
+import { emitWebhook } from "../lib/webhooks";
 
 const MAX_CONTENT_BYTES = 500_000;
 
@@ -403,6 +404,7 @@ You can review the pricing, choose options and accept online. Reply to this emai
   // Every email that goes out counts, so the dashboard can say "sent twice".
   if (recipients.length) await db.update(schema.proposals).set({ sendCount: sql`${schema.proposals.sendCount} + 1`, lastSentAt: now }).where(eq(schema.proposals.id, proposal.id));
   await audit(db, { userId: actor.id, proposalId: proposal.id, event: "proposal.sent", ipHash: await ipHash(c.env.SESSION_SECRET, clientIp(c.req.raw)), meta: { emailed: recipients.length } });
+  await emitWebhook(c, user.id, "proposal.sent", { ...proposal, status: "sent", sentAt: proposal.sentAt ?? now });
   return c.json({ ok: true, link, emailed: recipients.length, sendCount: proposal.sendCount + (recipients.length ? 1 : 0) });
 });
 
@@ -477,6 +479,7 @@ proposalRoutes.post("/:id/countersign", async (c) => {
   const now = new Date();
   await db.update(schema.acceptances).set({ countersignedAt: now, countersignerName: parsed.data.name }).where(eq(schema.acceptances.id, acceptance.id));
   await audit(db, { userId: actor.id, proposalId: proposal.id, event: "proposal.countersigned" });
+  await emitWebhook(c, user.id, "proposal.countersigned", proposal, { total: acceptance.totalAmount, acceptedAt: acceptance.acceptedAt });
   const signed = { ...acceptance, countersignedAt: now, countersignerName: parsed.data.name };
   const link = `${appUrl(c)}/p/${proposal.publicId}`;
   if (acceptance.signerEmail) {

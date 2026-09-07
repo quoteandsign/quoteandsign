@@ -8,6 +8,7 @@ import { shrinkImage } from "../lib/image";
 import { ThemeToggle } from "../lib/theme";
 import { Button, Input, Wordmark, cn } from "../components/ui";
 import { StyleSwatch } from "../components/StyleSwatch";
+import { WebhookSettings } from "../components/WebhookSettings";
 import { STYLES } from "../../shared/styles";
 import { LOOKS, isHex } from "../../shared/looks";
 import { businessName } from "../../shared/names";
@@ -32,7 +33,7 @@ const tabFromHash = (): Tab => {
 
 const PLANS = [
   { id: "pro" as const, name: "Pro", month: 24, year: 19, blurb: "For freelancers and studios", popular: true, items: ["Unlimited proposals", "Your logo, color and page styles", "Passwords, expiry dates and reminders", "An email the moment it is opened", "PDF export and a payment link after signing", "Hide the Quote and Sign footer"] },
-  { id: "business" as const, name: "Business", month: 69, year: 59, blurb: "For small agencies", popular: false, items: ["Everything in Pro", "Up to 10 team members, one brand", "Shared templates", "Countersign after the client", "Priority support"] },
+  { id: "business" as const, name: "Business", month: 69, year: 59, blurb: "For small agencies", popular: false, items: ["Everything in Pro", "Up to 10 team members, one brand", "Shared templates", "Countersign after the client", "Webhooks for your CRM or Zapier", "Priority support"] },
 ];
 
 function SectionTitle({ children, tag, hint }: { children: React.ReactNode; tag?: "Pro" | "Business" | null; hint?: string }) {
@@ -59,7 +60,7 @@ export function Profile() {
   const [state, setState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [billing, setBilling] = useState<{ plan: string; paidPlan: string; interval: string | null; trial: boolean; trialDaysLeft: number; checkoutAvailable: boolean; yearlyAvailable: boolean; hasBilling: boolean } | null>(null);
   const [interval, setInterval_] = useState<"month" | "year">("year");
-  const caps = user?.caps ?? { brand: true, protect: true, payment: true, countersign: false, footerOff: false, pdf: true, notify: true, seats: 0, liveLimit: 3 };
+  const caps = user?.caps ?? { brand: true, protect: true, payment: true, countersign: false, footerOff: false, pdf: true, notify: true, seats: 0, liveLimit: 3, webhooks: false };
   const [crew, setCrew] = useState<{ seats: number; isOwner: boolean; members: { id: string; email: string; joined: boolean }[] } | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [teamMsg, setTeamMsg] = useState<string | null>(null);
@@ -507,6 +508,11 @@ export function Profile() {
                 <input type="checkbox" className="mt-1 h-4 w-4 accent-brand" checked={Boolean(user?.marketingOptIn)} onChange={(e) => void save({ marketingOptIn: e.target.checked })} />
                 <span className="text-[13.5px]"><span className="font-medium">Send me product news and tips</span><span className="block text-[12.5px] text-stone-500">A few emails a year. Untick any time; this is your consent record.</span></span>
               </label>
+            </section>
+
+            <section className={panel} data-test="webhooks-section">
+              <SectionTitle tag={caps.webhooks ? null : "Business"} hint="A signed message to an address you choose whenever a proposal is sent, opened, accepted, declined or countersigned. Works with Zapier, Make, n8n and any CRM that accepts webhooks. Nothing personal is in the message: ids, names and amounts only.">Webhooks</SectionTitle>
+              <WebhookSettings enabled={Boolean(caps.webhooks)} />
             </section>
 
             <section className={panel}>

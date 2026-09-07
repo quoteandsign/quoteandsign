@@ -73,7 +73,7 @@ Operated from ${LEGAL.province}, Canada. Prices in USD.
 
 - Free: $0. ${free.liveLimit} live proposals at a time, live pricing and one-tap accept, signed copies by email, ${TEMPLATES.length} templates, export. Every new account starts with a 14-day Pro trial, no card needed.
 - Pro: $${pro.yearly} a month billed yearly or $${pro.monthly} monthly. Unlimited proposals, your logo, color and page styles, passwords, expiry dates and reminders, open notifications, PDF export, a payment link after signing, no footer.
-- Business: $${biz.yearly} a month billed yearly or $${biz.monthly} monthly. Everything in Pro, up to ${biz.seats} team members under one brand, shared templates, countersigning, priority support.
+- Business: $${biz.yearly} a month billed yearly or $${biz.monthly} monthly. Everything in Pro, up to ${biz.seats} team members under one brand, shared templates, countersigning, signed webhooks for a CRM or automation tool (Zapier, Make, n8n), priority support.
 - Fair use: up to 200 new proposals and 40 sends a day per account.
 
 ## How it compares to typical proposal software
