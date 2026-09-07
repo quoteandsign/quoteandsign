@@ -384,7 +384,7 @@ export function renderLanding(o: { nonce: string; appUrl: string; githubUrl: str
     <div><b>Open source, AGPL</b><p>The code is public. Anyone can read every line and check that it does what this page says.</p></div>
     <div><b>Encrypted at rest and in transit</b><p>Every proposal, record and upload is encrypted where it is stored and on its way to you. Card details are handled by our payment provider and never touch our servers.</p></div>
     <div><b>No passwords to leak</b><p>You sign in with a one-time link. Proposal links can carry their own password and expiry.</p></div>
-    <div><b>Leave any time</b><p>Export every proposal and record. Delete your account yourself, no email required.</p></div>
+    <div><b>Leave any time</b><p>Export every proposal and record. Delete your account yourself, with a code we email you, and signed records stay readable for your clients.</p></div>
   </div>
 </section>
 

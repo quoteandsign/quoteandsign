@@ -350,7 +350,7 @@ proposalRoutes.post("/:id/send", async (c) => {
       .where(and(eq(schema.proposals.userId, user.id), inArray(schema.proposals.status, ["sent", "viewed"]), or(isNull(schema.proposals.expiresAt), gt(schema.proposals.expiresAt, new Date()))))
       .get();
     if ((live?.n ?? 0) >= plan.liveLimit) {
-      return c.json({ error: `The free plan allows ${plan.liveLimit} live proposals at a time. Archive one, or upgrade under Brand for unlimited.`, code: "limit" }, 402);
+      return c.json({ error: `The free plan allows ${plan.liveLimit} live proposals at a time. Archive one, or upgrade under Settings for unlimited.`, code: "limit" }, 402);
     }
   }
 
@@ -585,7 +585,7 @@ proposalRoutes.post("/:id/restore", async (c) => {
     const plan = PLANS[effectivePlan(user).id];
     if (plan.liveLimit !== Infinity) {
       const live = await db.select({ n: sql<number>`count(*)` }).from(schema.proposals).where(and(eq(schema.proposals.userId, user.id), inArray(schema.proposals.status, ["sent", "viewed"]), or(isNull(schema.proposals.expiresAt), gt(schema.proposals.expiresAt, new Date())))).get();
-      if ((live?.n ?? 0) >= plan.liveLimit) return c.json({ error: `The free plan allows ${plan.liveLimit} live proposals at a time. Archive one first, or upgrade under Brand.`, code: "limit" }, 402);
+      if ((live?.n ?? 0) >= plan.liveLimit) return c.json({ error: `The free plan allows ${plan.liveLimit} live proposals at a time. Archive one first, or upgrade under Settings.`, code: "limit" }, 402);
     }
   }
   const restored = await db
@@ -677,7 +677,7 @@ proposalRoutes.get("/:id/pdf", async (c) => {
   const db = getDb(c.env.DB);
   const proposal = await ownerProposal(db, c.req.param("id"), user.id);
   if (!proposal) return c.json({ error: "not found" }, 404);
-  if (!PLANS[effectivePlan(user).id].pdf) return c.json({ error: "PDF export is part of Pro. Upgrade under Brand.", code: "plan" }, 402);
+  if (!PLANS[effectivePlan(user).id].pdf) return c.json({ error: "PDF export is part of Pro. Upgrade under Settings.", code: "plan" }, 402);
   const [items, acceptance] = await Promise.all([
     db.select().from(schema.pricingItems).where(eq(schema.pricingItems.proposalId, proposal.id)).orderBy(schema.pricingItems.position).all(),
     db.select().from(schema.acceptances).where(eq(schema.acceptances.proposalId, proposal.id)).get(),

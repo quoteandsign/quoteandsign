@@ -66,7 +66,7 @@ accountRoutes.post("/delete-code", async (c) => {
     to: user.email,
     subject: "Your account deletion code",
     heading: "Delete your account?",
-    text: `Your code is ${code}. It works once and expires in 15 minutes.\n\nEntering it on the Brand page removes your drafts, templates and unsigned proposals for good. Signed proposals stay readable at their links, because they are your clients' records too.\n\nIf you did not ask for this, ignore this email and nothing happens.`,
+    text: `Your code is ${code}. It works once and expires in 15 minutes.\n\nEntering it on the Settings page removes your drafts, templates and unsigned proposals for good. Signed proposals stay readable at their links, because they are your clients' records too.\n\nIf you did not ask for this, ignore this email and nothing happens.`,
   });
   await audit(db, { userId: user.id, event: "account.delete_code" });
   return c.json({ ok: true });
@@ -171,7 +171,7 @@ accountRoutes.post("/images", async (c) => {
   if (file.size > MAX_IMAGE) return c.json({ error: "Images are limited to 600 KB." }, 413);
   const quota = capsOf(owner).images;
   const used = await db.select({ n: sql<number>`count(*)` }).from(schema.files).where(and(eq(schema.files.userId, owner.id), like(schema.files.key, "images/%"))).get();
-  if ((used?.n ?? 0) >= quota) return c.json({ error: `Your plan includes ${quota} images. Remove one from a proposal, or upgrade under Brand for more.`, code: "plan" }, 402);
+  if ((used?.n ?? 0) >= quota) return c.json({ error: `Your plan includes ${quota} images. Remove one from a proposal, or upgrade under Settings for more.`, code: "plan" }, 402);
   const bytes = new Uint8Array(await file.arrayBuffer());
   const kind = SNIFF.find((s) => s.test(bytes));
   if (!kind) return c.json({ error: "Use a PNG, JPEG or WebP image." }, 415);

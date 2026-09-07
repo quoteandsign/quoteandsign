@@ -527,7 +527,7 @@ publicRoutes.get("/:publicId/pdf", async (c) => {
     if (!ok) return c.redirect(`/p/${publicId}`);
   }
   // The signed copy is always free for both parties; an unsigned PDF is a Pro feature.
-  if (!acceptance && !PLANS[effectivePlan(owner).id].pdf) return simple(c, "PDF export is part of Pro", "Upgrade under Brand to download unsigned proposals as PDF. Signed copies are always free.", 402);
+  if (!acceptance && !PLANS[effectivePlan(owner).id].pdf) return simple(c, "PDF export is part of Pro", "Upgrade under Settings to download unsigned proposals as PDF. Signed copies are always free.", 402);
   // Building a PDF is real CPU time, so a link alone does not buy unlimited renders.
   const pdfViewer = await rateLimit(db, `pdf:${publicId}:${await ipHash(c.env.SESSION_SECRET, clientIp(c.req.raw))}`, 10, 10 * 60_000);
   const pdfTotal = await rateLimit(db, `pdf:${publicId}`, 100, 60 * 60_000);

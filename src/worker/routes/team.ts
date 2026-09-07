@@ -37,7 +37,7 @@ teamRoutes.post("/invite", requireOwner, async (c) => {
   const email = parsed.data.email;
   if (email === owner.email) return c.json({ error: "That is you." }, 400);
   const seats = PLANS[effectivePlan(owner).id].seats;
-  if (!seats) return c.json({ error: "Teams are part of the Business plan. Upgrade under Brand to invite people.", code: "plan" }, 402);
+  if (!seats) return c.json({ error: "Teams are part of the Business plan. Upgrade under Settings to invite people.", code: "plan" }, 402);
   const existing = await db.select().from(schema.teamMembers).where(eq(schema.teamMembers.ownerId, owner.id)).all();
   if (existing.some((m) => m.email === email)) return c.json({ error: "Already invited." }, 409);
   if (existing.length >= seats) return c.json({ error: `Business includes up to ${seats} team members.` }, 409);
