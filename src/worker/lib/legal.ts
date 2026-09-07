@@ -226,6 +226,9 @@ export function renderPrivacy(nonce: string, analytics: string | null = null): s
 <li>Legal obligation: keeping records where the law requires.</li>
 </ul>
 
+<h2>Webhooks you set up</h2>
+<p>Business accounts can give us one web address to notify when a proposal is sent, opened, accepted, declined or countersigned. The message carries the proposal's id, title, client name, currency, total and timestamps, signed so the receiver can verify it came from us. It never carries the client's email address, the proposal content or any IP address. The receiving service is yours: you choose it, you are responsible for it, and you can switch the webhook off or remove it at any time under Settings.</p>
+
 <h2>Who else sees data</h2>
 <p>We use three service providers for the product and no others: <strong>Cloudflare</strong> (hosting, database, image storage and network security; data is encrypted at rest and in transit), <strong>Polar</strong> (payments; they see your email and billing details), and <strong>Resend</strong> (email delivery; they see the addresses and content of emails we send). <strong>Google</strong> (Google Analytics) receives data only from visitors to the public pages who clicked Allow, and never anything from proposals or accounts. We do not sell personal information and we do not share it for advertising. We disclose data when the law requires it or to protect people from harm, and we will tell you if we lawfully can.</p>
 
@@ -313,6 +316,9 @@ export function renderDpa(nonce: string, analytics: string | null = null): strin
 <li>Delete or return the data at the end of the service: you can export everything yourself first, and deleting the account removes it at once from the live system and within 60 days from encrypted backups. Signed records that protect both parties to an agreement, and data under a legal hold, are the only exceptions.</li>
 <li>Make available the information needed to show compliance and allow audits, at your cost and on reasonable notice, no more than once a year unless a regulator requires otherwise.</li>
 </ul>
+
+<h2>3a. Webhooks</h2>
+<p>If you configure a webhook, the messages we send to your chosen address (proposal ids, titles, client names, amounts and timestamps) are sent on your instruction. The receiver is your processor, not our subprocessor, and you are responsible for it.</p>
 
 <h2>4. Subprocessors</h2>
 <p>You authorise the subprocessors listed in the Privacy Policy: Cloudflare, Polar and Resend. Google Analytics, when enabled, processes only our own visitor data on the public pages and never your proposals or your clients' data, so it is not a subprocessor under this addendum. We will email account holders at least 14 days before adding a new one; you may object, and if we cannot resolve it you may close your account and export your data.</p>

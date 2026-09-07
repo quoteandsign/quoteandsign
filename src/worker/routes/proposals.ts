@@ -289,12 +289,18 @@ proposalRoutes.put("/:id", async (c) => {
   if (d.paymentLabel !== undefined) set.paymentLabel = d.paymentLabel || null;
   if (d.password !== undefined) set.passwordHash = d.password === "" ? null : await hashPassword(d.password);
 
+  // Clearing or extending the expiry of an expired live proposal brings it back to life: same cap as sending.
+  const now = new Date();
+  const wasExpired = (proposal.status === "sent" || proposal.status === "viewed") && proposal.expiresAt !== null && proposal.expiresAt.getTime() <= now.getTime();
+  const revives = wasExpired && d.expiresAt !== undefined && (d.expiresAt === null || d.expiresAt > now.getTime());
+  const plan = PLANS[effectivePlan(user).id];
   const changed = await db
     .update(schema.proposals)
     .set(set)
-    .where(and(eq(schema.proposals.id, proposal.id), inArray(schema.proposals.status, ["draft", "sent", "viewed", "declined"])))
+    .where(and(eq(schema.proposals.id, proposal.id), inArray(schema.proposals.status, ["draft", "sent", "viewed", "declined"]), revives ? withinLiveCap(user.id, plan.liveLimit, now) : sql`1 = 1`))
     .returning({ id: schema.proposals.id })
     .get();
+  if (!changed && revives) return c.json({ error: LIVE_LIMIT_MESSAGE(plan.liveLimit), code: "limit" }, 402);
   if (!changed) return c.json({ error: "This proposal was accepted while you were editing. Reload to see the signed version." }, 409);
   return c.json({ ok: true });
 });
@@ -477,7 +483,8 @@ proposalRoutes.post("/:id/countersign", async (c) => {
   if (!acceptance) return c.json({ error: "The client has not signed yet." }, 409);
   if (acceptance.countersignedAt) return c.json({ error: "Already countersigned." }, 409);
   const now = new Date();
-  await db.update(schema.acceptances).set({ countersignedAt: now, countersignerName: parsed.data.name }).where(eq(schema.acceptances.id, acceptance.id));
+  const signedNow = await db.update(schema.acceptances).set({ countersignedAt: now, countersignerName: parsed.data.name }).where(and(eq(schema.acceptances.id, acceptance.id), isNull(schema.acceptances.countersignedAt))).returning({ id: schema.acceptances.id }).get();
+  if (!signedNow) return c.json({ error: "Already countersigned." }, 409);
   await audit(db, { userId: actor.id, proposalId: proposal.id, event: "proposal.countersigned" });
   await emitWebhook(c, user.id, "proposal.countersigned", proposal, { total: acceptance.totalAmount, acceptedAt: acceptance.acceptedAt });
   const signed = { ...acceptance, countersignedAt: now, countersignerName: parsed.data.name };

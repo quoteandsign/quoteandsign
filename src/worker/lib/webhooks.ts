@@ -170,10 +170,7 @@ async function deliverNew(env: Bindings, ownerId: string, event: WebhookEvent, p
   // The plan is checked when something is sent, not only when the webhook was set up.
   const owner = await db.select({ plan: schema.users.plan, trialEndsAt: schema.users.trialEndsAt }).from(schema.users).where(eq(schema.users.id, ownerId)).get();
   if (!owner || !capsOf(owner).webhooks) return;
-  if (!(await rateLimit(db, `wh:${ownerId}`, DELIVERIES_PER_HOUR, 60 * 60_000)).allowed) {
-    await audit(db, { userId: ownerId, event: "webhook.dropped", meta: { event } });
-    return;
-  }
+  if (!(await rateLimit(db, `wh:${ownerId}`, DELIVERIES_PER_HOUR, 60 * 60_000)).allowed) return;
   const now = new Date();
   const id = uuid();
   const delivery: Delivery = {
@@ -205,28 +202,35 @@ const RETRY_BUDGET_MS = 8 * 60_000;
  * Nightly: pending deliveries whose time has come, a fair share per webhook, inside a time budget.
  * Old rows are pruned first so the table never grows because a run was cut short.
  */
+const HOOK_SLICE_MS = 45_000;
+
 export async function retryWebhooks(env: Bindings, now = new Date()): Promise<number> {
   const db = getDb(env.DB);
   await db.delete(schema.webhookDeliveries).where(lt(schema.webhookDeliveries.createdAt, new Date(now.getTime() - 30 * 24 * 60 * 60_000)));
-  const due = await db
-    .select({ d: schema.webhookDeliveries })
+  // Which hooks have something due, then a bounded slice per hook, in a random order, so no one
+  // account's backlog can stand in front of everyone else's.
+  const hooksDue = await db
+    .selectDistinct({ id: schema.webhooks.id })
     .from(schema.webhookDeliveries)
     .innerJoin(schema.webhooks, eq(schema.webhooks.id, schema.webhookDeliveries.webhookId))
     .where(and(eq(schema.webhookDeliveries.status, "pending"), lte(schema.webhookDeliveries.nextAt, now), eq(schema.webhooks.active, true)))
-    .orderBy(schema.webhookDeliveries.createdAt)
-    .limit(1000)
+    .limit(500)
     .all();
-  const perHook = new Map<string, Delivery[]>();
-  for (const { d } of due) {
-    const list = perHook.get(d.webhookId) ?? [];
-    if (list.length < RETRIES_PER_HOOK_PER_NIGHT) list.push(d);
-    perHook.set(d.webhookId, list);
-  }
+  for (let i = hooksDue.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [hooksDue[i], hooksDue[j]] = [hooksDue[j]!, hooksDue[i]!]; }
   const started = Date.now();
   let sent = 0;
-  for (const [hookId, list] of perHook) {
+  for (const { id: hookId } of hooksDue) {
+    if (Date.now() - started > RETRY_BUDGET_MS) break;
+    const sliceStart = Date.now();
+    const list = await db
+      .select()
+      .from(schema.webhookDeliveries)
+      .where(and(eq(schema.webhookDeliveries.webhookId, hookId), eq(schema.webhookDeliveries.status, "pending"), lte(schema.webhookDeliveries.nextAt, now)))
+      .orderBy(schema.webhookDeliveries.createdAt)
+      .limit(RETRIES_PER_HOOK_PER_NIGHT)
+      .all();
     for (const d of list) {
-      if (Date.now() - started > RETRY_BUDGET_MS) return sent;
+      if (Date.now() - sliceStart > HOOK_SLICE_MS) break;
       const h = await db.select().from(schema.webhooks).where(eq(schema.webhooks.id, hookId)).get();
       if (!h || !h.active) break;
       if (await settle(env, h, d, await attempt(h, d), now)) sent++;

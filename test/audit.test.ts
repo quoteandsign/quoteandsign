@@ -89,6 +89,14 @@ describe("free-plan live cap holds on every path", () => {
     expect((await as(c)(`/api/proposals/${fourth}/archive`, "POST")).status).toBe(200);
     expect((await as(c)(`/api/proposals/${live[0]}/mark`, "POST", { status: "open" })).status).toBe(200);
     expect((await as(c)(`/api/proposals/${fourth}/restore`, "POST")).status).toBe(402);
+    // Reviving an expired live proposal by clearing its expiry counts too.
+    await env.DB.prepare("UPDATE proposals SET expires_at = ? WHERE id = ?").bind(Date.now() - 60_000, live[2]).run();
+    expect((await as(c)(`/api/proposals/${fourth}/restore`, "POST")).status).toBe(200); // room now: live[2] is expired
+    const revive = await as(c)(`/api/proposals/${live[2]}`, "PUT", { expiresAt: null });
+    expect(revive.status).toBe(402);
+    expect((await revive.json()).code).toBe("limit");
+    expect((await as(c)(`/api/proposals/${fourth}/archive`, "POST")).status).toBe(200);
+    expect((await as(c)(`/api/proposals/${live[2]}`, "PUT", { expiresAt: null })).status).toBe(200);
     // A declined proposal can be revised.
     expect((await as(c)(`/api/proposals/${live[1]}/mark`, "POST", { status: "declined" })).status).toBe(200);
     expect((await as(c)(`/api/proposals/${live[1]}`, "PUT", { title: "Revised" })).status).toBe(200);

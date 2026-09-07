@@ -354,7 +354,7 @@ export function renderLanding(o: { nonce: string; appUrl: string; githubUrl: str
   <div class="plans">
     <div class="plan"><div class="name">Free</div><div class="price">$0</div><p class="for">After a 14-day Pro trial</p><ul><li>3 live proposals at a time</li><li>Live pricing and one-tap accept</li><li>Signed copies by email, PDF attached</li><li>Six templates, the standard look</li><li>Export any time</li></ul><a href="/login">Start free</a></div>
     <div class="plan hot"><div class="name">Pro <span class="tag">Most chosen</span></div><div class="price">$<span data-price data-year="19" data-month="24">19</span><small>/month</small></div><p class="for"><span data-billed data-year="Billed $228 a year" data-month="Billed monthly">Billed $228 a year</span> · For freelancers and studios</p><ul><li>Unlimited proposals</li><li>Your logo, color and six page styles</li><li>Passwords, expiry dates and reminders</li><li>An email the moment it is opened</li><li>PDF export and a payment link after signing</li><li>No Quote and Sign footer</li></ul><a href="/login?plan=pro">Start with Pro</a></div>
-    <div class="plan"><div class="name">Business</div><div class="price">$<span data-price data-year="59" data-month="69">59</span><small>/month</small></div><p class="for"><span data-billed data-year="Billed $708 a year" data-month="Billed monthly">Billed $708 a year</span> · For small agencies</p><ul><li>Everything in Pro</li><li>Up to 10 team members, one brand</li><li>Shared templates</li><li>Countersign after the client</li><li>Webhooks for your CRM, Zapier or Make</li><li>Priority support</li></ul><a href="/login?plan=business">Start with Business</a></div>
+    <div class="plan"><div class="name">Business</div><div class="price">$<span data-price data-year="59" data-month="69">59</span><small>/month</small></div><p class="for"><span data-billed data-year="Billed $708 a year" data-month="Billed monthly">Billed $708 a year</span> · For small agencies</p><ul><li>Everything in Pro</li><li>Up to 10 team members, one brand</li><li>Shared templates</li><li>Countersign after the client</li><li>Webhooks: every sent, opened, accepted or declined proposal lands in your CRM, Zapier or Make</li><li>Priority support</li></ul><a href="/login?plan=business">Start with Business</a></div>
   </div>
   <p class="foot-note">Prices in USD. Unlimited means what it says for a working business: up to 200 new proposals and 40 sends a day per account, which is more than anyone writes by hand. <a href="/terms">The terms</a> carry the fair-use line so nobody can script tens of thousands.</p>
 </section>
@@ -371,6 +371,7 @@ export function renderLanding(o: { nonce: string; appUrl: string; githubUrl: str
         <tr><td>Client changes options</td><td class="us">Live, total updates</td><td>Usually fixed</td></tr>
         <tr><td>Currencies</td><td class="us">16, including CAD, USD, EUR and GBP</td><td>Often USD only</td></tr>
         <tr><td>Source code</td><td class="us">Open, AGPL</td><td>Closed</td></tr>
+        <tr><td>CRM and automation</td><td class="us">Signed webhooks on every event, on Business. Works with Zapier, Make, n8n, HubSpot, Pipedrive</td><td>Native connectors on higher tiers, often per-seat</td></tr>
         <tr><td>Export everything</td><td class="us">Any time, JSON and PDF</td><td>Varies</td></tr>
       </tbody>
     </table>
@@ -384,6 +385,7 @@ export function renderLanding(o: { nonce: string; appUrl: string; githubUrl: str
     <div><b>Open source, AGPL</b><p>The code is public. Anyone can read every line and check that it does what this page says.</p></div>
     <div><b>Encrypted at rest and in transit</b><p>Every proposal, record and upload is encrypted where it is stored and on its way to you. Card details are handled by our payment provider and never touch our servers.</p></div>
     <div><b>No passwords to leak</b><p>You sign in with a one-time link. Proposal links can carry their own password and expiry.</p></div>
+    <div><b>Plays well with your tools</b><p>Business accounts get a signed webhook: one address, a JSON message the moment a proposal is sent, opened, accepted, declined or countersigned. Ids, names and amounts only, never your client's email or the document. Verify the signature and trust it.</p></div>
     <div><b>Leave any time</b><p>Export every proposal and record. Delete your account yourself, with a code we email you, and signed records stay readable for your clients.</p></div>
   </div>
 </section>

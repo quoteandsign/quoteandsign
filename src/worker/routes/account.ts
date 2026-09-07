@@ -103,6 +103,7 @@ accountRoutes.delete("/", async (c) => {
   await db.delete(schema.userTemplates).where(eq(schema.userTemplates.userId, user.id));
   await db.delete(schema.sessions).where(eq(schema.sessions.userId, user.id));
   await db.delete(schema.files).where(eq(schema.files.userId, user.id));
+  await db.delete(schema.webhooks).where(eq(schema.webhooks.userId, user.id));
   // Out of every team, and no more copies of anyone's signed proposals to this address.
   await db.delete(schema.teamMembers).where(or(eq(schema.teamMembers.memberId, user.id), eq(schema.teamMembers.email, user.email), eq(schema.teamMembers.ownerId, user.id)));
   const now = new Date();

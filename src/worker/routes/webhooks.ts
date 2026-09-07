@@ -66,7 +66,7 @@ webhookRoutes.put("/", async (c) => {
     const urlChanged = existing.url !== parsed.data.url;
     await db
       .update(schema.webhooks)
-      .set({ url: parsed.data.url, events: parsed.data.events ?? existing.events, active: parsed.data.active ?? existing.active, ...(urlChanged ? { lastError: null } : {}) })
+      .set({ url: parsed.data.url, events: parsed.data.events ?? existing.events, active: parsed.data.active ?? existing.active, ...(urlChanged ? { lastError: null } : {}), ...(parsed.data.active === true && !existing.active ? { failures: 0, lastError: null } : {}) })
       .where(eq(schema.webhooks.id, existing.id));
     await audit(db, { userId: owner.id, event: "webhook.updated", meta: { urlChanged } });
     const fresh = (await db.select().from(schema.webhooks).where(eq(schema.webhooks.id, existing.id)).get())!;

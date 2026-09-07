@@ -147,6 +147,30 @@ describe("plan gate and lifecycle", () => {
     expect((await as(c)("/api/webhooks")).status).toBe(402);
   });
 
+  it("retries every hook fairly even when one account has a huge backlog", async () => {
+    const a = await signIn("hooks6@example.com");
+    const b = await signIn("hooks7@example.com");
+    const aId = await business(a);
+    const bId = await business(b);
+    await as(a)("/api/webhooks", "PUT", { url: "https://backlog.example.com/in" });
+    await as(b)("/api/webhooks", "PUT", { url: "https://honest.example.com/in" });
+    const db = getDb(env.DB);
+    const hookA = (await db.select().from(schema.webhooks).where(eq(schema.webhooks.userId, aId)).get())!;
+    const hookB = (await db.select().from(schema.webhooks).where(eq(schema.webhooks.userId, bId)).get())!;
+    const old = new Date(Date.now() - 5 * 24 * 60 * 60_000);
+    const due = new Date(Date.now() - 60_000);
+    const rows = [] as (typeof schema.webhookDeliveries.$inferInsert)[];
+    for (let i = 0; i < 150; i++) rows.push({ id: `a-${i}`, webhookId: hookA.id, event: "ping", payload: "{}", attempts: 2, status: "pending", responseCode: 503, nextAt: due, createdAt: new Date(old.getTime() + i), updatedAt: old });
+    rows.push({ id: "b-1", webhookId: hookB.id, event: "ping", payload: "{}", attempts: 2, status: "pending", responseCode: 503, nextAt: due, createdAt: new Date(), updatedAt: new Date() });
+    for (let i = 0; i < rows.length; i += 8) await db.insert(schema.webhookDeliveries).values(rows.slice(i, i + 8));
+    handler = (call) => new Response(call.url.includes("backlog") ? "nope" : "ok", { status: call.url.includes("backlog") ? 503 : 200 });
+    await retryWebhooks(env);
+    const honest = (await db.select().from(schema.webhookDeliveries).where(eq(schema.webhookDeliveries.id, "b-1")).get())!;
+    expect(honest.status).toBe("ok");
+    const tried = calls.filter((c) => c.url.includes("backlog")).length;
+    expect(tried).toBe(20);
+  });
+
   it("caps deliveries per hour and drops the rest", async () => {
     const c = await signIn("hooks4@example.com");
     const ownerId = await business(c);
