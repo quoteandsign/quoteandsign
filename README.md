@@ -1,5 +1,9 @@
 # Quote and Sign
 
+[![Licence: AGPL-3.0](https://img.shields.io/badge/licence-AGPL--3.0-2b3f8c)](./LICENSE) [![Release](https://img.shields.io/github/v/release/quoteandsign/quoteandsign?color=2b3f8c)](https://github.com/quoteandsign/quoteandsign/releases) [![Live](https://img.shields.io/badge/hosted-quoteandsign.com-2b3f8c)](https://quoteandsign.com)
+
+**Status:** 1.0, live at quoteandsign.com. Issues here are for bugs in the software; see [CHANGELOG.md](./CHANGELOG.md) for what shipped.
+
 **Open-source proposal and quote software.** Write a proposal once, send a link, and get a signed
 copy the moment your client accepts. The open alternative to Proposify, PandaDoc and Qwilr.
 

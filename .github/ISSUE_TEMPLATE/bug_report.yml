@@ -1,0 +1,53 @@
+name: Bug report
+description: Something in the software does not work as described.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks. Issues are for bugs in the software. For a security problem, do not file an issue: see SECURITY.md.
+        For help running your own copy, the README is the supported setup; that help is not offered here.
+  - type: input
+    id: where
+    attributes:
+      label: Where
+      description: The page or feature, for example "editor, pricing panel" or "client accept page".
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Create a proposal from the Consulting template
+        2. Add an optional line with a quantity range
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened instead
+      description: Include the exact error text if there was one. Never paste sign-in links, secrets or a client's details.
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Browser and device
+      placeholder: Safari on iPhone 15, Chrome 129 on Windows
+  - type: dropdown
+    id: host
+    attributes:
+      label: Where it runs
+      options:
+        - quoteandsign.com
+        - My own copy
+    validations:
+      required: true

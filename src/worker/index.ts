@@ -14,6 +14,7 @@ import { renderTerms, renderPrivacy, renderAcceptableUse, renderDpa, renderConta
 import { contactRoutes, adminRoutes } from "./routes/support";
 import { analyticsId, analyticsCsp } from "./lib/analytics";
 import { robotsTxt, sitemapXml, llmsTxt } from "./lib/seo";
+import { compareBySlug, renderCompare } from "./lib/compare";
 import { getSessionUser } from "./lib/session";
 import { businessName } from "../shared/names";
 import { eq, and } from "drizzle-orm";
@@ -120,6 +121,18 @@ for (const [path, render] of Object.entries(legalPages)) {
     return c.html(render(nonce, ga));
   });
 }
+
+// Comparison pages, one per competitor, sourced and dated.
+app.get("/compare/:slug", async (c) => {
+  const comp = compareBySlug(c.req.param("slug"));
+  if (!comp) return c.html(renderSimplePage("Not found", "There is no comparison at this address."), 404);
+  const nonce = crypto.randomUUID().replace(/-/g, "");
+  const ga = await analyticsId(c.env.DB);
+  const csp = analyticsCsp(ga);
+  c.header("content-security-policy", `default-src 'none'; script-src 'nonce-${nonce}'${csp.script}; style-src 'nonce-${nonce}'; img-src 'self'${csp.img}; connect-src 'self'${csp.connect}; font-src 'self'; base-uri 'none'; frame-ancestors 'none'`);
+  c.header("cache-control", "public, max-age=3600");
+  return c.html(renderCompare(comp, nonce, ga));
+});
 
 // The contact page: pre-filled for a signed-in person; Turnstile when configured.
 app.get("/contact", async (c) => {

@@ -6,7 +6,7 @@
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/", "/api/*", "/p/*", "/t/*", "/auth/*", "/files/*", "/billing/*", "/terms", "/privacy", "/acceptable-use", "/dpa", "/contact", "/robots.txt", "/sitemap.xml", "/llms.txt"]
+    "run_worker_first": ["/", "/api/*", "/p/*", "/t/*", "/auth/*", "/files/*", "/billing/*", "/terms", "/privacy", "/acceptable-use", "/dpa", "/contact", "/robots.txt", "/sitemap.xml", "/llms.txt", "/compare/*"]
   },
   "workers_dev": false,
   "routes": [

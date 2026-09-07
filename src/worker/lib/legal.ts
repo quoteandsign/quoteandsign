@@ -35,7 +35,7 @@ footer{max-width:760px;margin:0 auto;padding:0 20px 48px;font-size:13.5px;color:
 @media(max-width:600px){.top nav a{margin-left:12px}}
 `;
 
-function shell(title: string, body: string, nonce: string, extraHead = "", analytics: string | null = null): string {
+export function shell(title: string, body: string, nonce: string, extraHead = "", analytics: string | null = null): string {
   return `<!doctype html>
 <html lang="en">
 <head>

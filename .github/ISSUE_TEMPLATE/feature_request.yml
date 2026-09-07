@@ -1,0 +1,26 @@
+name: Feature request
+description: A small, clear addition to the software.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Small and specific requests get built; large ones get a conversation first. Open the issue before writing code.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The situation
+      description: What you were trying to do, as a sender or as a client reading a proposal.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would help
+      description: The smallest change that would solve it.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you do today instead

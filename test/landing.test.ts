@@ -50,7 +50,8 @@ describe("what crawlers are told", () => {
     const sitemap = await app.request("http://localhost:5173/sitemap.xml", {}, env);
     expect(sitemap.headers.get("content-type")).toContain("application/xml");
     const x = await sitemap.text();
-    expect((x.match(/<url>/g) ?? []).length).toBe(7);
+    expect((x.match(/<url>/g) ?? []).length).toBe(8);
+    expect(x).toContain("/compare/qwilr");
     expect(x).not.toContain("/p/");
     expect(x).not.toContain("/app");
     const llms = await (await app.request("http://localhost:5173/llms.txt", {}, env)).text();
@@ -62,5 +63,21 @@ describe("what crawlers are told", () => {
     // Client-facing pages stay out of every index.
     const notFound = await (await app.request("http://localhost:5173/p/00000000-0000-4000-8000-000000000000", {}, env)).text();
     expect(notFound).toContain('name="robots" content="noindex"');
+  });
+});
+
+describe("comparison pages", () => {
+  it("serve a sourced, dated comparison with a strict CSP and an honest 'what they do better' section", async () => {
+    const res = await app.request("http://localhost:5173/compare/qwilr", {}, env);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-security-policy")).toContain("default-src 'none'");
+    const html = await res.text();
+    expect(html).toContain("Quote and Sign vs Qwilr");
+    expect(html).toContain("qwilr.com/pricing");
+    expect(html).toContain("September 2026");
+    expect(html).toContain("What Qwilr does that we do not");
+    expect(html).toContain("$19 a month billed yearly");
+    expect(html).not.toContain("—");
+    expect((await app.request("http://localhost:5173/compare/nobody", {}, env)).status).toBe(404);
   });
 });
