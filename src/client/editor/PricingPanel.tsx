@@ -149,16 +149,16 @@ export function PricingPanel({ items, currency, defaultTaxBps, taxLabel, onChang
                 type="button"
                 onClick={() => setOpen(isOpen ? null : it.id)}
                 aria-expanded={isOpen}
-                className="flex w-full items-start gap-3 px-4 py-3.5 text-left"
+                className="grid w-full gap-1.5 px-4 py-3.5 text-left"
               >
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-baseline justify-between gap-3">
-                    <span className={cn("truncate text-[15px] font-semibold tracking-[-0.01em]", !it.name && "font-medium text-stone-400")}>{it.name || "Untitled item"}</span>
-                    <span className={cn("shrink-0 text-[15px] font-medium tabular-nums", it.optional && !it.selectedByDefault && "font-normal text-stone-400 line-through decoration-stone-300", shownQty === 0 && "font-normal text-stone-500")} title={it.optional && !it.selectedByDefault ? "Off by default: not in the total unless the client switches it on" : undefined}>
-                      {shownQty === 0 ? priceLabel(it.unitAmount, currency, it.unit, it.billing) : formatMoney(it.unitAmount * shownQty, currency)}
-                    </span>
+                <span className="flex items-baseline justify-between gap-3">
+                  <span className={cn("min-w-0 truncate text-[15px] font-semibold tracking-[-0.01em]", !it.name && "font-medium text-stone-400")}>{it.name || "Untitled item"}</span>
+                  <span className={cn("shrink-0 text-[15px] font-medium tabular-nums", it.optional && !it.selectedByDefault && "font-normal text-stone-400 line-through decoration-stone-300", shownQty === 0 && "font-normal text-stone-500")} title={it.optional && !it.selectedByDefault ? "Off by default: not in the total unless the client switches it on" : undefined}>
+                    {shownQty === 0 ? priceLabel(it.unitAmount, currency, it.unit, it.billing) : formatMoney(it.unitAmount * shownQty, currency)}
                   </span>
-                  <span className="mt-1 flex flex-wrap items-center gap-1.5">
+                </span>
+                <span className="flex items-end justify-between gap-3">
+                  <span className="flex min-w-0 flex-wrap items-center gap-1.5">
                     {summary && <span className="text-[12px] text-stone-500 tabular-nums">{summary}</span>}
                     {shownQty === 0 && <Chip>Client picks how many</Chip>}
                     {billingOf(it.billing) !== "once" && <Chip on>{BILLING.find((b) => b.id === billingOf(it.billing))!.label}</Chip>}
@@ -167,10 +167,10 @@ export function PricingPanel({ items, currency, defaultTaxBps, taxLabel, onChang
                     {it.taxRateBps === 0 && defaultTaxBps > 0 && <Chip>No tax</Chip>}
                     {it.taxRateBps !== null && it.taxRateBps !== 0 && <Chip>{it.taxRateBps / 100}% tax on this line</Chip>}
                   </span>
-                </span>
-                <span className={cn("mt-0.5 flex h-7 shrink-0 items-center gap-1 rounded-full pl-2.5 pr-1.5 text-[12px] font-medium transition-colors", isOpen ? "bg-brand/10 text-brand dark:text-indigo-300" : "bg-stone-900/[.05] text-stone-500 group-hover:bg-stone-900/[.09] group-hover:text-ink dark:bg-white/[.07] dark:group-hover:bg-white/[.12] dark:group-hover:text-stone-100")}>
-                  {isOpen ? "Close" : <><PencilSimple size={12} weight="bold" /> Edit</>}
-                  <CaretDown size={12} weight="bold" className={cn("transition-transform duration-300 ease-[cubic-bezier(.32,.72,0,1)]", isOpen && "rotate-180")} />
+                  <span className={cn("flex h-6 shrink-0 items-center gap-1 rounded-full pl-2 pr-1.5 text-[11.5px] font-medium transition-colors", isOpen ? "bg-brand/10 text-brand dark:text-indigo-300" : "bg-stone-900/[.05] text-stone-500 group-hover:bg-stone-900/[.09] group-hover:text-ink dark:bg-white/[.07] dark:group-hover:bg-white/[.12] dark:group-hover:text-stone-100")}>
+                    {isOpen ? "Close" : <><PencilSimple size={11} weight="bold" /> Edit</>}
+                    <CaretDown size={11} weight="bold" className={cn("transition-transform duration-300 ease-[cubic-bezier(.32,.72,0,1)]", isOpen && "rotate-180")} />
+                  </span>
                 </span>
               </button>
 
