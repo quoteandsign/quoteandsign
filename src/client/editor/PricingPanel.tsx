@@ -1,5 +1,5 @@
-import { useRef, useState, type ReactNode } from "react";
-import { Plus, Trash, ArrowUp, ArrowDown, CaretDown } from "@phosphor-icons/react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Plus, Trash, ArrowUp, ArrowDown, CaretDown, CaretUp, PencilSimple } from "@phosphor-icons/react";
 import { Button, Input, Textarea, Switch, Field, NumberField, cn } from "../components/ui";
 import { computeTotals, formatMoney, lineSummary, priceLabel, periodRow, billingOf, BILLING, type PricingLine } from "../../shared/pricing";
 
@@ -43,9 +43,52 @@ function Chip({ children, on }: { children: ReactNode; on?: boolean }) {
   );
 }
 
-export function PricingPanel({ items, currency, defaultTaxBps, taxLabel, onChange, onTax, readOnly }: { items: PricingLine[]; currency: string; defaultTaxBps: number; taxLabel: string; onChange: (items: PricingLine[]) => void; onTax: (bps: number, label: string) => void; readOnly: boolean }) {
+/** A whole number with up and down arrows. The text box still takes typing and keeps its id for tests. */
+function Stepper({ id, name, value, min = 0, max = MAX_QUANTITY, disabled, onChange }: { id: string; name: string; value: number; min?: number; max?: number; disabled?: boolean; onChange: (v: number) => void }) {
+  const clamp = (n: number) => Math.min(max, Math.max(min, Number.isFinite(n) ? n : min));
+  const step = (d: number) => onChange(clamp(value + d));
+  const arrow = "flex h-[18px] w-7 items-center justify-center text-stone-500 transition-colors hover:bg-stone-900/[.06] hover:text-ink disabled:opacity-40 disabled:hover:bg-transparent dark:hover:bg-white/[.08] dark:hover:text-stone-100";
+  return (
+    <div className={cn("flex h-11 items-stretch overflow-hidden rounded-xl bg-white ring-1 ring-inset ring-stone-900/[.12] focus-within:ring-2 focus-within:ring-brand/50 dark:bg-stone-900 dark:ring-white/[.14]", disabled && "opacity-60")}>
+      <input
+        id={id}
+        name={name}
+        inputMode="numeric"
+        pattern="[0-9]*"
+        disabled={disabled}
+        className="min-w-0 flex-1 bg-transparent px-3 text-right text-[15px] tabular-nums outline-none"
+        value={value}
+        onChange={(e) => { const n = parseInt(e.target.value.replace(/[^0-9]/g, ""), 10); onChange(clamp(Number.isFinite(n) ? n : min)); }}
+        onKeyDown={(e) => { if (e.key === "ArrowUp") { e.preventDefault(); step(1); } if (e.key === "ArrowDown") { e.preventDefault(); step(-1); } }}
+      />
+      <div className="flex flex-col border-l border-stone-900/[.08] dark:border-white/[.1]" aria-hidden={disabled}>
+        <button type="button" tabIndex={-1} className={arrow} aria-label="Increase" disabled={disabled || value >= max} onClick={() => step(1)}><CaretUp size={12} weight="bold" /></button>
+        <button type="button" tabIndex={-1} className={cn(arrow, "border-t border-stone-900/[.08] dark:border-white/[.1]")} aria-label="Decrease" disabled={disabled || value <= min} onClick={() => step(-1)}><CaretDown size={12} weight="bold" /></button>
+      </div>
+    </div>
+  );
+}
+
+export type PricingFocus = { id: string | null; n: number };
+
+export function PricingPanel({ items, currency, defaultTaxBps, taxLabel, onChange, onTax, readOnly, focus }: { items: PricingLine[]; currency: string; defaultTaxBps: number; taxLabel: string; onChange: (items: PricingLine[]) => void; onTax: (bps: number, label: string) => void; readOnly: boolean; focus?: PricingFocus }) {
   const [open, setOpen] = useState<string | null>(null);
+  const [flash, setFlash] = useState<string | null>(null); // an item id, or "all" for the whole list
   const justAdded = useRef<string | null>(null);
+
+  // A click on a line in the page preview lands here: open that line and light it up for a moment.
+  useEffect(() => {
+    if (!focus || focus.n === 0) return;
+    const target = focus.id && items.some((it) => it.id === focus.id) ? focus.id : "all";
+    if (target !== "all") setOpen(target);
+    setFlash(target);
+    const el = document.getElementById(target === "all" ? "pricing-lines" : `line-${target}`);
+    setTimeout(() => el?.scrollIntoView({ behavior: "smooth", block: "center" }), 30);
+    const t = setTimeout(() => setFlash(null), 1600);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus?.n]);
+
   const update = (id: string, patch: Partial<PricingLine>) => onChange(items.map((it) => (it.id === id ? { ...it, ...withValidRange(it, patch) } : it)));
   const remove = (id: string) => {
     onChange(items.filter((it) => it.id !== id).map((it, i) => ({ ...it, position: i })));
@@ -79,9 +122,9 @@ export function PricingPanel({ items, currency, defaultTaxBps, taxLabel, onChang
         </div>
       )}
 
-      <div className="overflow-hidden rounded-2xl bg-white ring-1 ring-stone-900/[.07] dark:bg-stone-900 dark:ring-white/[.08]">
+      <div id="pricing-lines" className={cn("grid gap-2 rounded-2xl transition-shadow", flash === "all" && "qs-flash")}>
         {items.length === 0 && (
-          <div className="px-5 py-10 text-center">
+          <div className="rounded-2xl bg-white px-5 py-10 text-center ring-1 ring-stone-900/[.07] dark:bg-stone-900 dark:ring-white/[.08]">
             <p className="font-medium">No line items yet</p>
             <p className="mt-1 text-[13px] text-stone-500">Each line can be required or optional, with a quantity your client can change.</p>
           </div>
@@ -91,25 +134,32 @@ export function PricingPanel({ items, currency, defaultTaxBps, taxLabel, onChang
           const range = it.minQuantity != null || it.maxQuantity != null;
           const line = totals.lines.find((l) => l.id === it.id);
           const shownQty = line?.quantity ?? it.quantity;
+          const summary = shownQty > 0 ? lineSummary({ quantity: shownQty, unitAmount: it.unitAmount, unit: it.unit ?? null, billing: billingOf(it.billing) }, currency) : "";
           return (
-            <div key={it.id} className={cn("border-t border-stone-900/[.06] first:border-t-0 dark:border-white/[.07]", isOpen && "bg-stone-900/[.02] dark:bg-white/[.03]")}>
+            <div
+              key={it.id}
+              id={`line-${it.id}`}
+              className={cn(
+                "group overflow-hidden rounded-2xl bg-white ring-1 transition-[box-shadow,transform] duration-300 ease-[cubic-bezier(.32,.72,0,1)] dark:bg-stone-900",
+                isOpen ? "ring-brand/40 shadow-[0_12px_32px_-18px_rgba(43,63,140,.45)]" : "ring-stone-900/[.08] hover:ring-stone-900/[.16] hover:shadow-[0_8px_24px_-16px_rgba(25,24,22,.35)] dark:ring-white/[.08] dark:hover:ring-white/[.16]",
+                flash === it.id && "qs-flash",
+              )}
+            >
               <button
                 type="button"
                 onClick={() => setOpen(isOpen ? null : it.id)}
                 aria-expanded={isOpen}
-                className="flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-stone-900/[.025] dark:hover:bg-white/[.04]"
+                className="flex w-full items-start gap-3 px-4 py-3.5 text-left"
               >
                 <span className="min-w-0 flex-1">
                   <span className="flex items-baseline justify-between gap-3">
-                    <span className={cn("truncate text-[15px] font-medium", !it.name && "text-stone-400")}>{it.name || "Untitled item"}</span>
-                    <span className={cn("shrink-0 text-[15px] tabular-nums", it.optional && !it.selectedByDefault && "text-stone-400 line-through decoration-stone-300", shownQty === 0 && "text-stone-500")} title={it.optional && !it.selectedByDefault ? "Off by default: not in the total unless the client switches it on" : undefined}>
+                    <span className={cn("truncate text-[15px] font-semibold tracking-[-0.01em]", !it.name && "font-medium text-stone-400")}>{it.name || "Untitled item"}</span>
+                    <span className={cn("shrink-0 text-[15px] font-medium tabular-nums", it.optional && !it.selectedByDefault && "font-normal text-stone-400 line-through decoration-stone-300", shownQty === 0 && "font-normal text-stone-500")} title={it.optional && !it.selectedByDefault ? "Off by default: not in the total unless the client switches it on" : undefined}>
                       {shownQty === 0 ? priceLabel(it.unitAmount, currency, it.unit, it.billing) : formatMoney(it.unitAmount * shownQty, currency)}
                     </span>
                   </span>
                   <span className="mt-1 flex flex-wrap items-center gap-1.5">
-                    {shownQty > 0 && lineSummary({ quantity: shownQty, unitAmount: it.unitAmount, unit: it.unit ?? null, billing: billingOf(it.billing) }, currency) && (
-                      <span className="text-[12px] text-stone-500 tabular-nums">{lineSummary({ quantity: shownQty, unitAmount: it.unitAmount, unit: it.unit ?? null, billing: billingOf(it.billing) }, currency)}</span>
-                    )}
+                    {summary && <span className="text-[12px] text-stone-500 tabular-nums">{summary}</span>}
                     {shownQty === 0 && <Chip>Client picks how many</Chip>}
                     {billingOf(it.billing) !== "once" && <Chip on>{BILLING.find((b) => b.id === billingOf(it.billing))!.label}</Chip>}
                     {it.optional && <Chip on={it.selectedByDefault}>{it.selectedByDefault ? "Optional · on" : "Optional · off"}</Chip>}
@@ -118,11 +168,14 @@ export function PricingPanel({ items, currency, defaultTaxBps, taxLabel, onChang
                     {it.taxRateBps !== null && it.taxRateBps !== 0 && <Chip>{it.taxRateBps / 100}% tax on this line</Chip>}
                   </span>
                 </span>
-                <CaretDown size={16} weight="bold" className={cn("mt-1 shrink-0 text-stone-400 transition-transform duration-300 ease-[cubic-bezier(.32,.72,0,1)]", isOpen && "rotate-180")} />
+                <span className={cn("mt-0.5 flex h-7 shrink-0 items-center gap-1 rounded-full pl-2.5 pr-1.5 text-[12px] font-medium transition-colors", isOpen ? "bg-brand/10 text-brand dark:text-indigo-300" : "bg-stone-900/[.05] text-stone-500 group-hover:bg-stone-900/[.09] group-hover:text-ink dark:bg-white/[.07] dark:group-hover:bg-white/[.12] dark:group-hover:text-stone-100")}>
+                  {isOpen ? "Close" : <><PencilSimple size={12} weight="bold" /> Edit</>}
+                  <CaretDown size={12} weight="bold" className={cn("transition-transform duration-300 ease-[cubic-bezier(.32,.72,0,1)]", isOpen && "rotate-180")} />
+                </span>
               </button>
 
               {isOpen && (
-                <div className="grid gap-3 px-4 pb-4">
+                <div className="grid gap-3 border-t border-stone-900/[.06] px-4 pb-4 pt-3.5 dark:border-white/[.07]">
                   <Field label="Name" htmlFor={`n-${it.id}`}>
                     <Input id={`n-${it.id}`} name="itemName" maxLength={200} value={it.name} disabled={readOnly} autoFocus={justAdded.current === it.id && !it.name} onChange={(e) => update(it.id, { name: e.target.value })} placeholder="Design and build" />
                   </Field>
@@ -134,7 +187,7 @@ export function PricingPanel({ items, currency, defaultTaxBps, taxLabel, onChang
                       <NumberField id={`p-${it.id}`} value={it.unitAmount} disabled={readOnly} max={MAX_UNIT_AMOUNT} onChange={(v) => update(it.id, { unitAmount: v ?? 0 })} />
                     </Field>
                     <Field label="Qty" htmlFor={`q-${it.id}`}>
-                      <Input id={`q-${it.id}`} name="itemQuantity" inputMode="numeric" pattern="[0-9]*" disabled={readOnly} className="text-right tabular-nums" value={it.quantity} onChange={(e) => { const n = parseInt(e.target.value.replace(/[^0-9]/g, ""), 10); update(it.id, { quantity: Math.min(MAX_QUANTITY, Number.isFinite(n) ? n : 0) }); }} />
+                      <Stepper id={`q-${it.id}`} name="itemQuantity" value={it.quantity} disabled={readOnly} onChange={(v) => update(it.id, { quantity: v })} />
                     </Field>
                   </div>
                   <div className="grid gap-2.5">
@@ -158,7 +211,6 @@ export function PricingPanel({ items, currency, defaultTaxBps, taxLabel, onChang
                     Reads as <span className="font-medium text-stone-700 dark:text-stone-300">{priceLabel(it.unitAmount, currency, it.unit, it.billing)}</span>{billingOf(it.billing) !== "once" ? ". Recurring lines get their own total under the one-time total." : "."}
                   </p>
                   <div className="grid gap-2.5 rounded-xl bg-stone-900/[.03] p-3 dark:bg-white/[.04]">
-                    <Switch disabled={readOnly} checked={it.taxRateBps !== 0} label={defaultTaxBps > 0 ? `Taxable, ${defaultTaxBps / 100}% ${taxLabel || "tax"}` : "Taxable, once a tax rate is set"} onChange={(v) => update(it.id, { taxRateBps: v ? null : 0 })} />
                     <Switch disabled={readOnly} checked={it.optional} label="Client can leave this out" onChange={(v) => update(it.id, { optional: v, selectedByDefault: v ? it.selectedByDefault : true })} />
                     {it.optional && <Switch disabled={readOnly} checked={it.selectedByDefault} label="Included unless they switch it off" onChange={(v) => update(it.id, { selectedByDefault: v })} />}
                     <Switch
@@ -175,14 +227,21 @@ export function PricingPanel({ items, currency, defaultTaxBps, taxLabel, onChang
                     {range && (
                       <div className="grid grid-cols-2 gap-2.5">
                         <Field label="Min" htmlFor={`mn-${it.id}`}>
-                          <Input id={`mn-${it.id}`} name="itemMin" inputMode="numeric" pattern="[0-9]*" disabled={readOnly} className="text-right tabular-nums" value={it.minQuantity ?? 0} onChange={(e) => { const n = parseInt(e.target.value.replace(/[^0-9]/g, ""), 10); update(it.id, { minQuantity: Math.min(MAX_QUANTITY, Number.isFinite(n) ? n : 0) }); }} />
+                          <Stepper id={`mn-${it.id}`} name="itemMin" value={it.minQuantity ?? 0} disabled={readOnly} onChange={(v) => update(it.id, { minQuantity: v })} />
                         </Field>
                         <Field label="Max" htmlFor={`mx-${it.id}`}>
-                          <Input id={`mx-${it.id}`} name="itemMax" inputMode="numeric" pattern="[0-9]*" disabled={readOnly} className="text-right tabular-nums" value={it.maxQuantity ?? 0} onChange={(e) => { const n = parseInt(e.target.value.replace(/[^0-9]/g, ""), 10); update(it.id, { maxQuantity: Math.min(MAX_QUANTITY, Number.isFinite(n) ? n : 0) }); }} />
+                          <Stepper id={`mx-${it.id}`} name="itemMax" value={it.maxQuantity ?? 0} disabled={readOnly} onChange={(v) => update(it.id, { maxQuantity: v })} />
                         </Field>
                       </div>
                     )}
                   </div>
+                  {/* Tax sits apart from the switches: a small tick, only once a rate exists for the proposal. */}
+                  {defaultTaxBps > 0 && (
+                    <label className={cn("inline-flex w-fit select-none items-center gap-2 rounded-lg px-1 py-0.5 text-[12.5px] text-stone-600 dark:text-stone-400", readOnly ? "opacity-60" : "cursor-pointer hover:text-ink dark:hover:text-stone-200")}>
+                      <input type="checkbox" className="h-[15px] w-[15px] rounded-[4px] accent-brand" disabled={readOnly} checked={it.taxRateBps !== 0} onChange={(e) => update(it.id, { taxRateBps: e.target.checked ? null : 0 })} />
+                      Taxable · {defaultTaxBps / 100}% {taxLabel || "tax"}
+                    </label>
+                  )}
                   {!readOnly && (
                     <div className="flex items-center justify-between">
                       <div className="flex gap-0.5">
@@ -207,7 +266,7 @@ export function PricingPanel({ items, currency, defaultTaxBps, taxLabel, onChang
           <button
             type="button"
             onClick={add}
-            className="flex w-full items-center justify-center gap-2 border-t border-dashed border-stone-900/[.12] px-4 py-3.5 text-[14px] font-medium text-brand transition-colors hover:bg-brand/[.05] dark:border-white/[.12] dark:text-indigo-300"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-stone-900/[.15] px-4 py-3.5 text-[14px] font-medium text-brand transition-colors hover:border-brand/40 hover:bg-brand/[.05] dark:border-white/[.14] dark:text-indigo-300"
           >
             <Plus size={15} weight="bold" /> Add line item
           </button>
@@ -228,8 +287,8 @@ export function PricingPanel({ items, currency, defaultTaxBps, taxLabel, onChang
           </div>
           <p className="mt-1.5 text-[12px] text-stone-500 tabular-nums">
             {totals.hasTax
-              ? `Applies to every taxable line. Subtotal ${formatMoney(totals.subtotal, currency)}, tax ${formatMoney(totals.tax, currency)}.`
-              : "One rate for the whole proposal. Switch a line to not taxable if it is exempt."}
+              ? `Applies to every taxable line. Subtotal ${formatMoney(totals.subtotal, currency)}, tax ${formatMoney(totals.tax, currency)}. Untick "Taxable" inside a line to exempt it.`
+              : "One rate for the whole proposal. Once set, each line gets a small Taxable tick you can turn off."}
           </p>
         </div>
       )}

@@ -276,3 +276,12 @@
   --doc-text: #2a2118;
   --doc-heading: #2a2118;
 }
+
+/* A short glow to say "this is the one", after a click in the page preview. */
+@keyframes qs-flash {
+  0% { box-shadow: 0 0 0 0 rgba(43, 63, 140, 0), 0 0 0 0 rgba(43, 63, 140, 0); }
+  15% { box-shadow: 0 0 0 4px rgba(43, 63, 140, .35), 0 12px 32px -12px rgba(43, 63, 140, .45); }
+  100% { box-shadow: 0 0 0 0 rgba(43, 63, 140, 0), 0 0 0 0 rgba(43, 63, 140, 0); }
+}
+.qs-flash { animation: qs-flash 1.6s cubic-bezier(.32, .72, 0, 1) both; }
+@media (prefers-reduced-motion: reduce) { .qs-flash { animation: none; box-shadow: 0 0 0 3px rgba(43, 63, 140, .35); } }

@@ -8,7 +8,7 @@ import { useTheme, ThemeToggle } from "../lib/theme";
 import { useAuth } from "../lib/auth";
 import { Button, StatusBadge, Skeleton, Input, Field, cn } from "../components/ui";
 import { schema, slashItems, PricingContext } from "../editor/blocks";
-import { PricingPanel } from "../editor/PricingPanel";
+import { PricingPanel , type PricingFocus } from "../editor/PricingPanel";
 import { MoreOptions, type Details } from "../editor/MoreOptions";
 import { BlockMenu } from "../editor/BlockMenu";
 import { ProposalSideMenu } from "../editor/SideMenu";
@@ -372,8 +372,10 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
     }
   };
 
+  // Which pricing line the preview asked for, and a counter so the same line can be asked for twice.
+  const [pricingFocus, setPricingFocus] = useState<PricingFocus>({ id: null, n: 0 });
   const pricingCtx = useMemo(
-    () => ({ items, currency: details.currency, defaultTaxBps: details.taxRateBps, taxLabel: details.taxLabel, openPricing: () => { setTab("pricing"); setTimeout(() => document.getElementById("pricing-panel")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50); } }),
+    () => ({ items, currency: details.currency, defaultTaxBps: details.taxRateBps, taxLabel: details.taxLabel, openPricing: (lineId?: string) => { setTab("pricing"); setPricingFocus((f) => ({ id: lineId ?? null, n: f.n + 1 })); } }),
     [items, details.currency, details.taxRateBps, details.taxLabel],
   );
 
@@ -557,7 +559,7 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
 
               {tab === "pricing" && (
                 <section id="pricing-panel" role="tabpanel" aria-labelledby="tab-pricing" className="rounded-[1.25rem] bg-white p-4 shadow-[0_1px_1px_rgba(25,24,22,.04),0_12px_32px_-20px_rgba(25,24,22,.35)] ring-1 ring-inset ring-stone-900/[.035] dark:bg-stone-900 dark:shadow-none dark:ring-white/[.08]">
-                  <PricingPanel items={items} currency={details.currency} defaultTaxBps={details.taxRateBps} taxLabel={details.taxLabel} onChange={onItems} onTax={(bps, label) => onDetails({ ...details, taxRateBps: bps, taxLabel: label })} readOnly={readOnly} />
+                  <PricingPanel items={items} currency={details.currency} defaultTaxBps={details.taxRateBps} taxLabel={details.taxLabel} onChange={onItems} onTax={(bps, label) => onDetails({ ...details, taxRateBps: bps, taxLabel: label })} readOnly={readOnly} focus={pricingFocus} />
                 </section>
               )}
 

@@ -8,7 +8,7 @@ import { shrinkImage } from "../lib/image";
 
 // The editor shows a live preview of the pricing table inside the document. The data
 // itself lives in the pricing panel; this context hands it to the block.
-export const PricingContext = createContext<{ items: PricingLine[]; currency: string; defaultTaxBps: number; taxLabel: string; openPricing: () => void }>({
+export const PricingContext = createContext<{ items: PricingLine[]; currency: string; defaultTaxBps: number; taxLabel: string; openPricing: (lineId?: string) => void }>({
   items: [],
   currency: "USD",
   defaultTaxBps: 0,
@@ -30,14 +30,14 @@ function PricingPreview() {
         <div className="p-5 text-center">
           <div className="font-medium">Pricing table</div>
           <p className="mt-1 text-sm text-stone-500">No line items yet.</p>
-          <button onClick={openPricing} className="mt-3 rounded-full bg-brand px-4 py-1.5 text-sm font-medium text-white">
+          <button onClick={() => openPricing()} className="mt-3 rounded-full bg-brand px-4 py-1.5 text-sm font-medium text-white">
             Add pricing
           </button>
         </div>
       ) : (
         <>
           {totals.lines.map((l) => (
-            <div key={l.id} className="grid grid-cols-[auto_1fr_auto] items-start gap-x-3 border-b border-stone-900/[.06] px-5 py-3.5 last:border-b-0 dark:border-white/[.08]">
+            <div key={l.id} role="button" tabIndex={0} title="Edit this line" onClick={() => openPricing(l.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openPricing(l.id); } }} className="grid cursor-pointer grid-cols-[auto_1fr_auto] items-start gap-x-3 border-b border-stone-900/[.06] px-5 py-3.5 transition-colors last:border-b-0 hover:bg-brand/[.06] focus-visible:bg-brand/[.06] focus-visible:outline-none dark:border-white/[.08]">
               <span className={l.optional ? "mt-[3px] inline-block h-[18px] w-[30px] rounded-full " + (l.selected ? "bg-brand" : "bg-stone-300 dark:bg-stone-700") : "w-[30px]"} aria-hidden="true">
                 {l.optional && <span className={"block h-[14px] w-[14px] translate-y-[2px] rounded-full bg-white shadow-sm " + (l.selected ? "translate-x-[14px]" : "translate-x-[2px]")} />}
               </span>
@@ -57,7 +57,7 @@ function PricingPreview() {
               </div>
             )}
             <div className="flex items-center justify-between">
-              <button onClick={openPricing} className="text-sm font-medium text-brand dark:text-indigo-300">
+              <button onClick={() => openPricing()} className="text-sm font-medium text-brand dark:text-indigo-300">
                 Edit pricing
               </button>
               <div className="text-right text-base font-semibold tabular-nums">
