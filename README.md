@@ -139,6 +139,12 @@ Addresses must be public https on port 443; IP literals, local names and our own
 Found a problem? Please report it through the [contact form](https://quoteandsign.com/contact?kind=abuse)
 rather than a public issue, and give us a few days to fix it before writing about it.
 
+## Trademark
+
+The AGPL covers the code, not the name. "Quote and Sign" and the marks in `public/brand/` belong to the
+operator of quoteandsign.com. Run your own copy freely, but give a public fork its own name and logo.
+See [TRADEMARK.md](./TRADEMARK.md).
+
 ## Contributing
 
 Issues and pull requests are welcome; see [CONTRIBUTING.md](./CONTRIBUTING.md) for the sign-off

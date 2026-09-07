@@ -23,8 +23,13 @@ git commit -s
 That adds a `Signed-off-by: Your Name <you@example.com>` line. Pull requests with unsigned
 commits are not merged. The text of the certificate is at https://developercertificate.org.
 
-By contributing you agree that your contribution is licensed under the AGPL-3.0, the same
-licence as the rest of the project.
+## Licence agreement
+
+Every contribution also needs your agreement to the short [Contributor Licence Agreement](./CLA.md).
+You keep your copyright; the project gets the right to relicense your contribution, which is what lets
+the codebase stay under one licence, change licence if it ever has to, or be acquired as a whole. Tick
+the box in the pull request template; the sign-off is the record. Your contribution is released to
+everyone under the AGPL-3.0 like the rest of the project.
 
 ## What issues are for
 
