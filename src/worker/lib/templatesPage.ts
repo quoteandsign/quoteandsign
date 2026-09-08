@@ -40,7 +40,7 @@ function sections(t: Template): string[] {
 
 const CSS = `
 .tpl-big{aspect-ratio:1200/1000;border-radius:18px;box-shadow:0 1px 2px rgba(25,24,22,.08),0 30px 80px -40px rgba(25,24,22,.4);border:1px solid var(--line)}
-.tpl-big iframe{width:120%;height:120%;transform:scale(.8333)}
+.tpl-thumb.tpl-big iframe{width:120%;height:120%;transform:scale(.8333)}
 .tpl-big::after{background:linear-gradient(to bottom,transparent 80%,rgba(25,24,22,.08))}
 .tpl-cta{display:inline-block;background:var(--accent);color:#fff;text-decoration:none;font-weight:600;border-radius:999px;padding:12px 22px;margin:8px 0 0}
 .tpl-cta.alt{background:transparent;color:var(--accent);border:1px solid var(--line)}
