@@ -39,7 +39,8 @@ function sections(t: Template): string[] {
 }
 
 const CSS = `
-.tpl-frame{width:100%;aspect-ratio:9/12;max-height:820px;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:0 30px 80px -40px rgba(25,24,22,.4)}
+.tpl-big{aspect-ratio:1200/1400;border-radius:16px;box-shadow:0 30px 80px -40px rgba(25,24,22,.4)}
+.tpl-big iframe{width:160%;height:160%;transform:scale(.625)}
 .tpl-cta{display:inline-block;background:var(--accent);color:#fff;text-decoration:none;font-weight:600;border-radius:999px;padding:12px 22px;margin:8px 0 0}
 .tpl-cta.alt{background:transparent;color:var(--accent);border:1px solid var(--line)}
 .tpl-grid{display:grid;gap:18px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));margin:24px 0}
@@ -91,7 +92,8 @@ export function renderTemplatePage(p: TemplatePage, nonce: string, analytics: st
 <p><a class="tpl-cta" href="/login?template=${esc(t.id)}">Use this template</a> <a class="tpl-cta alt" href="/t/${esc(t.id)}" target="_blank" rel="noopener">Open full size</a></p>
 
 <h2>The template, as your client would see it</h2>
-<iframe class="tpl-frame" src="/t/${esc(t.id)}" title="${esc(p.keyword)} preview" loading="lazy"></iframe>
+<a class="tpl-thumb tpl-big" href="/t/${esc(t.id)}" target="_blank" rel="noopener" aria-label="Open the ${esc(p.keyword)} full size"><iframe src="/t/${esc(t.id)}?thumb=1" title="${esc(p.keyword)} preview" tabindex="-1" aria-hidden="true" loading="lazy"></iframe></a>
+<p class="muted">A scaled preview. <a href="/t/${esc(t.id)}" target="_blank" rel="noopener">Open full size</a> to read it as a client would.</p>
 
 <h2>What is inside</h2>
 <p>Sections: ${secs.map((s) => esc(s)).join(", ")}. Then the pricing table and the accept button.</p>

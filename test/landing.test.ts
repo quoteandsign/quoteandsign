@@ -95,7 +95,7 @@ describe("template landing pages", () => {
     expect(page.headers.get("content-security-policy")).toContain("frame-src 'self'");
     const html = await page.text();
     expect(html).toContain("<h1>Consulting proposal template</h1>");
-    expect(html).toContain('src="/t/consulting"');
+    expect(html).toContain('src="/t/consulting?thumb=1"');
     expect(html).toContain('href="/login?template=consulting"');
     expect(html).toContain("Operations review");
     expect(html).not.toContain("—");
