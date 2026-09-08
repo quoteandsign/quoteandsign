@@ -141,8 +141,7 @@ export const compareBySlug = (slug: string) => COMPETITORS.find((c) => c.slug ==
 
 /** The index: one card per competitor, and the promise that keeps the pages honest. */
 export function renderCompareIndex(nonce: string, analytics: string | null = null): string {
-  const cards = COMPETITORS.map((c) => `<div class="cmp-card"><h3><a href="/compare/${c.slug}">Quote and Sign vs ${esc(c.name)}</a></h3><p>${esc(c.theirPricing.split(". ")[0])}. Read in ${esc(c.checked)}.</p><a href="/compare/${c.slug}">Read the comparison</a></div>`).join("
-");
+  const cards = COMPETITORS.map((c) => `<div class="cmp-card"><h3><a href="/compare/${c.slug}">Quote and Sign vs ${esc(c.name)}</a></h3><p>${esc(c.theirPricing.split(". ")[0])}. Read in ${esc(c.checked)}.</p><a href="/compare/${c.slug}">Read the comparison</a></div>`).join("\n");
   const body = `
 <h1>How Quote and Sign compares</h1>
 <p class="eff">One page per product, with their prices and features taken from their own sites, dated, and a section on what they do that we do not. If you find something out of date, tell us through the <a href="/contact">contact form</a>.</p>
