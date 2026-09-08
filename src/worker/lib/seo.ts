@@ -20,6 +20,7 @@ export const PUBLIC_PAGES: { path: string; changefreq: "weekly" | "monthly"; leg
   { path: "/privacy", changefreq: "monthly", legal: true },
   { path: "/acceptable-use", changefreq: "monthly", legal: true },
   { path: "/dpa", changefreq: "monthly", legal: true },
+  { path: "/compare", changefreq: "monthly" },
   ...COMPETITORS.map((c) => ({ path: `/compare/${c.slug}`, changefreq: "monthly" as const })),
   { path: "/templates", changefreq: "monthly" },
   ...TEMPLATE_PAGES.map((p) => ({ path: `/templates/${p.slug}`, changefreq: "monthly" as const })),

@@ -393,7 +393,7 @@ export function renderLanding(o: { nonce: string; appUrl: string; githubUrl: str
 
 <footer class="site-foot">
   <span class="foot-brand"><i aria-hidden="true"></i>Quote <span class="and">and</span> Sign</span>
-  <nav aria-label="Product"><a href="/templates">Templates</a><a href="/compare/qwilr">Compare</a><a href="/login">Sign in</a><a href="${esc(o.githubUrl)}" rel="noopener">GitHub</a><a href="/contact">Contact</a></nav>
+  <nav aria-label="Product"><a href="/templates">Templates</a><a href="/compare">Compare</a><a href="/login">Sign in</a><a href="${esc(o.githubUrl)}" rel="noopener">GitHub</a><a href="/contact">Contact</a></nav>
   <nav aria-label="Legal"><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/acceptable-use">Acceptable use</a><a href="/dpa">DPA</a>${o.analytics ? `<a href="#" data-cookie-settings>Cookie settings</a>` : ""}</nav>
   <p class="foot-licence">Open-source software released under the AGPL-3.0 licence.</p>
 </footer>

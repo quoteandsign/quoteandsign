@@ -89,6 +89,7 @@ function rowsFor(c: Competitor): [string, string, string][] {
 export function renderCompare(c: Competitor, nonce: string, analytics: string | null = null): string {
   const rows = rowsFor(c);
   const body = `
+<p class="cmp-switch">Compared with: ${COMPETITORS.map((o) => o.slug === c.slug ? `<strong>${esc(o.name)}</strong>` : `<a href="/compare/${o.slug}">${esc(o.name)}</a>`).join(" · ")}</p>
 <h1>Quote and Sign vs ${esc(c.name)}</h1>
 <p class="eff">An honest comparison for people choosing proposal software. ${esc(c.name)}'s prices and features are taken from ${esc(c.site)} as read in ${esc(c.checked)}; if something has changed since, tell us through the <a href="/contact">contact form</a> and it will be corrected.</p>
 
@@ -130,12 +131,32 @@ ${c.theyDoBetter.map((t) => `<li>${esc(t)}</li>`).join("\n")}
 .cmp th:nth-child(2){color:var(--accent)}
 .cmp td:nth-child(2),.cmp td:nth-child(3){width:46%}
 .wrap-x{overflow-x:auto;margin:8px 0 12px}
+.cmp-switch{font-size:13.5px;color:var(--muted);margin:24px 0 -12px}.cmp-switch a{color:var(--accent);text-decoration:none}.cmp-switch a:hover{text-decoration:underline}
 @media(max-width:640px){.cmp td:first-child{white-space:normal;width:auto}.cmp{font-size:14px}.cmp th,.cmp td{padding:12px 12px}}
 </style>`;
   return shell(`Quote and Sign vs ${c.name}`, body, nonce, extraHead, analytics);
 }
 
 export const compareBySlug = (slug: string) => COMPETITORS.find((c) => c.slug === slug) ?? null;
+
+/** The index: one card per competitor, and the promise that keeps the pages honest. */
+export function renderCompareIndex(nonce: string, analytics: string | null = null): string {
+  const cards = COMPETITORS.map((c) => `<div class="cmp-card"><h3><a href="/compare/${c.slug}">Quote and Sign vs ${esc(c.name)}</a></h3><p>${esc(c.theirPricing.split(". ")[0])}. Read in ${esc(c.checked)}.</p><a href="/compare/${c.slug}">Read the comparison</a></div>`).join("
+");
+  const body = `
+<h1>How Quote and Sign compares</h1>
+<p class="eff">One page per product, with their prices and features taken from their own sites, dated, and a section on what they do that we do not. If you find something out of date, tell us through the <a href="/contact">contact form</a>.</p>
+<div class="cmp-grid">${cards}</div>
+<h2>The pattern across all of them</h2>
+<ul>
+<li>They charge per user and meter documents or sends. Quote and Sign is one flat price per account with no document fees.</li>
+<li>They have native CRM apps on higher tiers. Quote and Sign has signed webhooks on Business, which reach the same tools through Zapier, Make or n8n.</li>
+<li>They are closed. Quote and Sign is open source under the AGPL, and you can run your own copy.</li>
+</ul>
+<p><a class="tpl-cta" href="/login">Start free</a></p>`;
+  return shell("Compare", body, nonce, `<meta name="description" content="Quote and Sign compared with Qwilr, PandaDoc and Proposify: pricing, client-side options, the acceptance record, and what each does better.">
+<style nonce="${nonce}">.cmp-grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));margin:20px 0}.cmp-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 20px}.cmp-card h3{margin:0 0 6px;font-size:18px}.cmp-card h3 a{color:var(--fg);text-decoration:none}.cmp-card p{margin:0 0 10px;color:var(--muted);font-size:14px}.tpl-cta{display:inline-block;background:var(--accent);color:#fff;text-decoration:none;font-weight:600;border-radius:999px;padding:12px 22px}</style>`, analytics);
+}
 
 /** Used by the sitemap. */
 export const COMPARE_PATHS = COMPETITORS.map((c) => `/compare/${c.slug}`);

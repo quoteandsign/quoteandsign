@@ -14,7 +14,7 @@ import { renderTerms, renderPrivacy, renderAcceptableUse, renderDpa, renderConta
 import { contactRoutes, adminRoutes } from "./routes/support";
 import { analyticsId, analyticsCsp } from "./lib/analytics";
 import { robotsTxt, sitemapXml, llmsTxt } from "./lib/seo";
-import { compareBySlug, renderCompare } from "./lib/compare";
+import { compareBySlug, renderCompare, renderCompareIndex } from "./lib/compare";
 import { pageBySlug, renderTemplatePage, renderTemplatesIndex } from "./lib/templatesPage";
 import { getSessionUser } from "./lib/session";
 import { businessName } from "../shared/names";
@@ -124,6 +124,14 @@ for (const [path, render] of Object.entries(legalPages)) {
 }
 
 // Comparison pages, one per competitor, sourced and dated.
+app.get("/compare", async (c) => {
+  const nonce = crypto.randomUUID().replace(/-/g, "");
+  const ga = await analyticsId(c.env.DB);
+  const csp = analyticsCsp(ga);
+  c.header("content-security-policy", `default-src 'none'; script-src 'nonce-${nonce}'${csp.script}; style-src 'nonce-${nonce}'; img-src 'self'${csp.img}; connect-src 'self'${csp.connect}; font-src 'self'; base-uri 'none'; frame-ancestors 'none'`);
+  c.header("cache-control", "public, max-age=3600");
+  return c.html(renderCompareIndex(nonce, ga));
+});
 app.get("/compare/:slug", async (c) => {
   const comp = compareBySlug(c.req.param("slug"));
   if (!comp) return c.html(renderSimplePage("Not found", "There is no comparison at this address."), 404);

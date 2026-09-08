@@ -53,7 +53,7 @@ export function shell(title: string, body: string, nonce: string, extraHead = ""
 ${extraHead}
 </head>
 <body>
-<div class="top"><a class="brand" href="/"><i></i><span>Quote <span class="and">and</span> Sign</span></a><nav><a href="/templates">Templates</a><a href="/#plans">Pricing</a><a href="/compare/qwilr">Compare</a><a href="/login">Sign in</a><a class="cta" href="/login">Start free</a></nav></div>
+<div class="top"><a class="brand" href="/"><i></i><span>Quote <span class="and">and</span> Sign</span></a><nav><a href="/templates">Templates</a><a href="/#plans">Pricing</a><a href="/compare">Compare</a><a href="/login">Sign in</a><a class="cta" href="/login">Start free</a></nav></div>
 <main>
 ${body}
 </main>

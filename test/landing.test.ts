@@ -50,7 +50,9 @@ describe("what crawlers are told", () => {
     const sitemap = await app.request("http://localhost:5173/sitemap.xml", {}, env);
     expect(sitemap.headers.get("content-type")).toContain("application/xml");
     const x = await sitemap.text();
-    expect((x.match(/<url>/g) ?? []).length).toBe(16);
+    expect((x.match(/<url>/g) ?? []).length).toBe(17);
+    const idx = await (await app.request("http://localhost:5173/compare", {}, env)).text();
+    for (const s of ["qwilr", "pandadoc", "proposify"]) expect(idx).toContain(`/compare/${s}`);
     expect(x).toContain("/compare/pandadoc");
     expect(x).toContain("/templates/consulting-proposal-template");
     expect(x).toContain("/compare/qwilr");
