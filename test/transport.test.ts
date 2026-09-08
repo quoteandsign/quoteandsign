@@ -19,7 +19,9 @@ describe("transport", () => {
     expect(me.headers.get("cache-control")).toBe("no-store");
     const api = await app.request("http://localhost:5173/api/proposals", {}, env);
     expect(api.headers.get("cache-control")).toBe("no-store");
-    const home = await app.request("http://localhost:5173/", {}, env);
+    // Public pages are cacheable in production (development sends no-store so previews stay fresh).
+    const prod = { ...env, ENVIRONMENT: "production", APP_URL: "https://quoteandsign.com" } as typeof env;
+    const home = await app.request("https://quoteandsign.com/", {}, prod);
     expect(home.headers.get("cache-control")).not.toContain("no-store");
   });
 });

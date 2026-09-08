@@ -70,6 +70,8 @@ app.use("*", async (c, next) => {
   await next();
   if (new URL(c.req.url).protocol === "https:") c.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   c.header("X-Content-Type-Options", "nosniff");
+  // In development every page is fresh, so a preview never shows a stale copy.
+  if (c.env.ENVIRONMENT === "development") c.header("Cache-Control", "no-store");
   // Account and proposal JSON is personal: never let a browser or shared cache keep a copy.
   const p = new URL(c.req.url).pathname;
   if ((p.startsWith("/api/") || p.startsWith("/auth/") || p.startsWith("/files/")) && !c.res.headers.has("cache-control")) {
