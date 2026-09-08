@@ -21,7 +21,8 @@ const CSS = `
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 "Geist",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
 a{color:var(--accent)}
 .top{max-width:760px;margin:0 auto;padding:22px 20px;display:flex;justify-content:space-between;align-items:center;font-size:14px}
-.top .brand{font-weight:600;color:var(--fg);text-decoration:none;display:flex;gap:10px;align-items:center}.top .brand i{width:10px;height:10px;border-radius:50%;background:var(--accent);display:inline-block}
+.top .brand{font-weight:600;color:var(--accent);text-decoration:none;display:flex;gap:10px;align-items:center;font-size:17px}.top .brand i{width:10px;height:10px;border-radius:50%;background:var(--accent);display:inline-block}.top .brand .and{font-weight:300}
+.top nav a.cta{background:var(--fg);color:var(--bg);padding:9px 16px;border-radius:999px;font-weight:600}.top nav a.cta:hover{color:var(--bg);opacity:.9}
 .top nav a{color:var(--muted);text-decoration:none;margin-left:18px}.top nav a:hover{color:var(--fg)}
 main{max-width:760px;margin:0 auto;padding:24px 20px 96px}
 h1{font-size:clamp(34px,5vw,46px);line-height:1.05;letter-spacing:-.035em;margin:24px 0 8px;font-weight:650}
@@ -52,11 +53,11 @@ export function shell(title: string, body: string, nonce: string, extraHead = ""
 ${extraHead}
 </head>
 <body>
-<div class="top"><a class="brand" href="/"><i></i>${esc(LEGAL.shortName)}</a><nav><a href="/templates">Templates</a><a href="/contact">Contact</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/acceptable-use">Acceptable use</a><a href="/dpa">DPA</a></nav></div>
+<div class="top"><a class="brand" href="/"><i></i><span>Quote <span class="and">and</span> Sign</span></a><nav><a href="/templates">Templates</a><a href="/#plans">Pricing</a><a href="/compare/qwilr">Compare</a><a href="/login">Sign in</a><a class="cta" href="/login">Start free</a></nav></div>
 <main>
 ${body}
 </main>
-<footer><span>${esc(LEGAL.operator)}</span><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/acceptable-use">Acceptable use</a><a href="/dpa">DPA</a>${analytics ? `<a href="#" data-cookie-settings>Cookie settings</a>` : ""}<a href="/">Home</a></footer>
+<footer><span>${esc(LEGAL.operator)}</span><a href="/contact">Contact</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/acceptable-use">Acceptable use</a><a href="/dpa">DPA</a>${analytics ? `<a href="#" data-cookie-settings>Cookie settings</a>` : ""}<a href="/">Home</a></footer>
 ${analytics ? consentMarkup(nonce, analytics) : ""}
 </body>
 </html>`;
