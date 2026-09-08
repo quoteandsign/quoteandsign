@@ -36,6 +36,37 @@ export const COMPETITORS: Competitor[] = [
     ],
     rows: [],
   },
+  {
+    slug: "pandadoc",
+    name: "PandaDoc",
+    site: "pandadoc.com",
+    pricingUrl: "https://www.pandadoc.com/pricing/",
+    checked: "September 2026",
+    theirPricing: "Starter $19 per user per month on annual billing ($35 monthly). Business $49 per user per month annual ($65 monthly). Enterprise on request. A free eSign plan exists for signing only.",
+    theirPerDoc: "Each plan carries a monthly document allowance; beyond it, $2 to $3.50 per document depending on plan and billing.",
+    theyDoBetter: [
+      "A very large template and content library, with a document editor that covers contracts, HR paperwork and forms as well as proposals.",
+      "Native CRM apps for HubSpot, Salesforce, Pipedrive, Zoho and others, with two-way sync. Quote and Sign offers signed webhooks that reach the same tools through Zapier, Make or n8n.",
+      "Built-in payment collection, CPQ-style product catalogues, and approval workflows for larger sales teams.",
+      "Notarization and advanced identity verification on higher plans.",
+    ],
+    rows: [],
+  },
+  {
+    slug: "proposify",
+    name: "Proposify",
+    site: "proposify.com",
+    pricingUrl: "https://www.proposify.com/pricing",
+    checked: "September 2026",
+    theirPricing: "Basic $19 per user per month on annual billing ($29 monthly). Team $41 per user per month annual ($49 quarterly). Business from about $3,900 a year. Fourteen-day trial, no free plan.",
+    theirPerDoc: "Sends are metered: 10 a month on Basic, 30 on Team, 75 on Business, then $0.30 to $0.75 per extra send.",
+    theyDoBetter: [
+      "A designed template gallery and a content library shared across a team, with brand controls that lock fonts and colors.",
+      "Native integrations with HubSpot, Salesforce and Pipedrive, plus Stripe payments inside the proposal.",
+      "Team analytics and pipeline-style reporting for sales managers.",
+    ],
+    rows: [],
+  },
 ];
 
 function rowsFor(c: Competitor): [string, string, string][] {

@@ -73,10 +73,11 @@ export function Login() {
   const [error, setError] = useState<string | null>(ERRORS[search.get("error") ?? ""] ?? null);
   // A plan picked on the homepage: keep it through the email round-trip, then land on the Plan tab.
   const wantedPlan = search.get("plan") === "pro" ? "Pro" : search.get("plan") === "business" ? "Business" : null;
+  const wantedTemplate = /^[a-z-]{1,40}$/.test(search.get("template") ?? "") ? search.get("template") : null;
   useEffect(() => {
-    if (!wantedPlan) return;
-    try { localStorage.setItem("qs-after-login", "/app/brand#plan"); } catch { /* private mode */ }
-  }, [wantedPlan]);
+    if (!wantedPlan && !wantedTemplate) return;
+    try { localStorage.setItem("qs-after-login", wantedTemplate ? `/app/templates?use=${wantedTemplate}` : "/app/brand#plan"); } catch { /* private mode */ }
+  }, [wantedPlan, wantedTemplate]);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();

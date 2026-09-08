@@ -50,7 +50,9 @@ describe("what crawlers are told", () => {
     const sitemap = await app.request("http://localhost:5173/sitemap.xml", {}, env);
     expect(sitemap.headers.get("content-type")).toContain("application/xml");
     const x = await sitemap.text();
-    expect((x.match(/<url>/g) ?? []).length).toBe(8);
+    expect((x.match(/<url>/g) ?? []).length).toBe(16);
+    expect(x).toContain("/compare/pandadoc");
+    expect(x).toContain("/templates/consulting-proposal-template");
     expect(x).toContain("/compare/qwilr");
     expect(x).not.toContain("/p/");
     expect(x).not.toContain("/app");
@@ -79,5 +81,29 @@ describe("comparison pages", () => {
     expect(html).toContain("$19 a month billed yearly");
     expect(html).not.toContain("—");
     expect((await app.request("http://localhost:5173/compare/nobody", {}, env)).status).toBe(404);
+  });
+});
+
+describe("template landing pages", () => {
+  it("list every template, show the real preview in a same-origin frame, and hand off to sign-in", async () => {
+    const index = await app.request("http://localhost:5173/templates", {}, env);
+    expect(index.status).toBe(200);
+    const ih = await index.text();
+    for (const s of ["consulting-proposal-template", "website-proposal-template", "retainer-proposal-template", "photography-proposal-template", "software-development-proposal-template"]) expect(ih).toContain(`/templates/${s}`);
+    const page = await app.request("http://localhost:5173/templates/consulting-proposal-template", {}, env);
+    expect(page.status).toBe(200);
+    expect(page.headers.get("content-security-policy")).toContain("frame-src 'self'");
+    const html = await page.text();
+    expect(html).toContain("<h1>Consulting proposal template</h1>");
+    expect(html).toContain('src="/t/consulting"');
+    expect(html).toContain('href="/login?template=consulting"');
+    expect(html).toContain("Operations review");
+    expect(html).not.toContain("—");
+    expect((await app.request("http://localhost:5173/templates/nothing-here", {}, env)).status).toBe(404);
+    for (const slug of ["pandadoc", "proposify"]) {
+      const c = await app.request(`http://localhost:5173/compare/${slug}`, {}, env);
+      expect(c.status).toBe(200);
+      expect(await c.text()).toContain("September 2026");
+    }
   });
 });

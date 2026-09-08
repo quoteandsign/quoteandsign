@@ -75,6 +75,10 @@ export function Templates() {
   const loadSaved = () => api<{ templates: Saved[] }>("/api/templates").then((r) => setSaved(r.templates), () => {});
   useEffect(() => {
     void loadSaved();
+    // Arriving from a public template page: open that template straight away.
+    const use = new URLSearchParams(window.location.search).get("use");
+    if (use && /^[a-z-]{1,40}$/.test(use) && !creating) void create(use, { template: use });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const create = async (key: string, body: Record<string, unknown>) => {

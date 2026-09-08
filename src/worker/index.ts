@@ -15,6 +15,7 @@ import { contactRoutes, adminRoutes } from "./routes/support";
 import { analyticsId, analyticsCsp } from "./lib/analytics";
 import { robotsTxt, sitemapXml, llmsTxt } from "./lib/seo";
 import { compareBySlug, renderCompare } from "./lib/compare";
+import { pageBySlug, renderTemplatePage, renderTemplatesIndex } from "./lib/templatesPage";
 import { getSessionUser } from "./lib/session";
 import { businessName } from "../shared/names";
 import { eq, and } from "drizzle-orm";
@@ -132,6 +133,26 @@ app.get("/compare/:slug", async (c) => {
   c.header("content-security-policy", `default-src 'none'; script-src 'nonce-${nonce}'${csp.script}; style-src 'nonce-${nonce}'; img-src 'self'${csp.img}; connect-src 'self'${csp.connect}; font-src 'self'; base-uri 'none'; frame-ancestors 'none'`);
   c.header("cache-control", "public, max-age=3600");
   return c.html(renderCompare(comp, nonce, ga));
+});
+
+// Template landing pages: the real template in a frame, what is inside, and a hand-off to sign-in.
+const templateCsp = (nonce: string, csp: { script: string; img: string; connect: string }) =>
+  `default-src 'none'; script-src 'nonce-${nonce}'${csp.script}; style-src 'nonce-${nonce}'; img-src 'self'${csp.img}; connect-src 'self'${csp.connect}; font-src 'self'; frame-src 'self'; base-uri 'none'; frame-ancestors 'none'`;
+app.get("/templates", async (c) => {
+  const nonce = crypto.randomUUID().replace(/-/g, "");
+  const ga = await analyticsId(c.env.DB);
+  c.header("content-security-policy", templateCsp(nonce, analyticsCsp(ga)));
+  c.header("cache-control", "public, max-age=3600");
+  return c.html(renderTemplatesIndex(nonce, ga));
+});
+app.get("/templates/:slug", async (c) => {
+  const page = pageBySlug(c.req.param("slug"));
+  if (!page) return c.html(renderSimplePage("Not found", "There is no template at this address."), 404);
+  const nonce = crypto.randomUUID().replace(/-/g, "");
+  const ga = await analyticsId(c.env.DB);
+  c.header("content-security-policy", templateCsp(nonce, analyticsCsp(ga)));
+  c.header("cache-control", "public, max-age=3600");
+  return c.html(renderTemplatePage(page, nonce, ga));
 });
 
 // The contact page: pre-filled for a signed-in person; Turnstile when configured.

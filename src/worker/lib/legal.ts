@@ -52,7 +52,7 @@ export function shell(title: string, body: string, nonce: string, extraHead = ""
 ${extraHead}
 </head>
 <body>
-<div class="top"><a class="brand" href="/"><i></i>${esc(LEGAL.shortName)}</a><nav><a href="/contact">Contact</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/acceptable-use">Acceptable use</a><a href="/dpa">DPA</a></nav></div>
+<div class="top"><a class="brand" href="/"><i></i>${esc(LEGAL.shortName)}</a><nav><a href="/templates">Templates</a><a href="/contact">Contact</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/acceptable-use">Acceptable use</a><a href="/dpa">DPA</a></nav></div>
 <main>
 ${body}
 </main>

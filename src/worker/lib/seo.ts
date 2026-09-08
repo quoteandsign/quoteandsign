@@ -9,6 +9,7 @@ import { SUPPORTED_CURRENCIES } from "../../shared/pricing";
 import { TEMPLATES } from "../../shared/templates";
 import { STYLES } from "../../shared/styles";
 import { COMPETITORS } from "./compare";
+import { TEMPLATE_PAGES } from "./templatesPage";
 
 /** Public pages, with a change-frequency hint for the sitemap. */
 export const PUBLIC_PAGES: { path: string; changefreq: "weekly" | "monthly"; legal?: boolean }[] = [
@@ -20,6 +21,8 @@ export const PUBLIC_PAGES: { path: string; changefreq: "weekly" | "monthly"; leg
   { path: "/acceptable-use", changefreq: "monthly", legal: true },
   { path: "/dpa", changefreq: "monthly", legal: true },
   ...COMPETITORS.map((c) => ({ path: `/compare/${c.slug}`, changefreq: "monthly" as const })),
+  { path: "/templates", changefreq: "monthly" },
+  ...TEMPLATE_PAGES.map((p) => ({ path: `/templates/${p.slug}`, changefreq: "monthly" as const })),
 ];
 
 /** Paths that exist for one person and must never be crawled. */
@@ -92,6 +95,7 @@ Operated from ${LEGAL.province}, Canada. Prices in USD.
 - ${appUrl}/terms, ${appUrl}/privacy, ${appUrl}/acceptable-use, ${appUrl}/dpa : legal pages
 - ${appUrl}/contact : contact form
 ${COMPETITORS.map((c) => `- ${appUrl}/compare/${c.slug} : an honest, sourced comparison with ${c.name}`).join("\n")}
+- ${appUrl}/templates : proposal templates (consulting, website, retainer, photography, software), each a real proposal a client can adjust and accept
 
 Proposal pages, signing records and the app itself are private to the people in them and are not for
 indexing or training.
