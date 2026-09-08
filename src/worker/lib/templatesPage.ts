@@ -39,25 +39,45 @@ function sections(t: Template): string[] {
 }
 
 const CSS = `
-.tpl-big{aspect-ratio:1200/1400;border-radius:16px;box-shadow:0 30px 80px -40px rgba(25,24,22,.4)}
-.tpl-big iframe{width:160%;height:160%;transform:scale(.625)}
+.tpl-big{aspect-ratio:1200/1000;border-radius:18px;box-shadow:0 1px 2px rgba(25,24,22,.08),0 30px 80px -40px rgba(25,24,22,.4);border:1px solid var(--line)}
+.tpl-big iframe{width:120%;height:120%;transform:scale(.8333)}
+.tpl-big::after{background:linear-gradient(to bottom,transparent 80%,rgba(25,24,22,.08))}
 .tpl-cta{display:inline-block;background:var(--accent);color:#fff;text-decoration:none;font-weight:600;border-radius:999px;padding:12px 22px;margin:8px 0 0}
 .tpl-cta.alt{background:transparent;color:var(--accent);border:1px solid var(--line)}
-.tpl-grid{display:grid;gap:18px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));margin:24px 0}
-.tpl-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px 12px 18px;transition:transform .3s cubic-bezier(.32,.72,0,1),box-shadow .3s}
-.tpl-card:hover{transform:translateY(-3px);box-shadow:0 24px 50px -30px rgba(25,24,22,.4)}
-.tpl-card h3{margin:14px 8px 4px;font-size:18px}.tpl-card p{margin:0 8px 10px;color:var(--muted);font-size:14.5px}.tpl-card>a{margin:0 8px}
-.tpl-thumb{position:relative;display:block;overflow:hidden;aspect-ratio:1200/900;border-radius:10px;border:1px solid var(--line);background:#fff}
+main,.top,footer{max-width:1040px}
+.tpl-grid{display:grid;gap:22px;grid-template-columns:repeat(3,1fr);margin:28px 0 8px}
+@media(max-width:860px){.tpl-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:540px){.tpl-grid{grid-template-columns:1fr}}
+.tpl-card{position:relative;display:flex;flex-direction:column;background:#efece5;border-radius:22px;padding:8px;box-shadow:inset 0 0 0 1px rgba(25,24,22,.06);transition:transform .45s cubic-bezier(.32,.72,0,1),box-shadow .45s cubic-bezier(.32,.72,0,1)}
+.tpl-card:hover{transform:translateY(-4px);box-shadow:inset 0 0 0 1px rgba(25,24,22,.08),0 30px 60px -32px rgba(25,24,22,.45)}
+.tpl-thumb{position:relative;display:block;overflow:hidden;aspect-ratio:1200/900;border-radius:15px;background:#fff;box-shadow:0 1px 2px rgba(25,24,22,.08),inset 0 1px 0 rgba(255,255,255,.6)}
 .tpl-thumb iframe{position:absolute;left:0;top:0;width:400%;height:400%;transform:scale(.25);transform-origin:top left;border:0;pointer-events:none}
-.tpl-thumb::after{content:"";position:absolute;inset:0}
+.tpl-thumb::after{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,transparent 70%,rgba(25,24,22,.06))}
+.tpl-body{padding:16px 12px 12px;display:flex;flex-direction:column;gap:6px;flex:1}
+.tpl-eyebrow{font-size:10.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:0}
+.tpl-body h3{margin:0;font-size:18px;letter-spacing:-.015em;line-height:1.2}
+.tpl-body h3 a{color:var(--fg);text-decoration:none}
+.tpl-body h3 a::after{content:"";position:absolute;inset:0;border-radius:22px}
+.tpl-body p{margin:0;color:var(--muted);font-size:14px;line-height:1.5;flex:1}
+.tpl-more{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13.5px;font-weight:600;color:var(--accent)}
+.tpl-more i{display:inline-flex;width:24px;height:24px;border-radius:50%;background:color-mix(in srgb,var(--accent) 12%,transparent);align-items:center;justify-content:center;font-style:normal;transition:transform .35s cubic-bezier(.32,.72,0,1)}
+.tpl-card:hover .tpl-more i{transform:translateX(3px)}
+.tpl-soon{justify-content:center;align-items:center;text-align:center;background:transparent;box-shadow:none;border:1.5px dashed rgba(25,24,22,.16);padding:28px 22px;min-height:100%}
+.tpl-soon:hover{transform:none;box-shadow:none;border-color:rgba(43,63,140,.4)}
+.tpl-soon .tpl-eyebrow{color:var(--muted)}
+.tpl-soon h3{margin:8px 0 6px;font-size:18px;letter-spacing:-.015em}
+.tpl-soon p{margin:0 0 14px;color:var(--muted);font-size:14px;line-height:1.5;max-width:26ch}
+.tpl-soon a{color:var(--accent);font-weight:600;text-decoration:none;font-size:14px}
+.tpl-soon a:hover{text-decoration:underline}
 .tpl-lines li{margin:.25em 0}
 `;
 
 export function renderTemplatesIndex(nonce: string, analytics: string | null = null): string {
   const cards = TEMPLATE_PAGES.map((p) => {
     const t = templateOf(p);
-    return `<div class="tpl-card"><a class="tpl-thumb" href="/templates/${p.slug}" aria-label="${esc(p.keyword)}"><iframe src="/t/${esc(t.id)}?thumb=1" title="${esc(p.keyword)} thumbnail" tabindex="-1" aria-hidden="true" loading="lazy"></iframe></a><h3><a href="/templates/${p.slug}">${esc(p.keyword)}</a></h3><p>${esc(t.summary)}</p><a href="/templates/${p.slug}">See the template</a></div>`;
-  }).join("\n");
+    return `<article class="tpl-card"><a class="tpl-thumb" href="/templates/${p.slug}" tabindex="-1" aria-hidden="true"><iframe src="/t/${esc(t.id)}?thumb=1" title="${esc(p.keyword)} thumbnail" tabindex="-1" loading="lazy"></iframe></a><div class="tpl-body"><p class="tpl-eyebrow">For ${esc(p.audience)}</p><h3><a href="/templates/${p.slug}">${esc(p.keyword)}</a></h3><p>${esc(t.summary)}</p><span class="tpl-more">See the template <i aria-hidden="true">›</i></span></div></article>`;
+  }).join("\n") + `
+<article class="tpl-card tpl-soon"><p class="tpl-eyebrow">More on the way</p><h3>Yours might be next</h3><p>Event planning, interior design, marketing retainers and more are being written. Tell us which one you need and it moves to the front.</p><a href="/contact?kind=question">Ask for a template</a></article>`;
   const body = `
 <h1>Proposal templates</h1>
 <p class="eff">Five starting points, each a real proposal your client can read, adjust and accept on their phone. Pick one, put your own prices in, and send a link.</p>
