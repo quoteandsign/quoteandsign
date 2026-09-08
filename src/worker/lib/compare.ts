@@ -95,7 +95,7 @@ export function renderCompare(c: Competitor, nonce: string, analytics: string | 
 <div class="box"><p><strong>The short version.</strong> ${esc(c.name)} charges per user and per document and gives you a polished, closed product with native CRM connectors. Quote and Sign charges a flat price per account, lets the client change options on the page, keeps a verifiable acceptance record, and publishes its source code. If you are a freelancer, a studio or a small agency sending proposals rather than managing a sales floor, the flat price usually wins. If you need a native Salesforce or HubSpot app today, ${esc(c.name)} has it and we do not.</p></div>
 
 <h2>Side by side</h2>
-<div class="wrap-x"><table>
+<div class="wrap-x"><table class="cmp">
 <thead><tr><th></th><th>Quote and Sign</th><th>${esc(c.name)}</th></tr></thead>
 <tbody>
 ${rows.map(([k, us, them]) => `<tr><td>${esc(k)}</td><td>${esc(us)}</td><td>${esc(them)}</td></tr>`).join("\n")}
@@ -120,7 +120,18 @@ ${c.theyDoBetter.map((t) => `<li>${esc(t)}</li>`).join("\n")}
 <p>Every account starts with fourteen days of Pro, no card needed, then Free for three live proposals. <a href="/login">Start free</a> or read the <a href="/#plans">plans</a>.</p>
 `;
   const extraHead = `<meta name="description" content="Quote and Sign compared with ${esc(c.name)}: flat pricing versus per-user pricing, live client options, a verifiable acceptance record, open source. Sourced from ${esc(c.site)}, ${esc(c.checked)}.">
-<style nonce="${nonce}">table{width:100%;border-collapse:collapse;font-size:15px}th,td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top}th{font-weight:650}.wrap-x{overflow-x:auto}</style>`;
+<style nonce="${nonce}">
+.cmp{width:100%;border-collapse:separate;border-spacing:0;font-size:14.5px;line-height:1.5;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.cmp th,.cmp td{text-align:left;padding:14px 16px;border-bottom:1px solid var(--line);vertical-align:top}
+.cmp tr:last-child td{border-bottom:0}
+.cmp th{font-weight:650;background:#faf8f3;font-size:14px}
+.cmp td:first-child{white-space:nowrap;font-weight:600;color:var(--muted);width:1%;font-size:13.5px}
+.cmp td:nth-child(2),.cmp th:nth-child(2){background:color-mix(in srgb,var(--accent) 6%,#fff)}
+.cmp th:nth-child(2){color:var(--accent)}
+.cmp td:nth-child(2),.cmp td:nth-child(3){width:46%}
+.wrap-x{overflow-x:auto;margin:8px 0 12px}
+@media(max-width:640px){.cmp td:first-child{white-space:normal;width:auto}.cmp{font-size:14px}.cmp th,.cmp td{padding:12px 12px}}
+</style>`;
   return shell(`Quote and Sign vs ${c.name}`, body, nonce, extraHead, analytics);
 }
 

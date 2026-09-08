@@ -42,16 +42,20 @@ const CSS = `
 .tpl-frame{width:100%;aspect-ratio:9/12;max-height:820px;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:0 30px 80px -40px rgba(25,24,22,.4)}
 .tpl-cta{display:inline-block;background:var(--accent);color:#fff;text-decoration:none;font-weight:600;border-radius:999px;padding:12px 22px;margin:8px 0 0}
 .tpl-cta.alt{background:transparent;color:var(--accent);border:1px solid var(--line)}
-.tpl-grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));margin:20px 0}
-.tpl-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 20px}
-.tpl-card h3{margin:0 0 6px}.tpl-card p{margin:0 0 10px;color:var(--muted);font-size:14.5px}
+.tpl-grid{display:grid;gap:18px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));margin:24px 0}
+.tpl-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px 12px 18px;transition:transform .3s cubic-bezier(.32,.72,0,1),box-shadow .3s}
+.tpl-card:hover{transform:translateY(-3px);box-shadow:0 24px 50px -30px rgba(25,24,22,.4)}
+.tpl-card h3{margin:14px 8px 4px;font-size:18px}.tpl-card p{margin:0 8px 10px;color:var(--muted);font-size:14.5px}.tpl-card>a{margin:0 8px}
+.tpl-thumb{position:relative;display:block;overflow:hidden;aspect-ratio:1200/900;border-radius:10px;border:1px solid var(--line);background:#fff}
+.tpl-thumb iframe{position:absolute;left:0;top:0;width:400%;height:400%;transform:scale(.25);transform-origin:top left;border:0;pointer-events:none}
+.tpl-thumb::after{content:"";position:absolute;inset:0}
 .tpl-lines li{margin:.25em 0}
 `;
 
 export function renderTemplatesIndex(nonce: string, analytics: string | null = null): string {
   const cards = TEMPLATE_PAGES.map((p) => {
     const t = templateOf(p);
-    return `<div class="tpl-card"><h3><a href="/templates/${p.slug}">${esc(p.keyword)}</a></h3><p>${esc(t.summary)}</p><a href="/templates/${p.slug}">See the template</a></div>`;
+    return `<div class="tpl-card"><a class="tpl-thumb" href="/templates/${p.slug}" aria-label="${esc(p.keyword)}"><iframe src="/t/${esc(t.id)}?thumb=1" title="${esc(p.keyword)} thumbnail" tabindex="-1" aria-hidden="true" loading="lazy"></iframe></a><h3><a href="/templates/${p.slug}">${esc(p.keyword)}</a></h3><p>${esc(t.summary)}</p><a href="/templates/${p.slug}">See the template</a></div>`;
   }).join("\n");
   const body = `
 <h1>Proposal templates</h1>
