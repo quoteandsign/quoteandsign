@@ -77,7 +77,11 @@ export function Templates() {
     void loadSaved();
     // Arriving from a public template page: open that template straight away.
     const use = new URLSearchParams(window.location.search).get("use");
-    if (use && /^[a-z-]{1,40}$/.test(use) && !creating) void create(use, { template: use });
+    if (use && /^[a-z-]{1,40}$/.test(use) && !creating) {
+      // Consume the parameter first, so a refresh or a shared link does not create another draft.
+      window.history.replaceState(null, "", window.location.pathname);
+      void create(use, { template: use });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
