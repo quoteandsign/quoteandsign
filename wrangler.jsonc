@@ -5,8 +5,12 @@
   "compatibility_date": "2026-08-15",
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
+    // The Worker reaches the static files through env.ASSETS (needed for the 404 fallback).
+    "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/", "/api/*", "/p/*", "/t/*", "/auth/*", "/files/*", "/billing/*", "/terms", "/privacy", "/acceptable-use", "/dpa", "/contact", "/robots.txt", "/sitemap.xml", "/llms.txt", "/compare", "/compare/*", "/templates", "/templates/*"]
+    // Every page request goes through the Worker (so unknown addresses get a real 404 and a
+    // trailing slash redirects); the static files are served straight from the edge.
+    "run_worker_first": ["/*", "!/assets/*", "!/brand/*", "!/fonts/*", "!/img/*", "!/favicon.ico"]
   },
   "workers_dev": false,
   "routes": [

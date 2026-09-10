@@ -2,6 +2,18 @@
 
 All notable changes to Quote and Sign. Dates are the day the change went live at quoteandsign.com.
 
+## 1.0.1 — 2026-09-10
+
+### Public pages
+- Every server-rendered page (templates, comparisons, legal, contact) now carries one real description, a
+  canonical link and share-preview tags, plus breadcrumb structured data on the template and comparison pages.
+- Unknown addresses answer with a real 404 instead of the app shell; a trailing slash redirects to the page.
+- The homepage has a single h1; the sign-in page is no longer listed in the sitemap.
+- llms.txt lists the pages as Markdown links, in sections, as the convention asks.
+- Static files are cached at the edge: hashed build output and fonts for a year, brand and screenshots for a day.
+- Template and comparison cards use h2 headings, thumbnail links carry a name, and header and footer links
+  are tall enough to tap on a phone.
+
 ## 1.0.0 — 2026-09-07
 
 First public release. Everything below is live on the hosted service and in this repository.

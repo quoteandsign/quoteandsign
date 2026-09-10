@@ -23,7 +23,7 @@ a{color:var(--accent)}
 .top{max-width:760px;margin:0 auto;padding:22px 20px;display:flex;justify-content:space-between;align-items:center;font-size:14px}
 .top .brand{font-weight:600;color:var(--accent);text-decoration:none;display:flex;gap:10px;align-items:center;font-size:17px}.top .brand i{width:10px;height:10px;border-radius:50%;background:var(--accent);display:inline-block}.top .brand .and{font-weight:300}
 .top nav a.cta{background:var(--fg);color:var(--bg);padding:9px 16px;border-radius:999px;font-weight:600}.top nav a.cta:hover{color:var(--bg);opacity:.9}
-.top nav a{color:var(--muted);text-decoration:none;margin-left:18px}.top nav a:hover{color:var(--fg)}
+.top nav a{color:var(--muted);text-decoration:none;margin-left:18px;display:inline-block;padding:10px 0}.top nav a:hover{color:var(--fg)}
 main{max-width:760px;margin:0 auto;padding:24px 20px 96px}
 h1{font-size:clamp(34px,5vw,46px);line-height:1.05;letter-spacing:-.035em;margin:24px 0 8px;font-weight:650}
 .eff{color:var(--muted);font-size:14px;margin:0 0 36px}
@@ -32,18 +32,54 @@ h3{font-size:17px;margin:24px 0 6px;font-weight:600}
 p,li{max-width:68ch}ul{padding-left:1.2em}li{margin:.35em 0}
 .box{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin:20px 0}
 .muted{color:var(--muted)}
-footer{max-width:760px;margin:0 auto;padding:0 20px 48px;font-size:13.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:8px 20px}footer a{color:inherit;text-decoration:none}footer a:hover{color:var(--fg)}
+footer{max-width:760px;margin:0 auto;padding:0 20px 48px;font-size:13.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:8px 20px}footer a{color:inherit;text-decoration:none;display:inline-block;padding:8px 0}footer a:hover{color:var(--fg)}
 @media(max-width:600px){.top nav a{margin-left:12px}}
 `;
 
-export function shell(title: string, body: string, nonce: string, extraHead = "", analytics: string | null = null): string {
+/** The public address of the service; canonical and share links always point here. */
+export const SITE_URL = "https://quoteandsign.com";
+
+export type PageMeta = {
+  /** One sentence for search results and link previews. */
+  description?: string;
+  /** The page's own path, e.g. "/privacy". Enables the canonical link and the share preview tags. */
+  path?: string;
+  /** Keep the page out of search indexes (error pages). */
+  noindex?: boolean;
+};
+
+/** BreadcrumbList structured data: Home, then the trail given. Search results show it as a path. */
+export function breadcrumbs(nonce: string, trail: [string, string][]): string {
+  const items = [["Home", "/"], ...trail].map(([name, path], i) => ({ "@type": "ListItem", position: i + 1, name, item: `${SITE_URL}${path}` }));
+  return `<script type="application/ld+json" nonce="${nonce}">${JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: items }).replace(/</g, "\\u003c")}</script>`;
+}
+
+export function shell(title: string, body: string, nonce: string, extraHead = "", analytics: string | null = null, meta: PageMeta = {}): string {
+  const fullTitle = `${title} · ${LEGAL.shortName}`;
+  const description = meta.description ?? `${title} for ${LEGAL.shortName}.`;
+  const share = meta.path
+    ? `<link rel="canonical" href="${SITE_URL}${esc(meta.path)}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="${esc(LEGAL.shortName)}">
+<meta property="og:title" content="${esc(fullTitle)}">
+<meta property="og:description" content="${esc(description)}">
+<meta property="og:url" content="${SITE_URL}${esc(meta.path)}">
+<meta property="og:image" content="${SITE_URL}/brand/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${esc(fullTitle)}">
+<meta name="twitter:description" content="${esc(description)}">
+<meta name="twitter:image" content="${SITE_URL}/brand/og.png">`
+    : "";
   return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(title)} · ${esc(LEGAL.shortName)}</title>
-<meta name="description" content="${esc(title)} for ${esc(LEGAL.shortName)}.">
+<title>${esc(fullTitle)}</title>
+<meta name="description" content="${esc(description)}">
+${meta.noindex ? `<meta name="robots" content="noindex">` : ""}${share}
 <link rel="icon" href="/brand/mark.svg" type="image/svg+xml">
 <link rel="icon" href="/brand/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
@@ -95,7 +131,10 @@ if(!body.name||!body.email||!body.subject||!body.message||String(body.message).l
 b.disabled=true;b.textContent="Sending…";
 fetch("/api/contact",{method:"POST",headers:{"content-type":"application/json",accept:"application/json"},body:JSON.stringify(body)}).then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j}})}).then(function(x){if(x.ok){f.hidden=true;var d=document.getElementById("done");d.hidden=false;d.textContent="Thanks. Your message is in, reference #"+x.j.ref+". Look out for a reply from us by email."}else{err.textContent=x.j.error||"Something went wrong.";b.disabled=false;b.textContent="Send message";if(window.turnstile){try{window.turnstile.reset()}catch(e){}}}}).catch(function(){err.textContent="Network error. Try again.";b.disabled=false;b.textContent="Send message"})})})();
 </script>
-`, nonce, o.siteKey ? `<script nonce="${nonce}" src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>` : "", o.analytics ?? null);
+`, nonce, o.siteKey ? `<script nonce="${nonce}" src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>` : "", o.analytics ?? null, {
+    path: "/contact",
+    description: "Ask a question about Quote and Sign, report a problem, or flag a proposal page or email. Answered by email, usually within one business day.",
+  });
 }
 
 export function renderTerms(nonce: string, analytics: string | null = null): string {
@@ -179,7 +218,10 @@ export function renderTerms(nonce: string, analytics: string | null = null): str
 
 <h2>16. Contact</h2>
 <p>Use the <a href="/contact">contact form</a>. Reports about a proposal page or email go through the <a href="/contact?kind=abuse">same form</a> and are handled first.</p>
-`, nonce, "", analytics);
+`, nonce, "", analytics, {
+    path: "/terms",
+    description: "The terms of service for Quote and Sign: plans, fair use, acceptance records, cancellation, liability and governing law, in plain English.",
+  });
 }
 
 export function renderPrivacy(nonce: string, analytics: string | null = null): string {
@@ -261,7 +303,10 @@ export function renderPrivacy(nonce: string, analytics: string | null = null): s
 
 <h2>Contact</h2>
 <p>The Privacy Officer, ${esc(LEGAL.operator)}, through the <a href="/contact?kind=other">contact form</a>. The officer's name and a postal address are provided on request.</p>
-`, nonce, "", analytics);
+`, nonce, "", analytics, {
+    path: "/privacy",
+    description: "How Quote and Sign collects, uses and protects personal information, under PIPEDA, the GDPR and the CCPA, and how to export or delete your data.",
+  });
 }
 
 export function renderAcceptableUse(nonce: string, analytics: string | null = null): string {
@@ -287,7 +332,10 @@ export function renderAcceptableUse(nonce: string, analytics: string | null = nu
 
 <h2>Report abuse</h2>
 <p>If a proposal page or email from this service is fraudulent, infringing or harmful, report it through the <a href="/contact?kind=abuse">contact form</a> with the link. We act on valid reports within two business days and take down clear cases immediately. Copyright owners may send a notice with the work, the location and their contact details; we follow the notice-and-notice rules of the Canadian Copyright Act and honour DMCA-style notices.</p>
-`, nonce, "", analytics);
+`, nonce, "", analytics, {
+    path: "/acceptable-use",
+    description: "What Quote and Sign may not be used for, what happens on a breach, and how to report a fraudulent or harmful proposal page or email.",
+  });
 }
 
 export function renderDpa(nonce: string, analytics: string | null = null): string {
@@ -345,5 +393,8 @@ export function renderDpa(nonce: string, analytics: string | null = null): strin
 <li>Nightly encrypted backups kept 60 days; a removed backup leaves history as well.</li>
 <li>Access to production limited to the operator, with the source code public for review under the AGPL.</li>
 </ul>
-`, nonce, "", analytics);
+`, nonce, "", analytics, {
+    path: "/dpa",
+    description: "The Data Processing Addendum for Quote and Sign under the GDPR and UK GDPR: roles, subprocessors, security measures, transfers and breach notice.",
+  });
 }

@@ -12,9 +12,10 @@ import { COMPETITORS } from "./compare";
 import { TEMPLATE_PAGES } from "./templatesPage";
 
 /** Public pages, with a change-frequency hint for the sitemap. */
-export const PUBLIC_PAGES: { path: string; changefreq: "weekly" | "monthly"; legal?: boolean }[] = [
+export const PUBLIC_PAGES: { path: string; changefreq: "weekly" | "monthly"; legal?: boolean; sitemap?: false }[] = [
   { path: "/", changefreq: "weekly" },
-  { path: "/login", changefreq: "monthly" },
+  // Crawlable, but not worth a sitemap entry: the sign-in page is an empty shell until scripts run.
+  { path: "/login", changefreq: "monthly", sitemap: false },
   { path: "/contact", changefreq: "monthly" },
   { path: "/terms", changefreq: "monthly", legal: true },
   { path: "/privacy", changefreq: "monthly", legal: true },
@@ -45,7 +46,7 @@ export function robotsTxt(appUrl: string): string {
 
 export function sitemapXml(appUrl: string): string {
   const legalDate = new Date(LEGAL.effective).toISOString().slice(0, 10);
-  const urls = PUBLIC_PAGES.map(
+  const urls = PUBLIC_PAGES.filter((p) => p.sitemap !== false).map(
     (p) => `  <url><loc>${appUrl}${p.path}</loc>${p.legal ? `<lastmod>${legalDate}</lastmod>` : ""}<changefreq>${p.changefreq}</changefreq><priority>${p.path === "/" ? "1.0" : p.legal ? "0.3" : "0.6"}</priority></url>`,
   );
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join("\n")}\n</urlset>\n`;
@@ -91,12 +92,26 @@ Operated from ${LEGAL.province}, Canada. Prices in USD.
 
 ## Pages
 
-- ${appUrl}/ : homepage with a live demo and the pricing table
-- ${appUrl}/login : sign in or start free
-- ${appUrl}/terms, ${appUrl}/privacy, ${appUrl}/acceptable-use, ${appUrl}/dpa : legal pages
-- ${appUrl}/contact : contact form
-${COMPETITORS.map((c) => `- ${appUrl}/compare/${c.slug} : an honest, sourced comparison with ${c.name}`).join("\n")}
-- ${appUrl}/templates : proposal templates (consulting, website, retainer, photography, software), each a real proposal a client can adjust and accept
+- [Homepage](${appUrl}/): live demo and the pricing table
+- [Sign in](${appUrl}/login): sign in or start free, by email link
+- [Contact](${appUrl}/contact): contact form
+- [Proposal templates](${appUrl}/templates): each a real proposal a client can adjust and accept
+${TEMPLATE_PAGES.map((p) => `- [${p.keyword}](${appUrl}/templates/${p.slug}): for ${p.audience}`).join("\n")}
+
+## Comparisons
+
+${COMPETITORS.map((c) => `- [Quote and Sign vs ${c.name}](${appUrl}/compare/${c.slug}): sourced from ${c.site}, ${c.checked}`).join("\n")}
+
+## Legal
+
+- [Terms of Service](${appUrl}/terms)
+- [Privacy Policy](${appUrl}/privacy)
+- [Acceptable Use Policy](${appUrl}/acceptable-use)
+- [Data Processing Addendum](${appUrl}/dpa)
+
+## Source
+
+- [GitHub repository](${githubUrl}): AGPL-3.0, run your own copy
 
 Proposal pages, signing records and the app itself are private to the people in them and are not for
 indexing or training.

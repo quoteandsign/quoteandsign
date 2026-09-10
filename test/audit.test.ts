@@ -167,7 +167,9 @@ describe("billing events from a different Polar customer", () => {
 
 describe("small public pages", () => {
   it("carry the strict policy", async () => {
-    const r = await app.request(`${APP}/p/00000000-0000-4000-8000-000000000000`, {}, env);
+    // Production headers: development sends no-store on everything so previews stay fresh.
+    const prod = { ...env, ENVIRONMENT: "production", APP_URL: APP } as typeof env;
+    const r = await app.request(`${APP}/p/00000000-0000-4000-8000-000000000000`, {}, prod);
     expect(r.status).toBe(404);
     expect(r.headers.get("content-security-policy")).toContain("style-src 'nonce-");
     expect(r.headers.get("cache-control")).toBe("private, no-store");

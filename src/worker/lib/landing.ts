@@ -21,7 +21,7 @@ nav.main .brand,footer.site-foot .foot-brand{color:var(--accent)}
 .site{max-width:1160px;margin:0 auto;padding:0 24px}
 nav.main{display:flex;align-items:center;justify-content:space-between;height:76px}
 nav.main .links{display:flex;gap:28px;align-items:center;font-size:15px}
-nav.main .links a{color:var(--fg);text-decoration:none}
+nav.main .links a{color:var(--fg);text-decoration:none;display:inline-block;padding:10px 0}
 nav.main .links a.cta{background:var(--fg);color:var(--bg);padding:10px 18px;border-radius:999px;font-weight:600}
 .brand.home{text-decoration:none;color:var(--accent);font-size:17px}
 @media(max-width:600px){nav.main .links a.sm-hide{display:none}nav.main .links{gap:16px}}
@@ -50,7 +50,7 @@ nav.main .links a.cta{background:var(--fg);color:var(--bg);padding:10px 18px;bor
 .scroll{overflow-y:auto;padding:8px 18px 18px;scrollbar-width:none}
 .scroll::-webkit-scrollbar{display:none}
 .phone article{padding:0}
-.phone h1{font-size:24px;letter-spacing:-.03em;margin:.4em 0 .4em;line-height:1.1}
+.phone .doc-title{font-size:24px;font-weight:650;letter-spacing:-.03em;margin:.4em 0 .4em;line-height:1.1}
 .phone .brand{font-size:13px;margin-bottom:6px}
 .phone .pricing{margin:.9em 0}
 .phone .accept{padding:16px;margin:1em 0 0}
@@ -169,7 +169,7 @@ footer.site-foot{padding:44px 0 56px;border-top:1px solid var(--line);display:gr
 footer.site-foot .foot-brand{display:inline-flex;align-items:center;gap:8px;font-weight:600;color:var(--fg)}
 footer.site-foot .foot-brand i{width:10px;height:10px;border-radius:50%;background:var(--accent)}
 footer.site-foot nav{display:flex;flex-wrap:wrap;gap:8px 20px}
-footer.site-foot a{color:inherit;text-decoration:none}
+footer.site-foot a{color:inherit;text-decoration:none}footer.site-foot nav a{display:inline-block;padding:8px 0}
 footer.site-foot a:hover{color:var(--fg)}
 footer.site-foot .foot-licence{grid-column:1/-1;margin:0;font-size:13px}
 @media(max-width:700px){footer.site-foot{grid-template-columns:1fr;gap:16px;padding:36px 0 44px}footer.site-foot nav{gap:8px 18px}}
@@ -269,7 +269,7 @@ export function renderLanding(o: { nonce: string; appUrl: string; githubUrl: str
           <form id="acceptForm" action="#" method="post">
           <article>
             <div class="brand"><span class="dot" aria-hidden="true"></span><span>Northwind Studio</span></div>
-            <h1>Website redesign for Bramble &amp; Co</h1>
+            <p class="doc-title">Website redesign for Bramble &amp; Co</p>
             <p class="lede-sm">A fast, mobile-first site that turns visitors into enquiries. Live in six weeks.</p>
             ${pricingHtml(DEMO_ITEMS, DEMO_CURRENCY, false)}
             <section class="accept" id="accept">

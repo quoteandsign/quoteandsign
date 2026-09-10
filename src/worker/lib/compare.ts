@@ -2,7 +2,7 @@
 // constants as the homepage so prices never drift. Truthful comparative advertising: every number
 // about the other product is sourced and dated, and the section on what they do better is real.
 
-import { shell, LEGAL } from "./legal";
+import { shell, breadcrumbs, LEGAL } from "./legal";
 import { esc } from "./render";
 import { PLANS } from "./plan";
 import { SUPPORTED_CURRENCIES } from "../../shared/pricing";
@@ -120,7 +120,7 @@ ${c.theyDoBetter.map((t) => `<li>${esc(t)}</li>`).join("\n")}
 <h2>Try it</h2>
 <p>Every account starts with fourteen days of Pro, no card needed, then Free for three live proposals. <a href="/login">Start free</a> or read the <a href="/#plans">plans</a>.</p>
 `;
-  const extraHead = `<meta name="description" content="Quote and Sign compared with ${esc(c.name)}: flat pricing versus per-user pricing, live client options, a verifiable acceptance record, open source. Sourced from ${esc(c.site)}, ${esc(c.checked)}.">
+  const extraHead = `${breadcrumbs(nonce, [["Compare", "/compare"], [`Quote and Sign vs ${c.name}`, `/compare/${c.slug}`]])}
 <style nonce="${nonce}">
 .cmp{width:100%;border-collapse:separate;border-spacing:0;font-size:14.5px;line-height:1.5;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}
 .cmp th,.cmp td{text-align:left;padding:14px 16px;border-bottom:1px solid var(--line);vertical-align:top}
@@ -134,14 +134,17 @@ ${c.theyDoBetter.map((t) => `<li>${esc(t)}</li>`).join("\n")}
 .cmp-switch{font-size:13.5px;color:var(--muted);margin:24px 0 -12px}.cmp-switch a{color:var(--accent);text-decoration:none}.cmp-switch a:hover{text-decoration:underline}
 @media(max-width:640px){.cmp td:first-child{white-space:normal;width:auto}.cmp{font-size:14px}.cmp th,.cmp td{padding:12px 12px}}
 </style>`;
-  return shell(`Quote and Sign vs ${c.name}`, body, nonce, extraHead, analytics);
+  return shell(`Quote and Sign vs ${c.name}`, body, nonce, extraHead, analytics, {
+    path: `/compare/${c.slug}`,
+    description: `Quote and Sign vs ${c.name}: flat pricing instead of per-user fees, live client options, a verifiable acceptance record, open source. Sourced from ${c.site}, ${c.checked}.`,
+  });
 }
 
 export const compareBySlug = (slug: string) => COMPETITORS.find((c) => c.slug === slug) ?? null;
 
 /** The index: one card per competitor, and the promise that keeps the pages honest. */
 export function renderCompareIndex(nonce: string, analytics: string | null = null): string {
-  const cards = COMPETITORS.map((c) => `<div class="cmp-card"><h3><a href="/compare/${c.slug}">Quote and Sign vs ${esc(c.name)}</a></h3><p>${esc(c.theirPricing.split(". ")[0])}. Read in ${esc(c.checked)}.</p><a href="/compare/${c.slug}">Read the comparison</a></div>`).join("\n");
+  const cards = COMPETITORS.map((c) => `<div class="cmp-card"><h2><a href="/compare/${c.slug}">Quote and Sign vs ${esc(c.name)}</a></h2><p>${esc(c.theirPricing.split(". ")[0])}. Read in ${esc(c.checked)}.</p><a href="/compare/${c.slug}">Read the comparison</a></div>`).join("\n");
   const body = `
 <h1>How Quote and Sign compares</h1>
 <p class="eff">One page per product, with their prices and features taken from their own sites, dated, and a section on what they do that we do not. If you find something out of date, tell us through the <a href="/contact">contact form</a>.</p>
@@ -153,8 +156,11 @@ export function renderCompareIndex(nonce: string, analytics: string | null = nul
 <li>They are closed. Quote and Sign is open source under the AGPL, and you can run your own copy.</li>
 </ul>
 <p><a class="tpl-cta" href="/login">Start free</a></p>`;
-  return shell("Compare", body, nonce, `<meta name="description" content="Quote and Sign compared with Qwilr, PandaDoc and Proposify: pricing, client-side options, the acceptance record, and what each does better.">
-<style nonce="${nonce}">.cmp-grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));margin:20px 0}.cmp-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 20px}.cmp-card h3{margin:0 0 6px;font-size:18px}.cmp-card h3 a{color:var(--fg);text-decoration:none}.cmp-card p{margin:0 0 10px;color:var(--muted);font-size:14px}.tpl-cta{display:inline-block;background:var(--accent);color:#fff;text-decoration:none;font-weight:600;border-radius:999px;padding:12px 22px}</style>`, analytics);
+  return shell("Compare", body, nonce, `${breadcrumbs(nonce, [["Compare", "/compare"]])}
+<style nonce="${nonce}">.cmp-grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));margin:20px 0}.cmp-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 20px}.cmp-card h2{margin:0 0 6px;font-size:18px}.cmp-card h2 a{color:var(--fg);text-decoration:none}.cmp-card p{margin:0 0 10px;color:var(--muted);font-size:14px}.tpl-cta{display:inline-block;background:var(--accent);color:#fff;text-decoration:none;font-weight:600;border-radius:999px;padding:12px 22px}</style>`, analytics, {
+    path: "/compare",
+    description: "Quote and Sign compared with Qwilr, PandaDoc and Proposify: pricing, client-side options, the acceptance record, and what each does better.",
+  });
 }
 
 /** Used by the sitemap. */

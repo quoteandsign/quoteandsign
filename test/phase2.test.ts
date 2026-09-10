@@ -114,7 +114,8 @@ describe("logo", () => {
     const { key, url } = await ok.json();
     expect(key).toMatch(/^logos\/[0-9a-f-]{36}\/[0-9a-f-]{36}\.png$/);
     expect((await (await req("/auth/me")).json()).user.brandLogoKey).toBe(key);
-    const served = await app.request(`${APP}${url}`, {}, env);
+    // Production headers: development sends no-store on everything so previews stay fresh.
+    const served = await app.request(`${APP}${url}`, {}, { ...env, ENVIRONMENT: "production", APP_URL: APP } as typeof env);
     expect(served.status).toBe(200);
     expect(served.headers.get("content-type")).toBe("image/png");
     expect(served.headers.get("content-security-policy")).toContain("sandbox");

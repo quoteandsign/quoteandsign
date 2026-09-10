@@ -1,0 +1,14 @@
+# Cache rules for the static files served from the edge. Build output under /assets carries a
+# content hash in the filename, so it can be cached for a year; brand, fonts and screenshots
+# change rarely and keep a day-long cache with revalidation.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/brand/*
+  Cache-Control: public, max-age=86400
+
+/img/*
+  Cache-Control: public, max-age=86400

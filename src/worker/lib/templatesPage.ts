@@ -3,7 +3,7 @@
 // the real template (the same renderer the client sees), lists what is inside, and hands off to
 // sign-in with the template remembered.
 
-import { shell } from "./legal";
+import { shell, breadcrumbs } from "./legal";
 import { esc } from "./render";
 import { TEMPLATES, type Template } from "../../shared/templates";
 import { formatMoney } from "../../shared/pricing";
@@ -55,9 +55,9 @@ main,.top,footer{max-width:1040px}
 .tpl-thumb::after{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,transparent 70%,rgba(25,24,22,.06))}
 .tpl-body{padding:16px 12px 12px;display:flex;flex-direction:column;gap:6px;flex:1}
 .tpl-eyebrow{font-size:10.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:0}
-.tpl-body h3{margin:0;font-size:18px;letter-spacing:-.015em;line-height:1.2}
-.tpl-body h3 a{color:var(--fg);text-decoration:none}
-.tpl-body h3 a::after{content:"";position:absolute;inset:0;border-radius:22px}
+.tpl-body h2{margin:0;font-size:18px;letter-spacing:-.015em;line-height:1.2}
+.tpl-body h2 a{color:var(--fg);text-decoration:none}
+.tpl-body h2 a::after{content:"";position:absolute;inset:0;border-radius:22px}
 .tpl-body p{margin:0;color:var(--muted);font-size:14px;line-height:1.5;flex:1}
 .tpl-more{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13.5px;font-weight:600;color:var(--accent)}
 .tpl-more i{display:inline-flex;width:24px;height:24px;border-radius:50%;background:color-mix(in srgb,var(--accent) 12%,transparent);align-items:center;justify-content:center;font-style:normal;transition:transform .35s cubic-bezier(.32,.72,0,1)}
@@ -65,7 +65,7 @@ main,.top,footer{max-width:1040px}
 .tpl-soon{justify-content:center;align-items:center;text-align:center;background:transparent;box-shadow:none;border:1.5px dashed rgba(25,24,22,.16);padding:28px 22px;min-height:100%}
 .tpl-soon:hover{transform:none;box-shadow:none;border-color:rgba(43,63,140,.4)}
 .tpl-soon .tpl-eyebrow{color:var(--muted)}
-.tpl-soon h3{margin:8px 0 6px;font-size:18px;letter-spacing:-.015em}
+.tpl-soon h2{margin:8px 0 6px;font-size:18px;letter-spacing:-.015em}
 .tpl-soon p{margin:0 0 14px;color:var(--muted);font-size:14px;line-height:1.5;max-width:26ch}
 .tpl-soon a{color:var(--accent);font-weight:600;text-decoration:none;font-size:14px}
 .tpl-soon a:hover{text-decoration:underline}
@@ -75,9 +75,9 @@ main,.top,footer{max-width:1040px}
 export function renderTemplatesIndex(nonce: string, analytics: string | null = null): string {
   const cards = TEMPLATE_PAGES.map((p) => {
     const t = templateOf(p);
-    return `<article class="tpl-card"><a class="tpl-thumb" href="/templates/${p.slug}" tabindex="-1" aria-hidden="true"><iframe src="/t/${esc(t.id)}?thumb=1" title="${esc(p.keyword)} thumbnail" tabindex="-1" loading="lazy"></iframe></a><div class="tpl-body"><p class="tpl-eyebrow">For ${esc(p.audience)}</p><h3><a href="/templates/${p.slug}">${esc(p.keyword)}</a></h3><p>${esc(t.summary)}</p><span class="tpl-more">See the template <i aria-hidden="true">›</i></span></div></article>`;
+    return `<article class="tpl-card"><a class="tpl-thumb" href="/templates/${p.slug}" tabindex="-1" aria-label="${esc(p.keyword)} preview"><iframe src="/t/${esc(t.id)}?thumb=1" title="${esc(p.keyword)} thumbnail" tabindex="-1" loading="lazy"></iframe></a><div class="tpl-body"><p class="tpl-eyebrow">For ${esc(p.audience)}</p><h2><a href="/templates/${p.slug}">${esc(p.keyword)}</a></h2><p>${esc(t.summary)}</p><span class="tpl-more">See the template <i aria-hidden="true">›</i></span></div></article>`;
   }).join("\n") + `
-<article class="tpl-card tpl-soon"><p class="tpl-eyebrow">More on the way</p><h3>Yours might be next</h3><p>Event planning, interior design, marketing retainers and more are being written. Tell us which one you need and it moves to the front.</p><a href="/contact?kind=question">Ask for a template</a></article>`;
+<article class="tpl-card tpl-soon"><p class="tpl-eyebrow">More on the way</p><h2>Yours might be next</h2><p>Event planning, interior design, marketing retainers and more are being written. Tell us which one you need and it moves to the front.</p><a href="/contact?kind=question">Ask for a template</a></article>`;
   const body = `
 <h1>Proposal templates</h1>
 <p class="eff">Five starting points, each a real proposal your client can read, adjust and accept on their phone. Pick one, put your own prices in, and send a link.</p>
@@ -91,8 +91,11 @@ export function renderTemplatesIndex(nonce: string, analytics: string | null = n
 </ol>
 <p><a class="tpl-cta" href="/login">Start free</a></p>
 <p class="muted">Quote and Sign is open source under the AGPL. Prices in the templates are examples; change them to yours.</p>`;
-  return shell("Proposal templates", body, nonce, `<meta name="description" content="Free proposal templates for consulting, websites, retainers, photography and software. Real proposals your client can adjust and accept on their phone.">
-<style nonce="${nonce}">${CSS}</style>`, analytics);
+  return shell("Proposal templates", body, nonce, `${breadcrumbs(nonce, [["Templates", "/templates"]])}
+<style nonce="${nonce}">${CSS}</style>`, analytics, {
+    path: "/templates",
+    description: "Free proposal templates for consulting, websites, retainers, photography and software. Real proposals your client can adjust and accept on their phone.",
+  });
 }
 
 export function renderTemplatePage(p: TemplatePage, nonce: string, analytics: string | null = null): string {
@@ -134,6 +137,9 @@ ${lines}
 <p><a class="tpl-cta" href="/login?template=${esc(t.id)}">Use this template</a></p>
 
 <p class="muted">Other templates: ${others}. Quote and Sign is open source under the AGPL; you can also run your own copy.</p>`;
-  return shell(p.keyword, body, nonce, `<meta name="description" content="${esc(p.keyword)} for ${esc(p.audience)}: a real proposal your client can adjust and accept on their phone. Free to use, sign in with your email.">
-<style nonce="${nonce}">${CSS}</style>`, analytics);
+  return shell(p.keyword, body, nonce, `${breadcrumbs(nonce, [["Templates", "/templates"], [p.keyword, `/templates/${p.slug}`]])}
+<style nonce="${nonce}">${CSS}</style>`, analytics, {
+    path: `/templates/${p.slug}`,
+    description: `${p.keyword} for ${p.audience}: a real proposal your client can adjust and accept on their phone. Free to use, sign in with your email.`,
+  });
 }

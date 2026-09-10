@@ -50,7 +50,8 @@ describe("what crawlers are told", () => {
     const sitemap = await app.request("http://localhost:5173/sitemap.xml", {}, env);
     expect(sitemap.headers.get("content-type")).toContain("application/xml");
     const x = await sitemap.text();
-    expect((x.match(/<url>/g) ?? []).length).toBe(17);
+    expect((x.match(/<url>/g) ?? []).length).toBe(16);
+    expect(x).not.toContain("/login");
     const idx = await (await app.request("http://localhost:5173/compare", {}, env)).text();
     for (const s of ["qwilr", "pandadoc", "proposify"]) expect(idx).toContain(`/compare/${s}`);
     expect(x).toContain("/compare/pandadoc");
@@ -64,6 +65,9 @@ describe("what crawlers are told", () => {
     expect(llms).toContain("16 currencies");
     expect(llms).toContain("AGPL");
     expect(llms).not.toContain("Cloudflare");
+    // llms.txt convention: Markdown links, so agents can follow them.
+    expect(llms).toContain("- [Proposal templates](http://localhost:5173/templates)");
+    expect(llms).toContain("- [Quote and Sign vs Qwilr](http://localhost:5173/compare/qwilr)");
     // Client-facing pages stay out of every index.
     const notFound = await (await app.request("http://localhost:5173/p/00000000-0000-4000-8000-000000000000", {}, env)).text();
     expect(notFound).toContain('name="robots" content="noindex"');
@@ -107,5 +111,31 @@ describe("template landing pages", () => {
       expect(c.status).toBe(200);
       expect(await c.text()).toContain("September 2026");
     }
+  });
+});
+
+describe("search metadata on the shared pages", () => {
+  it("gives every server-rendered page one real description, a canonical link and share tags", async () => {
+    for (const path of ["/templates", "/templates/consulting-proposal-template", "/compare", "/compare/qwilr", "/privacy", "/terms", "/contact"]) {
+      const html = await (await app.request(`http://localhost:5173${path}`, {}, env)).text();
+      expect((html.match(/name="description"/g) ?? []).length).toBe(1);
+      expect(html).not.toContain('for Quote and Sign."');
+      expect(html).toContain(`<link rel="canonical" href="https://quoteandsign.com${path}">`);
+      expect(html).toContain('property="og:image" content="https://quoteandsign.com/brand/og.png"');
+      expect(html).toContain('name="twitter:card" content="summary_large_image"');
+    }
+    const tpl = await (await app.request("http://localhost:5173/templates/consulting-proposal-template", {}, env)).text();
+    expect(tpl).toContain('"@type":"BreadcrumbList"');
+    const home = await (await app.request("http://localhost:5173/", {}, env)).text();
+    expect((home.match(/<h1[\s>]/g) ?? []).length).toBe(1);
+  });
+
+  it("answers an unknown address with a real 404 and redirects a trailing slash", async () => {
+    const missing = await app.request("http://localhost:5173/no-such-page", {}, env);
+    expect(missing.status).toBe(404);
+    expect(await missing.text()).toContain('name="robots" content="noindex"');
+    const slash = await app.request("http://localhost:5173/templates/?x=1", {}, env);
+    expect(slash.status).toBe(301);
+    expect(slash.headers.get("location")).toBe("/templates?x=1");
   });
 });

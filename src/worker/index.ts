@@ -246,8 +246,25 @@ app.route("/files", fileRoutes);
 app.route("/api/proposals", proposalRoutes);
 app.route("/p", publicRoutes);
 
-// Anything the router does not own falls through to static assets / the SPA.
-app.notFound((c) => (c.env.ASSETS ? c.env.ASSETS.fetch(c.req.raw) : c.text("Not found", 404)));
+// Anything the router does not own falls through to static assets / the SPA. The assets binding
+// answers every unknown path with the app shell and a 200, which search engines would index as
+// thin duplicate pages; so outside the app's own routes an unknown address gets a real 404.
+const SPA_PREFIXES = ["/app", "/login", "/admin"];
+app.notFound(async (c) => {
+  const url = new URL(c.req.url);
+  const path = url.pathname;
+  // One address per page: a trailing slash redirects to the page itself.
+  if ((c.req.method === "GET" || c.req.method === "HEAD") && path.length > 1 && path.endsWith("/")) {
+    return c.redirect(path.replace(/\/+$/, "") + url.search, 301);
+  }
+  const notFound = () => c.html(renderSimplePage("Page not found", "There is nothing at this address. Try the homepage, the templates or the comparisons."), 404);
+  if (!c.env.ASSETS) return notFound();
+  const res = await c.env.ASSETS.fetch(c.req.raw);
+  const isApp = SPA_PREFIXES.some((p) => path === p || path.startsWith(p + "/"));
+  const looksLikeFile = /\.[a-z0-9]{1,8}$/i.test(path);
+  if (isApp || looksLikeFile || !(res.headers.get("content-type") ?? "").includes("text/html")) return res;
+  return notFound();
+});
 
 export { app };
 
