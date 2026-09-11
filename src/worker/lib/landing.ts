@@ -374,6 +374,87 @@ html.gs .plan .price{font-variant-numeric:tabular-nums}
 @keyframes rise{to{opacity:1;transform:none}}
 @keyframes draw{to{stroke-dashoffset:0}}
 @media(prefers-reduced-motion:reduce){.rise{opacity:1;transform:none;animation:none!important}.hero h1 .u path{stroke-dashoffset:0;animation:none!important}.phone{transform:none;transition:none}}
+
+/* ---- Mobile layer: phones and small tablets. Everything above 979px is untouched. ---------- */
+.tpls .sub .m,.compare-m{display:none}
+@media(max-width:979px){
+.site{padding:0 20px}
+.hero{padding:84px calc(50vw - 50%) 20px;gap:26px;min-height:0}
+.hero h1{font-size:clamp(40px,11.4vw,54px);max-width:none}
+.hero .lede{font-size:17px;line-height:1.5;margin:18px 0 24px;max-width:none}
+.ctas{flex-direction:column;align-items:stretch;gap:6px}
+.ctas .primary{display:flex;width:100%;justify-content:space-between}
+.ctas .secondary{justify-content:center;border:0;height:44px}
+.hero .fine{font-size:13px;text-align:center;margin-top:6px}
+.stage{order:2;margin:0;padding:6px 0 0;overflow:visible}
+.stage .halo{display:none}
+.phone{width:100%;border-radius:34px;padding:10px;transform:none;transition:none}
+.screen{height:auto;min-height:0;aspect-ratio:auto;border-radius:26px}
+.scroll{overflow:visible;pointer-events:auto;touch-action:auto;padding:4px 14px 14px}
+.phone .consent{position:static;box-shadow:none}
+.cur{display:none}
+.try{right:6px;top:-10px}
+section.band,.tpls{padding:60px 0}
+.ink{padding:60px 0}
+.ink > .site{padding:0 20px}
+.close{padding:72px calc(50vw - 50%) 64px}
+section.band h2,.tpls h2,.ink h2,.close h2{font-size:clamp(30px,8.6vw,40px);letter-spacing:-.04em}
+section.band .sub,.tpls .sub,.ink .sub,.close .sub{font-size:16.5px;line-height:1.5}
+.how{gap:18px;margin-top:26px}
+.frames .no,.frames .bar{display:none}
+.steps{gap:0}
+.steps li,.steps li[aria-current="true"]{padding:14px 0;border:0;border-top:1px solid var(--line);border-radius:0;background:transparent}
+.steps h3{font-size:19px;margin:2px 0 4px}.steps p{font-size:15px}
+.tpls .sub .d{display:none}.tpls .sub .m{display:inline}
+.strip{gap:16px;margin-top:26px;padding:12px calc(50vw - 39vw) 20px;scroll-padding:0;mask-image:none}
+.tcard{width:78vw;scroll-snap-align:center;gap:10px}
+.tcard > span:not(.thumb){display:none}
+.tcard .thumb{transition:transform .6s cubic-bezier(.32,.72,0,1)}
+.tcard.mid .thumb{transform:translateY(-6px) scale(1.05)}
+.tcard.mid iframe{transform:scale(.25) translateY(var(--travel,-66.6%));transition-duration:var(--dur,4.5s)}
+.flow{grid-template-columns:1fr;gap:12px;margin:0 0 22px}
+.flow li{padding-top:14px;font-size:14px}
+.ink .grid{gap:22px;margin-top:22px}
+.ink ul.points li:nth-child(2),.ink ul.points li:nth-child(3){display:none}
+.ink ul.points li{font-size:15.5px}
+.stack{min-height:0}
+.plans{gap:14px;margin-top:18px}
+.plan{padding:22px 20px 20px}
+.foot-note{display:none}
+.compare{display:none}
+.compare-m{display:block;margin-top:22px}
+.compare-m ul{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.compare-m li{display:flex;gap:12px;align-items:flex-start;padding:14px 0;border-bottom:1px solid var(--line);font-size:16px;line-height:1.45}
+.compare-m li::before{content:"";flex:none;width:9px;height:9px;border-radius:50%;background:var(--accent);margin-top:.5em}
+.compare-m a{display:inline-block;margin-top:16px;color:var(--fg);font-weight:600;text-decoration:none;border-bottom:1.5px solid var(--line);padding-bottom:2px}
+.trust{gap:18px;margin-top:22px}
+.trust .long{display:none}
+.trust p{font-size:15px}
+.trust b{font-size:16px}
+.close .signature{display:none}
+.close .ctas{align-items:center}
+.close .ctas .primary{width:auto;min-width:220px;justify-content:center;gap:12px}
+footer.site-foot{padding:30px 0 40px}
+/* second pass */
+nav.main{background:rgba(255,255,255,.93)}
+.hero{padding-bottom:0}
+.phone .lede-sm{display:none}
+.phone .line .unit{grid-column:1 / -1;text-align:right;margin-top:4px}
+.phone .sig{min-height:0;margin:0}.phone .sig.has{min-height:44px;margin:8px 0 2px}
+html.gs .tpls{border-top:1px solid var(--line)}
+.tpls .sub .d2{display:none}
+.tcard{transition:transform .6s cubic-bezier(.32,.72,0,1),opacity .6s cubic-bezier(.32,.72,0,1)}
+.tcard .thumb,.tcard b{transition:transform .6s cubic-bezier(.32,.72,0,1),opacity .6s cubic-bezier(.32,.72,0,1)}
+.tcard:not(.mid) .thumb{opacity:.45;transform:scale(.92)}
+.tcard:not(.mid) b{opacity:.45}
+.tcard.mid .thumb{opacity:1;transform:none}
+.tcard.mid iframe{transform:scale(.25);transition:none;animation:qs-peek 8s cubic-bezier(.45,.05,.3,1) 1.4s infinite alternate}
+.ink .receipt{transform:none!important;max-width:100%}
+.receipt code{font-size:11px}
+.close .sub{margin-bottom:28px}
+.close .ctas .primary{width:100%;min-width:0;justify-content:space-between}
+}
+@keyframes qs-peek{to{transform:scale(.25) translateY(var(--travel,-66.6%))}}
 `;
 
 /* The homepage choreography. Runs only when the vendor scripts loaded; the page is complete without it. */
@@ -596,7 +677,7 @@ export function renderLanding(o: { nonce: string; appUrl: string; githubUrl: str
 <section class="tpls" id="templates">
   <div class="head">
     <h2 class="rv"><span class="sr">Starting points that are already pages.</span><span class="ws" aria-hidden="true"><span class="w">Starting</span> <span class="w">points</span> <span class="w">that</span> <span class="w">are</span> <span class="w">already</span> <span class="w">pages.</span></span></h2>
-    <p class="sub">Not a document you fill in. A page your client scrolls, with your prices already live. Pick one, change the words, send. Hover to read one.</p>
+    <p class="sub"><span class="d2">Not a document you fill in. </span>A page your client scrolls, with your prices already live. <span class="d2">Pick one, change the words, send. </span><span class="d">Hover to read one.</span><span class="m">Swipe through them.</span></p>
     <a href="/templates">See all templates</a>
   </div>
   <div class="strip" aria-label="Templates">
@@ -673,6 +754,15 @@ export function renderLanding(o: { nonce: string; appUrl: string; githubUrl: str
     </table>
   </div></div>
   <p class="foot-note"><sup>1</sup> From qwilr.com/pricing, September 2026.</p>
+  <div class="compare-m">
+    <ul aria-label="How it compares, in short">
+      <li>Flat price per month, from $0. Never per user.</li>
+      <li>No per-document fees.</li>
+      <li>Your client can change options after you send. The total updates live.</li>
+      <li>Open source, and you can export everything any time.</li>
+    </ul>
+    <a href="/compare">See the full comparison</a>
+  </div>
 </section>
 
 <section class="band rise-kids" id="trust">
@@ -681,7 +771,7 @@ export function renderLanding(o: { nonce: string; appUrl: string; githubUrl: str
     <div><b>Open source, AGPL</b><p>The code is public. Anyone can read every line and check that it does what this page says.</p></div>
     <div><b>Encrypted at rest and in transit</b><p>Every proposal, record and upload is encrypted where it is stored and on its way to you. Card details are handled by our payment provider and never touch our servers.</p></div>
     <div><b>No passwords to leak</b><p>You sign in with a one-time link. Proposal links can carry their own password and expiry.</p></div>
-    <div><b>Plays well with your tools</b><p>Business accounts get a signed webhook: one address, a JSON message the moment a proposal is sent, opened, accepted, declined or countersigned. Ids, names and amounts only, never your client's email or the document. Verify the signature and trust it.</p></div>
+    <div class="long"><b>Plays well with your tools</b><p>Business accounts get a signed webhook: one address, a JSON message the moment a proposal is sent, opened, accepted, declined or countersigned. Ids, names and amounts only, never your client's email or the document. Verify the signature and trust it.</p></div>
     <div><b>Leave any time</b><p>Export every proposal and record. Delete your account yourself, with a code we email you, and signed records stay readable for your clients.</p></div>
   </div>
 </section>
@@ -722,6 +812,8 @@ stage.addEventListener("pointerleave",function(){phone.style.transform=""});
 document.querySelectorAll(".cur button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll(".cur button").forEach(function(x){x.setAttribute("aria-pressed",String(x===b))});if(window.qsSetCurrency)window.qsSetCurrency(b.dataset.cur)})});
 // Each template thumbnail scrolls exactly to the end of its page on hover, at a speed that suits its length.
 document.querySelectorAll(".tcard iframe").forEach(function(fr){var fit=function(){try{var d=fr.contentDocument;if(!d||!d.documentElement)return;var own=fr.clientHeight,win=own/3,doc=0;[].forEach.call(d.body.children,function(el){if(el.tagName==="SCRIPT"||el.tagName==="STYLE"||el.hidden)return;var r=el.getBoundingClientRect();if(r.height>0)doc=Math.max(doc,r.bottom+d.defaultView.scrollY)});if(!doc)doc=d.documentElement.scrollHeight;var travel=Math.max(0,Math.min(own-win,(doc-win)*.9));fr.style.setProperty("--travel",(-travel)+"px");fr.style.setProperty("--dur",(1.2+3.6*travel/(own-win)).toFixed(2)+"s")}catch(e){}};fr.addEventListener("load",fit);if(fr.contentDocument&&fr.contentDocument.readyState==="complete")fit()});
+var stripEl=document.querySelector(".tpls .strip");
+if(stripEl&&matchMedia("(hover:none)").matches){var mcards=[].slice.call(stripEl.querySelectorAll(".tcard")),mraf=0;var pickMid=function(){mraf=0;var r=stripEl.getBoundingClientRect(),mid=r.left+r.width/2,best=null,bd=1e9;mcards.forEach(function(c){var cr=c.getBoundingClientRect(),d=Math.abs(cr.left+cr.width/2-mid);if(d<bd){bd=d;best=c}});mcards.forEach(function(c){c.classList.toggle("mid",c===best)})};stripEl.addEventListener("scroll",function(){if(!mraf)mraf=requestAnimationFrame(pickMid)},{passive:true});addEventListener("resize",pickMid);setTimeout(pickMid,50)}
 var frames=document.getElementById("frames"),steps=document.getElementById("steps");
 if(frames&&steps&&!GS){var imgs=frames.querySelectorAll("img"),lis=steps.querySelectorAll("li"),cur=0,timer=null;imgs.forEach(function(im,k){im.setAttribute("data-state",k===0?"on":"next")});
 var no=document.getElementById("frameNo");function state(i){imgs.forEach(function(im,k){im.classList.toggle("on",k===i);im.setAttribute("data-state",k<i?"past":k===i?"on":"next")});if(no)no.textContent=(i+1)+" / "+imgs.length}

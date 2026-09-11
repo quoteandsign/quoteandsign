@@ -81,6 +81,17 @@ All notable changes to Quote and Sign. Dates are the day the change went live at
   phones.
 
 
+### Homepage on phones
+- A mobile layer for the homepage, scoped to screens under 980px so the desktop page is unchanged: a proper
+  side gutter everywhere (the hero and the dark record section had none), a full-width Start free button,
+  the demo phone shown in full so the pricing, the name field and the Accept button are all visible, the
+  currency chips hidden, how-it-works as three plain rows, the template gallery as a swipe strip that snaps
+  to the centre where the middle card pops out and its preview reads itself while the neighbours recede,
+  the record timeline as one column with the card straight and two bullets instead of four, the comparison
+  table replaced by four one-line contrasts and a link to the full comparison, the long webhook trust point
+  hidden, the fair-use footnote hidden, the closing signature flourish hidden, and section spacing halved.
+  The page is about a quarter shorter on a phone.
+
 ### Security
 - A path beginning with two slashes no longer produces a protocol-relative redirect (the trailing-slash
   redirect now collapses leading slashes), with a regression test.
