@@ -91,6 +91,11 @@ All notable changes to Quote and Sign. Dates are the day the change went live at
   table replaced by four one-line contrasts and a link to the full comparison, the long webhook trust point
   hidden, the fair-use footnote hidden, the closing signature flourish hidden, and section spacing halved.
   The page is about a quarter shorter on a phone.
+- Second and third phone passes: more room under the nav; the demo phone has a fixed height and scrolls
+  inside, ending just under the Total; the template strip advances by itself while on screen and stops the
+  moment you touch it, and the preview no longer scrolls inside the card on phones; the record section shows
+  the record card straight away (labels stacked, hash on one line) with two bullets, about one screen tall;
+  no stray line between the dark section and pricing; the secondary hero link is underlined.
 
 ### Security
 - A path beginning with two slashes no longer produces a protocol-relative redirect (the trailing-slash
