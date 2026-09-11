@@ -3,6 +3,7 @@
 export type Style = { id: string; name: string; blurb: string; paperCover: boolean; dark: boolean };
 
 export const STYLES: Style[] = [
+  { id: "studio", name: "Studio", blurb: "A full-screen opening, huge type, sections that rise as you scroll. The high-end one.", paperCover: true, dark: false },
   { id: "classic", name: "Classic", blurb: "Gradient cover, soft corners, color bands.", paperCover: false, dark: false },
   { id: "editorial", name: "Editorial", blurb: "Serif headlines, paper cover, a rule of color.", paperCover: true, dark: false },
   { id: "bold", name: "Bold", blurb: "Huge type on a solid color block. Loud on purpose.", paperCover: false, dark: false },
@@ -12,4 +13,5 @@ export const STYLES: Style[] = [
 ];
 
 export const STYLE_IDS = STYLES.map((s) => s.id) as [string, ...string[]];
-export const styleOf = (id: string | null | undefined): Style => STYLES.find((s) => s.id === id) ?? STYLES[0]!;
+// Classic stays the fallback: proposals saved before styles existed, and unknown ids, keep their look.
+export const styleOf = (id: string | null | undefined): Style => STYLES.find((s) => s.id === id) ?? STYLES.find((s) => s.id === "classic")!;

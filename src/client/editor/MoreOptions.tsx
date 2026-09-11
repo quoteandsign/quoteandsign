@@ -21,6 +21,7 @@ export type Details = {
   paymentUrl: string;
   paymentLabel: string;
   countersign: boolean;
+  coverArt: boolean; // Studio and Night: the first picture becomes the cover art
 };
 
 /** Per-proposal look. Empty color or sender means "use the brand". */
@@ -245,6 +246,11 @@ export function MoreOptions({
             </div>
           )}
         </div>
+        {(look.style === "studio" || look.style === "night") && (
+          <Row label="Opening image" hint={details.coverArt ? "The first picture in the proposal becomes the cover art. Delete it from the page, or switch this off, for a centred typographic opening." : "A centred typographic opening. Pictures stay where they are in the page."}>
+            <Toggle checked={details.coverArt} disabled={readOnly} onChange={(v) => onChange({ ...details, coverArt: v })} label="Use the first picture as the cover art" />
+          </Row>
+        )}
         <Row label="Signed by" htmlFor="senderName">
           <input id="senderName" value={look.senderName} disabled={readOnly} maxLength={120} placeholder="Your business name" onChange={(e) => onSender(e.target.value)} className={inline} />
         </Row>

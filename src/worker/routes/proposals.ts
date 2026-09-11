@@ -65,6 +65,7 @@ const updateSchema = z.object({
   paymentUrl: z.string().trim().max(500).refine((v) => v === "" || /^https:\/\/[^\s]+$/i.test(v), "Payment links must start with https://").nullish(),
   paymentLabel: z.string().trim().max(40).transform(flat).nullish(),
   countersign: z.boolean().optional(),
+  coverArt: z.boolean().optional(),
   // undefined = unchanged, "" = remove, string = set
   password: z.string().max(200).optional(),
 });
@@ -80,7 +81,7 @@ function withIds(blocks: unknown): unknown {
   return blocks.map((b) => {
     if (!b || typeof b !== "object") return b;
     const block = b as Record<string, unknown>;
-    return { ...block, id: typeof block.id === "string" ? block.id : uuid(), ...(Array.isArray(block.children) ? { children: withIds(block.children) } : {}) };
+    return { ...block, id: typeof block.id === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(block.id) ? block.id : uuid(), ...(Array.isArray(block.children) ? { children: withIds(block.children) } : {}) };
   });
 }
 
@@ -272,6 +273,7 @@ proposalRoutes.put("/:id", async (c) => {
 
   const set: Partial<typeof schema.proposals.$inferInsert> = { updatedAt: new Date() };
   if (d.countersign !== undefined) set.countersign = d.countersign;
+  if (d.coverArt !== undefined) set.coverArt = d.coverArt;
   if (d.title !== undefined) set.title = d.title;
   if (d.clientName !== undefined) set.clientName = d.clientName || null;
   if (d.clientEmail !== undefined) set.clientEmail = d.clientEmail || null;
@@ -445,6 +447,7 @@ proposalRoutes.post("/:id/duplicate", async (c) => {
     navHidden: proposal.navHidden,
     notifyEmails: proposal.notifyEmails,
     style: proposal.style,
+    coverArt: proposal.coverArt,
     status: "draft",
     createdAt: now,
     updatedAt: now,

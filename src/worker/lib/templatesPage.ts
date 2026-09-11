@@ -18,6 +18,7 @@ export type TemplatePage = {
 
 export const TEMPLATE_PAGES: TemplatePage[] = [
   { slug: "consulting-proposal-template", id: "consulting", keyword: "Consulting proposal template", audience: "consultants and advisors", intro: "A discovery-first consulting proposal: the problem as you understand it, a four-week approach, what the client receives, and an optional implementation phase they can switch on themselves." },
+  { slug: "brand-identity-proposal-template", id: "brand", keyword: "Brand identity proposal template", audience: "designers and studios", intro: "A showcase proposal: three visual directions up front, what the client receives, how the weeks run, and an identity priced as one line with the social kit, print and a photography day as options." },
   { slug: "website-proposal-template", id: "web-project", keyword: "Website proposal template", audience: "web designers and studios", intro: "A fixed-scope website build with optional add-ons: copywriting, extra pages the client can count up, and a care plan. The total updates as they choose." },
   { slug: "retainer-proposal-template", id: "retainer", keyword: "Retainer proposal template", audience: "freelancers and agencies on ongoing work", intro: "A monthly retainer where the client picks the number of hours within the range you set, with an optional priority-response line. Recurring pricing is shown as a monthly total." },
   { slug: "photography-proposal-template", id: "photography", keyword: "Photography proposal template", audience: "photographers", intro: "A brand or event shoot with add-ons the client can pick: extra edited photos by the number, headshots per person, and a short social video." },
@@ -80,7 +81,7 @@ export function renderTemplatesIndex(nonce: string, analytics: string | null = n
 <article class="tpl-card tpl-soon"><p class="tpl-eyebrow">More on the way</p><h2>Yours might be next</h2><p>Event planning, interior design, marketing retainers and more are being written. Tell us which one you need and it moves to the front.</p><a href="/contact?kind=question">Ask for a template</a></article>`;
   const body = `
 <h1>Proposal templates</h1>
-<p class="eff">Five starting points, each a real proposal your client can read, adjust and accept on their phone. Pick one, put your own prices in, and send a link.</p>
+<p class="eff">Six starting points, each a real proposal your client can read, adjust and accept on their phone. Pick one, put your own prices in, and send a link.</p>
 <div class="tpl-grid">${cards}</div>
 <h2>How a template becomes a proposal</h2>
 <ol>
@@ -94,7 +95,7 @@ export function renderTemplatesIndex(nonce: string, analytics: string | null = n
   return shell("Proposal templates", body, nonce, `${breadcrumbs(nonce, [["Templates", "/templates"]])}
 <style nonce="${nonce}">${CSS}</style>`, analytics, {
     path: "/templates",
-    description: "Free proposal templates for consulting, websites, retainers, photography and software. Real proposals your client can adjust and accept on their phone.",
+    description: "Free proposal templates for consulting, websites, brand identity, retainers, photography and software. Real proposals your client can adjust and accept on their phone.",
   });
 }
 

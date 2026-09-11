@@ -95,7 +95,7 @@ Operated from ${LEGAL.province}, Canada. Prices in USD.
 - [Homepage](${appUrl}/): live demo and the pricing table
 - [Sign in](${appUrl}/login): sign in or start free, by email link
 - [Contact](${appUrl}/contact): contact form
-- [Proposal templates](${appUrl}/templates): each a real proposal a client can adjust and accept
+- [Proposal templates](${appUrl}/templates): each a real proposal a client can adjust and accept, with a full-screen Studio style for high-end work
 ${TEMPLATE_PAGES.map((p) => `- [${p.keyword}](${appUrl}/templates/${p.slug}): for ${p.audience}`).join("\n")}
 
 ## Comparisons

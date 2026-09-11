@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BlockNoteView } from "@blocknote/shadcn";
 import { FormattingToolbar, FormattingToolbarController, SideMenuController, SuggestionMenuController, blockTypeSelectItems, useCreateBlockNote, BlockTypeSelect, FileCaptionButton, FileReplaceButton, FileDeleteButton, BasicTextStyleButton, TextAlignButton, ColorStyleButton, NestBlockButton, UnnestBlockButton, CreateLinkButton } from "@blocknote/react";
-import { ArrowLeft, PaperPlaneTilt, Eye, Check, LinkSimple, X, Plus, DeviceMobile, Globe } from "@phosphor-icons/react";
+import { ArrowLeft, PaperPlaneTilt, Eye, Check, LinkSimple, X, Plus, DeviceMobile, Globe, Cursor, DotsSixVertical, TextT, SlidersHorizontal, Tag, ArrowCounterClockwise, ArrowClockwise } from "@phosphor-icons/react";
+import { computeTotals, formatMoney } from "../../shared/pricing";
 import { api, ApiError } from "../lib/api";
 import { Link, useRouter } from "../lib/router";
 import { useTheme, ThemeToggle } from "../lib/theme";
@@ -18,6 +19,11 @@ import { isHex, readableOn } from "../../shared/looks";
 import { shrinkImage } from "../lib/image";
 import { en as bnEn } from "@blocknote/core/locales";
 import { SuggestionMenu } from "@blocknote/core/extensions";
+// The editor's history plugin (a BlockNote dependency): how many steps can be undone or redone.
+import { undoDepth, redoDepth } from "@tiptap/pm/history";
+
+/** Block ids go into CSS selectors; anything that does not look like an id selects nothing. */
+const safeId = (id: string) => (/^[A-Za-z0-9_-]{1,64}$/.test(id) ? id : "");
 import type { PricingLine } from "../../shared/pricing";
 
 type Question = { id: string; name: string; email: string | null; body: string; createdAt: number; unread: boolean };
@@ -48,6 +54,7 @@ type Loaded = {
     declinedAt: number | null;
     declineReason: string | null;
     countersign: boolean;
+    coverArt: boolean;
   };
   items: PricingLine[];
   acceptance: { signerName: string; acceptedAt: number; totalAmount: number; currency: string; countersignedAt: number | null; countersignerName: string | null } | null;
@@ -137,6 +144,7 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
     paymentUrl: proposal.paymentUrl ?? "",
     paymentLabel: proposal.paymentLabel ?? "",
     countersign: proposal.countersign ?? false,
+    coverArt: proposal.coverArt ?? true,
   });
   const [senderName, setSenderName] = useState(proposal.senderName ?? "");
   const [accent, setAccent] = useState(proposal.accentColor ?? "");
@@ -147,6 +155,13 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [splash, setSplash] = useState<string | null>(null); // a moment of confirmation after Send
   const [tab, setTab] = useState<"pricing" | "options">("pricing");
+  const heroArtRef = useRef<{ url: string; caption: string; blockId: string } | null>(null);
+  // On phones the settings live in a sheet that slides up from a bottom bar.
+  const [sheet, setSheet] = useState<null | "pricing" | "options">(null);
+  const openSheet = (which: "pricing" | "options") => { setTab(which); setSheet(which); };
+  // Three lines for a first-time editor, shown once.
+  const [coach, setCoach] = useState<boolean>(() => { try { return localStorage.getItem("qs-coach-editor") !== "done"; } catch { return false; } });
+  const dismissCoach = () => { setCoach(false); try { localStorage.setItem("qs-coach-editor", "done"); } catch { /* private mode */ } };
 
   // Every write goes through one chain so requests can never land out of order.
   const chain = useRef<Promise<void>>(Promise.resolve());
@@ -193,6 +208,7 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
     paymentUrl: d.paymentUrl.trim(),
     paymentLabel: d.paymentLabel,
     countersign: d.countersign,
+    coverArt: d.coverArt,
   });
   const saveTitle = useDebounced((t: string) => void save({ title: t || "Untitled proposal" }), 600);
   const saveDetails = useDebounced((d: Details) => void save(detailsPatch(d)), 600);
@@ -231,25 +247,75 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
     const at = empty ? target : editor.insertBlocks([{ type: "paragraph" }], target, "after")[0]!;
     editor.setTextCursorPosition(at);
     editor.focus();
+    // Bring the line into view above the bottom bar before the menu opens on it.
+    document.querySelector(`.bn-editor [data-id="${safeId((at as { id: string }).id)}"]`)?.scrollIntoView({ block: "center" });
     editor.getExtension(SuggestionMenu)?.openSuggestionMenu("/");
   };
   const flushAll = () => [saveTitle, saveDetails, saveItems, saveSender, saveContent].forEach((f) => f.flush());
   const bandCss = useSectionBands(editor);
+  // (cover art state is declared above the pricing context; see useHeroArt)
+  // Change the cover picture on the cover itself: replace the first picture in the page, or add one.
+  const uploadImage = async (file: File): Promise<string> => {
+    const small = await shrinkImage(file, 1400);
+    const fd = new FormData();
+    fd.append("file", small);
+    const r = await fetch("/api/account/images", { method: "POST", body: fd, credentials: "same-origin" });
+    const j = (await r.json()) as { url?: string; error?: string };
+    if (!r.ok || !j.url) throw new Error(j.error ?? "Could not upload the image.");
+    return j.url;
+  };
+  const replaceCoverArt = async (file: File) => {
+    try {
+      const url = await uploadImage(file);
+      const block = heroArt ? (editor.getBlock(heroArt.blockId) as any) : null;
+      if (block && block.type === "imageRow") {
+        const list = JSON.parse(String(block.props?.images ?? "[]")) as { url?: string; caption?: string }[];
+        const i = Math.max(0, list.findIndex((it) => it?.url));
+        list[i] = { ...(list[i] ?? { caption: "" }), url };
+        editor.updateBlock(block, { props: { images: JSON.stringify(list) } } as any);
+      } else if (block && block.type === "image") {
+        editor.updateBlock(block, { props: { url } } as any);
+      } else {
+        // No picture yet: the cover image becomes the first block of the page.
+        const first = (editor.document as any[])[0];
+        if (first) editor.insertBlocks([{ type: "image", props: { url, caption: "" } } as any], first, "before");
+      }
+      if (!details.coverArt) onDetails({ ...details, coverArt: true });
+    } catch (e) {
+      setSaveError((e as Error).message);
+    }
+  };
   const toolbarBlockTypes = useMemo(() => {
     const keep = new Set(["paragraph", "heading", "quote", "bulletListItem", "numberedListItem", "checkListItem"]);
     return blockTypeSelectItems(editor.dictionary as any).filter((i) => keep.has(i.type) && !(i.type === "heading" && Number(i.props?.level) > 3) && !i.props?.isToggleable);
   }, [editor]);
+  // Undo and redo in the header, for people who never learned the shortcut. The editor keeps the history.
+  const [history, setHistory] = useState({ undo: false, redo: false });
+  const refreshHistory = () => {
+    try {
+      const st = (editor as unknown as { _tiptapEditor?: { state: Parameters<typeof undoDepth>[0] } })._tiptapEditor?.state;
+      if (!st) return;
+      const next = { undo: undoDepth(st) > 0, redo: redoDepth(st) > 0 };
+      setHistory((cur) => (cur.undo === next.undo && cur.redo === next.redo ? cur : next));
+    } catch { /* never let a history read break editing */ }
+  };
+  const undo = () => { (editor as unknown as { undo(): void }).undo(); editor.focus(); refreshHistory(); };
+  const redo = () => { (editor as unknown as { redo(): void }).redo(); editor.focus(); refreshHistory(); };
   const [hasSelection, setHasSelection] = useState(false);
+  // The block the caret is in keeps a quiet solid frame, so a click always shows what it landed on.
+  const [activeBlock, setActiveBlock] = useState<string | null>(null);
   useEffect(() => {
     const off = editor.onSelectionChange(() => {
       const text = window.getSelection()?.toString() ?? "";
       setHasSelection(Boolean(editor.getSelection()) && text.length > 0);
+      try { setActiveBlock((editor.getTextCursorPosition().block as { id: string }).id); } catch { setActiveBlock(null); }
+      refreshHistory();
     });
     return typeof off === "function" ? off : undefined;
   }, [editor]);
   useEffect(() => {
     if (readOnly) return;
-    const off = editor.onChange(() => { dirty.current = true; saveContent(); });
+    const off = editor.onChange(() => { dirty.current = true; saveContent(); refreshHistory(); });
     return typeof off === "function" ? off : undefined;
   }, [editor, saveContent, readOnly]);
   useEffect(() => { if (saveState === "saved" && pending.current === 0 && !debouncePending() && !saveContent.pending()) dirty.current = false; }, [saveState]);
@@ -338,11 +404,11 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
     setTimeout(() => setCopied(false), 1500);
   };
   useEffect(() => {
-    if (!sendOpen && !tplOpen && !phoneOpen) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") { setSendOpen(false); setTplOpen(false); setPhoneOpen(false); } };
+    if (!sendOpen && !tplOpen && !phoneOpen && !sheet) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") { setSendOpen(false); setTplOpen(false); setPhoneOpen(false); setSheet(null); } };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [sendOpen, tplOpen, phoneOpen]);
+  }, [sendOpen, tplOpen, phoneOpen, sheet]);
 
   // ---- Save as template / duplicate ----
   const [tplName, setTplName] = useState("");
@@ -377,9 +443,153 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
 
   // Which pricing line the preview asked for, and a counter so the same line can be asked for twice.
   const [pricingFocus, setPricingFocus] = useState<PricingFocus>({ id: null, n: 0 });
+  const heroArt = useHeroArt(editor);
+  heroArtRef.current = heroArt;
+  const stage = pageStyle === "studio" || pageStyle === "night";
+  const shownArt = stage && details.coverArt && heroArt ? heroArt : null;
   const pricingCtx = useMemo(
-    () => ({ items, currency: details.currency, defaultTaxBps: details.taxRateBps, taxLabel: details.taxLabel, openPricing: (lineId?: string) => { setTab("pricing"); setPricingFocus((f) => ({ id: lineId ?? null, n: f.n + 1 })); } }),
-    [items, details.currency, details.taxRateBps, details.taxLabel],
+    () => ({
+      items, currency: details.currency, defaultTaxBps: details.taxRateBps, taxLabel: details.taxLabel,
+      openPricing: (lineId?: string) => {
+        setTab("pricing");
+        // Below the desktop breakpoint the panel is a sheet; open it so the line is actually in view.
+        if (window.matchMedia("(max-width: 1023px)").matches) setSheet("pricing");
+        setPricingFocus((f) => ({ id: lineId ?? null, n: f.n + 1 }));
+      },
+      coverArtBlockId: shownArt?.blockId ?? null,
+    }),
+    [items, details.currency, details.taxRateBps, details.taxLabel, shownArt?.blockId],
+  );
+  const setCoverCaption = (caption: string) => {
+    const block = heroArt ? (editor.getBlock(heroArt.blockId) as any) : null;
+    if (!block) return;
+    if (block.type === "imageRow") {
+      const list = JSON.parse(String(block.props?.images ?? "[]")) as { url?: string; caption?: string }[];
+      const i = Math.max(0, list.findIndex((it) => it?.url));
+      list[i] = { ...(list[i] ?? { url: "" }), caption };
+      editor.updateBlock(block, { props: { images: JSON.stringify(list) } } as any);
+    } else if (block.type === "image") {
+      editor.updateBlock(block, { props: { caption } } as any);
+    }
+  };
+  const barTotals = computeTotals(items, {}, details.taxRateBps);
+  const barTotal = barTotals.hasOnce ? formatMoney(barTotals.total, details.currency) : barTotals.recurring[0] ? formatMoney(barTotals.recurring[0].total, details.currency) : null;
+
+  // The settings column: the same markup sits in the desktop aside and in the phone sheet.
+  const panel = (
+    <div className="grid gap-4">
+      <section className="min-w-0 rounded-[1.25rem] bg-white p-4 shadow-[0_1px_1px_rgba(25,24,22,.04),0_12px_32px_-20px_rgba(25,24,22,.35)] ring-1 ring-inset ring-stone-900/[.035] dark:bg-stone-900 dark:shadow-none dark:ring-white/[.08]" data-test="send-card">
+        <h3 className="mb-3 text-[13px] font-semibold text-graphite dark:text-stone-400">Send to</h3>
+        <div className="grid gap-3">
+          <Field label="Client" htmlFor="clientName">
+            <Input id="clientName" maxLength={200} value={details.clientName} disabled={readOnly} onChange={(e) => onDetails({ ...details, clientName: e.target.value })} placeholder="Acme Bakery" />
+          </Field>
+          <Field label="Their email" htmlFor="clientEmail">
+            <div className="grid gap-2">
+              <Input id="clientEmail" type="email" inputMode="email" spellCheck={false} maxLength={254} value={details.clientEmail} disabled={readOnly} onChange={(e) => onDetails({ ...details, clientEmail: e.target.value })} placeholder="owner@acmebakery.com" />
+              {details.ccEmails.map((e, i) => (
+                <div key={i} className="flex gap-1.5">
+                  <Input aria-label={`Recipient ${i + 2}`} type="email" inputMode="email" spellCheck={false} maxLength={254} value={e} disabled={readOnly} autoFocus={e === ""} placeholder="another@acmebakery.com" onChange={(ev) => onDetails({ ...details, ccEmails: details.ccEmails.map((x, k) => (k === i ? ev.target.value : x)) })} />
+                  {!readOnly && (
+                    <Button variant="ghost" size="icon" aria-label="Remove recipient" onClick={() => onDetails({ ...details, ccEmails: details.ccEmails.filter((_, k) => k !== i) })}>
+                      <X size={16} weight="light" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+              {!readOnly && details.ccEmails.length < 10 && (
+                <button type="button" onClick={() => onDetails({ ...details, ccEmails: [...details.ccEmails, ""] })} className="inline-flex w-fit items-center gap-1 rounded-full px-2 py-1 text-[13px] font-medium text-brand hover:bg-brand/[.08] dark:text-indigo-300">
+                  <Plus size={14} weight="bold" /> Add another recipient
+                </button>
+              )}
+            </div>
+          </Field>
+          {!readOnly && (
+            <Button size="lg" className="mt-1 w-full" onClick={() => { setSendError(null); setSendOpen(true); }} data-test="send-button">
+              <PaperPlaneTilt size={16} weight="light" /> {status === "draft" ? "Send" : "Send again"}
+            </Button>
+          )}
+          {/* The client link, always here: copy it from the panel without opening anything. */}
+          <div className="min-w-0 overflow-hidden rounded-xl bg-stone-900/[.04] p-1.5 pl-3 dark:bg-white/[.06]" data-test="link-row">
+            <div className="flex items-center gap-2">
+              <Globe size={15} weight="light" className="flex-none text-stone-500" />
+              <span className="min-w-0 flex-1 truncate font-mono text-[12.5px] text-stone-700 dark:text-stone-300" title={link}>{link.replace(/^https?:\/\//, "")}</span>
+              {live || readOnly ? (
+                <Button size="sm" variant="secondary" onClick={() => void copy()} aria-label="Copy link" className="bg-white dark:bg-stone-800" data-test="copy-link">
+                  {copied ? <Check size={14} weight="bold" /> : <LinkSimple size={14} weight="light" />} {copied ? "Copied" : "Copy"}
+                </Button>
+              ) : (
+                <Button size="sm" variant="secondary" disabled={sendBusy} onClick={() => void send(false).then(() => copy())} className="bg-white dark:bg-stone-800" data-test="publish-link">
+                  <LinkSimple size={14} weight="light" /> {sendBusy ? "…" : "Publish and copy"}
+                </Button>
+              )}
+            </div>
+            <p className="px-0.5 pb-1 pt-1.5 text-[12px] text-stone-500">
+              {live ? "Live. Anyone with the link can read it." : "Not live yet. Send it by email, or publish the link and share it yourself."}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <div role="tablist" aria-label="Proposal settings" className="grid grid-cols-2 gap-1 rounded-full bg-stone-900/[.06] p-1 dark:bg-white/[.08]">
+        {(["pricing", "options"] as const).map((t) => (
+          <button
+            key={t}
+            id={`tab-${t}`}
+            role="tab"
+            aria-selected={tab === t}
+            aria-controls={`panel-${t}`}
+            tabIndex={tab === t ? 0 : -1}
+            onKeyDown={(e) => { if (e.key === "ArrowRight" || e.key === "ArrowLeft") { const next = t === "pricing" ? "options" : "pricing"; setTab(next); document.getElementById(`tab-${next}`)?.focus(); } }}
+            onClick={() => setTab(t)}
+            className={cn(
+              "h-9 rounded-full text-[13px] font-medium capitalize transition-[background-color,color,box-shadow] duration-200",
+              tab === t ? "bg-white text-ink shadow-[0_1px_2px_rgba(25,24,22,.12)] dark:bg-stone-800 dark:text-stone-50" : "text-graphite hover:text-ink dark:text-stone-400 dark:hover:text-stone-100",
+            )}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {tab === "pricing" && (
+        <section id="pricing-panel" role="tabpanel" aria-labelledby="tab-pricing" className="rounded-[1.25rem] bg-white p-4 shadow-[0_1px_1px_rgba(25,24,22,.04),0_12px_32px_-20px_rgba(25,24,22,.35)] ring-1 ring-inset ring-stone-900/[.035] dark:bg-stone-900 dark:shadow-none dark:ring-white/[.08]">
+          <PricingPanel items={items} currency={details.currency} defaultTaxBps={details.taxRateBps} taxLabel={details.taxLabel} onChange={onItems} onTax={(bps, label) => onDetails({ ...details, taxRateBps: bps, taxLabel: label })} readOnly={readOnly} focus={pricingFocus} />
+        </section>
+      )}
+
+      {tab === "options" && <section id="panel-options" role="tabpanel" aria-labelledby="tab-options"><MoreOptions
+        teamEmails={user?.notifyEmails ?? []}
+        details={details}
+        onChange={onDetails}
+        onPassword={onPassword}
+        readOnly={readOnly}
+        look={{ style: pageStyle, color: accent, senderName, brandColour }}
+        onStyle={(id) => { setPageStyle(id); void save({ style: id }); }}
+        onColour={(hex) => { setAccent(hex ?? ""); void save({ accentColor: hex }); }}
+        onSender={(v) => { setSenderName(v); saveSender(v); }}
+        onSaveTemplate={() => { setTplName(title); setTplError(null); setTplOpen(true); }}
+        onDuplicate={() => void duplicate()}
+        exportHref={`/api/proposals/${proposal.id}/export`}
+        canPdf={user?.plan !== "free"}
+        brandPaymentUrl={user?.paymentUrl ?? null}
+        caps={user?.caps ?? { brand: true, protect: true, payment: true, countersign: false }}
+      /></section>}
+
+      {questions.length > 0 && (
+        <section className="rounded-2xl bg-amber-500/[.08] p-4 ring-1 ring-inset ring-amber-500/20" aria-label="Questions from your client">
+          <h3 className="text-[13px] font-semibold">Questions from your client</h3>
+          <ul className="mt-2 grid gap-2">
+            {questions.map((q) => (
+              <li key={q.id} className="text-[13.5px]">
+                <span className="font-medium">{q.name}</span>: <span className="text-stone-700 dark:text-stone-300">{q.body}</span>
+                {q.email && <a href={`mailto:${q.email}?subject=${encodeURIComponent("Re: your question")}`} className="ml-2 text-[12.5px] font-medium text-brand underline underline-offset-4 dark:text-indigo-300">Reply</a>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </div>
   );
 
   return (
@@ -398,6 +608,12 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
               <span className="hidden sm:inline">{saveState === "saving" ? "Saving…" : saveState === "error" ? <span className="text-red-700 dark:text-red-400">Not saved</span> : "Saved"}</span>
               <span aria-hidden="true" className={cn("inline-block h-2 w-2 rounded-full sm:hidden", saveState === "saving" ? "animate-pulse bg-amber-500" : saveState === "error" ? "bg-red-600" : "bg-emerald-500")} />
             </span>
+            {!readOnly && (
+              <span className="ml-1 inline-flex overflow-hidden rounded-full bg-stone-900/[.05] dark:bg-white/[.08]" role="group" aria-label="History">
+                <button type="button" onClick={undo} disabled={!history.undo} title="Undo (Ctrl+Z)" aria-label="Undo" className="grid h-9 w-9 place-items-center text-stone-700 hover:bg-stone-900/[.07] disabled:opacity-35 disabled:hover:bg-transparent dark:text-stone-300 dark:hover:bg-white/[.1]" data-test="undo"><ArrowCounterClockwise size={16} weight="bold" /></button>
+                <button type="button" onClick={redo} disabled={!history.redo} title="Redo (Ctrl+Shift+Z)" aria-label="Redo" className="grid h-9 w-9 place-items-center text-stone-700 hover:bg-stone-900/[.07] disabled:opacity-35 disabled:hover:bg-transparent dark:text-stone-300 dark:hover:bg-white/[.1]" data-test="redo"><ArrowClockwise size={16} weight="bold" /></button>
+              </span>
+            )}
             <a href={`/p/${proposal.publicId}`} className="hidden h-9 items-center gap-1.5 rounded-full px-3 text-sm text-stone-700 hover:bg-stone-900/[.05] sm:inline-flex dark:text-stone-300 dark:hover:bg-white/[.07]">
               <Eye size={16} weight="light" /> Preview
             </a>
@@ -437,12 +653,22 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
         {status === "archived" && !initial.acceptance && (
           <div className="border-b border-hairline bg-stone-900/[.04] px-4 py-2 text-center text-sm dark:border-white/10 dark:bg-white/[.05]">This proposal is archived. Restore it from the dashboard to edit or send it again.</div>
         )}
+        {coach && !readOnly && (
+          <div className="qs-coach border-b border-hairline bg-white dark:border-white/[.08] dark:bg-stone-900" data-test="coach">
+            <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-6 gap-y-2 px-4 py-2.5 text-[13px] text-stone-700 sm:px-6 dark:text-stone-300">
+              <span className="inline-flex items-center gap-2"><span className="grid h-6 w-6 flex-none place-items-center rounded-full bg-brand/10 text-brand dark:text-indigo-300"><Cursor size={13} weight="bold" /></span><span className="lg:hidden">Tap any text to change it. Prices and options live in the bar below.</span><span className="hidden lg:inline">Click any text to change it, including the title on the cover.</span></span>
+              <span className="hidden items-center gap-2 lg:inline-flex"><span className="grid h-6 w-6 flex-none place-items-center rounded-full bg-brand/10 text-brand dark:text-indigo-300"><DotsSixVertical size={13} weight="bold" /></span>Hover a block for its handle: add, move, color or delete.</span>
+              <span className="hidden items-center gap-2 lg:inline-flex"><span className="grid h-6 w-6 flex-none place-items-center rounded-full bg-brand/10 text-brand dark:text-indigo-300"><TextT size={13} weight="bold" /></span>Type <kbd className="rounded-md bg-stone-900/[.06] px-1.5 py-0.5 font-mono text-[12px] dark:bg-white/10">/</kbd> on an empty line to add pricing, cards or images.</span>
+              <button type="button" onClick={dismissCoach} className="ml-auto h-7 flex-none rounded-full bg-stone-900/[.06] px-3 text-[12.5px] font-medium hover:bg-stone-900/[.1] dark:bg-white/10 dark:hover:bg-white/15">Got it</button>
+            </div>
+          </div>
+        )}
         {notice && <div role="status" className="border-b border-brand/20 bg-brand/[.08] px-4 py-2 text-center text-sm">{notice}</div>}
         {saveError && <div role="alert" className="border-b border-red-600/20 bg-red-600/[.07] px-4 py-2 text-center text-sm text-red-800 dark:text-red-300">{saveError}</div>}
 
         <div className="mx-auto grid max-w-[1480px] lg:grid-cols-[1fr_400px]">
-          <main className="relative min-w-0 px-3 py-6 sm:px-10 sm:py-12">
-            <div data-style={pageStyle} className={cn(pageStyle === "night" ? "sheet-dark" : "sheet-light", "sheet relative mx-auto max-w-[900px] overflow-hidden rounded-[6px] bg-white shadow-[0_1px_1px_rgba(25,24,22,.05),0_30px_60px_-30px_rgba(25,24,22,.28)] dark:shadow-[0_0_0_1px_rgba(255,255,255,.08),0_30px_60px_-30px_rgba(0,0,0,.8)]")}>
+          <main className="relative min-w-0 px-3 pb-28 pt-6 sm:px-10 sm:pt-12 lg:pb-12">
+            <div data-style={pageStyle} style={{ "--sheet-accent": shownColour } as React.CSSProperties} className={cn(pageStyle === "night" ? "sheet-dark" : "sheet-light", "sheet relative mx-auto max-w-[900px] rounded-[6px] bg-white shadow-[0_1px_1px_rgba(25,24,22,.05),0_30px_60px_-30px_rgba(25,24,22,.28)] dark:shadow-[0_0_0_1px_rgba(255,255,255,.08),0_30px_60px_-30px_rgba(0,0,0,.8)]")}>
               <Cover
                 title={title}
                 readOnly={readOnly}
@@ -453,8 +679,16 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
                 onSenderName={(v) => { setSenderName(v); saveSender(v); }}
                 color={shownColour}
                 pageStyle={pageStyle}
+                centered={stage && !details.coverArt}
+                art={shownArt}
+                canAddArt={stage && details.coverArt && !heroArt}
+                onReplaceArt={(f) => void replaceCoverArt(f)}
+                onRemoveArt={() => onDetails({ ...details, coverArt: false })}
+                onArtCaption={setCoverCaption}
               />
+              {shownArt && <style>{`.bn-editor > .bn-block-group > .bn-block-outer[data-id="${safeId(shownArt.blockId)}"]:has(.bn-block-content[data-content-type="image"]){display:none}`}</style>}
               <style>{bandCss}</style>
+              {activeBlock && !readOnly && <style>{`.bn-editor > .bn-block-group > .bn-block-outer[data-id="${safeId(activeBlock)}"] > .bn-block > .bn-block-content, .bn-editor > .bn-block-group > .bn-block-outer[data-id="${safeId(activeBlock)}"] > .bn-block > .bn-react-node-view-renderer > .bn-block-content{outline:1.5px solid color-mix(in srgb, var(--color-brand) 55%, transparent);outline-offset:8px;border-radius:6px}`}</style>}
               <div className="px-6 pb-10 pt-6 sm:px-20 sm:pb-20 sm:pt-10">
                 <BlockNoteView editor={editor} editable={!readOnly} theme={pageStyle === "night" ? "dark" : "light"} slashMenu={false} sideMenu={false} formattingToolbar={false} className={hasSelection ? "has-selection" : undefined}>
                   <SideMenuController sideMenu={ProposalSideMenu} />
@@ -484,127 +718,47 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
             </div>
           </main>
 
-          <aside className="px-4 pb-24 pt-4 lg:sticky lg:top-14 lg:h-[calc(100dvh-3.5rem)] lg:overflow-y-auto lg:pl-2 lg:pr-5" aria-label="Proposal settings">
-            <div className="grid gap-4">
-              <section className="min-w-0 rounded-[1.25rem] bg-white p-4 shadow-[0_1px_1px_rgba(25,24,22,.04),0_12px_32px_-20px_rgba(25,24,22,.35)] ring-1 ring-inset ring-stone-900/[.035] dark:bg-stone-900 dark:shadow-none dark:ring-white/[.08]" data-test="send-card">
-                <h3 className="mb-3 text-[13px] font-semibold text-graphite dark:text-stone-400">Send to</h3>
-                <div className="grid gap-3">
-                  <Field label="Client" htmlFor="clientName">
-                    <Input id="clientName" maxLength={200} value={details.clientName} disabled={readOnly} onChange={(e) => onDetails({ ...details, clientName: e.target.value })} placeholder="Acme Bakery" />
-                  </Field>
-                  <Field label="Their email" htmlFor="clientEmail">
-                    <div className="grid gap-2">
-                      <Input id="clientEmail" type="email" inputMode="email" spellCheck={false} maxLength={254} value={details.clientEmail} disabled={readOnly} onChange={(e) => onDetails({ ...details, clientEmail: e.target.value })} placeholder="owner@acmebakery.com" />
-                      {details.ccEmails.map((e, i) => (
-                        <div key={i} className="flex gap-1.5">
-                          <Input aria-label={`Recipient ${i + 2}`} type="email" inputMode="email" spellCheck={false} maxLength={254} value={e} disabled={readOnly} autoFocus={e === ""} placeholder="another@acmebakery.com" onChange={(ev) => onDetails({ ...details, ccEmails: details.ccEmails.map((x, k) => (k === i ? ev.target.value : x)) })} />
-                          {!readOnly && (
-                            <Button variant="ghost" size="icon" aria-label="Remove recipient" onClick={() => onDetails({ ...details, ccEmails: details.ccEmails.filter((_, k) => k !== i) })}>
-                              <X size={16} weight="light" />
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-                      {!readOnly && details.ccEmails.length < 10 && (
-                        <button type="button" onClick={() => onDetails({ ...details, ccEmails: [...details.ccEmails, ""] })} className="inline-flex w-fit items-center gap-1 rounded-full px-2 py-1 text-[13px] font-medium text-brand hover:bg-brand/[.08] dark:text-indigo-300">
-                          <Plus size={14} weight="bold" /> Add another recipient
-                        </button>
-                      )}
-                    </div>
-                  </Field>
-                  {!readOnly && (
-                    <Button size="lg" className="mt-1 w-full" onClick={() => { setSendError(null); setSendOpen(true); }} data-test="send-button">
-                      <PaperPlaneTilt size={16} weight="light" /> {status === "draft" ? "Send" : "Send again"}
-                    </Button>
-                  )}
-                  {/* The client link, always here: copy it from the panel without opening anything. */}
-                  <div className="min-w-0 overflow-hidden rounded-xl bg-stone-900/[.04] p-1.5 pl-3 dark:bg-white/[.06]" data-test="link-row">
-                    <div className="flex items-center gap-2">
-                      <Globe size={15} weight="light" className="flex-none text-stone-500" />
-                      <span className="min-w-0 flex-1 truncate font-mono text-[12.5px] text-stone-700 dark:text-stone-300" title={link}>{link.replace(/^https?:\/\//, "")}</span>
-                      {live || readOnly ? (
-                        <Button size="sm" variant="secondary" onClick={() => void copy()} aria-label="Copy link" className="bg-white dark:bg-stone-800" data-test="copy-link">
-                          {copied ? <Check size={14} weight="bold" /> : <LinkSimple size={14} weight="light" />} {copied ? "Copied" : "Copy"}
-                        </Button>
-                      ) : (
-                        <Button size="sm" variant="secondary" disabled={sendBusy} onClick={() => void send(false).then(() => copy())} className="bg-white dark:bg-stone-800" data-test="publish-link">
-                          <LinkSimple size={14} weight="light" /> {sendBusy ? "…" : "Publish and copy"}
-                        </Button>
-                      )}
-                    </div>
-                    <p className="px-0.5 pb-1 pt-1.5 text-[12px] text-stone-500">
-                      {live ? "Live. Anyone with the link can read it." : "Not live yet. Send it by email, or publish the link and share it yourself."}
-                    </p>
-                  </div>
-                </div>
-              </section>
-
-              <div role="tablist" aria-label="Proposal settings" className="grid grid-cols-2 gap-1 rounded-full bg-stone-900/[.06] p-1 dark:bg-white/[.08]">
-                {(["pricing", "options"] as const).map((t) => (
-                  <button
-                    key={t}
-                    id={`tab-${t}`}
-                    role="tab"
-                    aria-selected={tab === t}
-                    aria-controls={`panel-${t}`}
-                    tabIndex={tab === t ? 0 : -1}
-                    onKeyDown={(e) => { if (e.key === "ArrowRight" || e.key === "ArrowLeft") { const next = t === "pricing" ? "options" : "pricing"; setTab(next); document.getElementById(`tab-${next}`)?.focus(); } }}
-                    onClick={() => setTab(t)}
-                    className={cn(
-                      "h-9 rounded-full text-[13px] font-medium capitalize transition-[background-color,color,box-shadow] duration-200",
-                      tab === t ? "bg-white text-ink shadow-[0_1px_2px_rgba(25,24,22,.12)] dark:bg-stone-800 dark:text-stone-50" : "text-graphite hover:text-ink dark:text-stone-400 dark:hover:text-stone-100",
-                    )}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-
-              {tab === "pricing" && (
-                <section id="pricing-panel" role="tabpanel" aria-labelledby="tab-pricing" className="rounded-[1.25rem] bg-white p-4 shadow-[0_1px_1px_rgba(25,24,22,.04),0_12px_32px_-20px_rgba(25,24,22,.35)] ring-1 ring-inset ring-stone-900/[.035] dark:bg-stone-900 dark:shadow-none dark:ring-white/[.08]">
-                  <PricingPanel items={items} currency={details.currency} defaultTaxBps={details.taxRateBps} taxLabel={details.taxLabel} onChange={onItems} onTax={(bps, label) => onDetails({ ...details, taxRateBps: bps, taxLabel: label })} readOnly={readOnly} focus={pricingFocus} />
-                </section>
-              )}
-
-              {tab === "options" && <section id="panel-options" role="tabpanel" aria-labelledby="tab-options"><MoreOptions
-                teamEmails={user?.notifyEmails ?? []}
-                details={details}
-                onChange={onDetails}
-                onPassword={onPassword}
-                readOnly={readOnly}
-                look={{ style: pageStyle, color: accent, senderName, brandColour }}
-                onStyle={(id) => { setPageStyle(id); void save({ style: id }); }}
-                onColour={(hex) => { setAccent(hex ?? ""); void save({ accentColor: hex }); }}
-                onSender={(v) => { setSenderName(v); saveSender(v); }}
-                onSaveTemplate={() => { setTplName(title); setTplError(null); setTplOpen(true); }}
-                onDuplicate={() => void duplicate()}
-                exportHref={`/api/proposals/${proposal.id}/export`}
-                canPdf={user?.plan !== "free"}
-                brandPaymentUrl={user?.paymentUrl ?? null}
-                caps={user?.caps ?? { brand: true, protect: true, payment: true, countersign: false }}
-              /></section>}
-
-              {questions.length > 0 && (
-                <section className="rounded-2xl bg-amber-500/[.08] p-4 ring-1 ring-inset ring-amber-500/20" aria-label="Questions from your client">
-                  <h3 className="text-[13px] font-semibold">Questions from your client</h3>
-                  <ul className="mt-2 grid gap-2">
-                    {questions.map((q) => (
-                      <li key={q.id} className="text-[13.5px]">
-                        <span className="font-medium">{q.name}</span>: <span className="text-stone-700 dark:text-stone-300">{q.body}</span>
-                        {q.email && <a href={`mailto:${q.email}?subject=${encodeURIComponent("Re: your question")}`} className="ml-2 text-[12.5px] font-medium text-brand underline underline-offset-4 dark:text-indigo-300">Reply</a>}
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              )}
-            </div>
+          <aside className="hidden px-4 pb-24 pt-4 lg:sticky lg:top-14 lg:block lg:h-[calc(100dvh-3.5rem)] lg:overflow-y-auto lg:pl-2 lg:pr-5" aria-label="Proposal settings">
+            {sheet === null && panel}
           </aside>
         </div>
 
-        {!readOnly && !sendOpen && !tplOpen && !phoneOpen && (
-          <button type="button" onClick={addBlockHere} aria-label="Add a block" data-test="add-block-mobile" className="fixed bottom-5 right-5 z-20 grid h-13 w-13 place-items-center rounded-full bg-brand text-white shadow-[0_10px_30px_-8px_rgba(43,63,140,.7)] transition-transform active:scale-95 lg:hidden">
-            <Plus size={22} weight="bold" />
-          </button>
+        {/* Phones: the settings column becomes a bar at the bottom and a sheet that slides up. */}
+        {!sendOpen && !tplOpen && !phoneOpen && (
+          <nav aria-label="Editor tools" className="fixed inset-x-0 bottom-0 z-20 lg:hidden" data-test="mobile-bar">
+            <div className="mx-auto mb-[max(10px,env(safe-area-inset-bottom))] flex w-[calc(100%-20px)] max-w-md items-stretch gap-1 rounded-[22px] bg-white/95 p-1.5 shadow-[0_1px_2px_rgba(25,24,22,.08),0_20px_50px_-20px_rgba(25,24,22,.45)] ring-1 ring-inset ring-stone-900/[.06] backdrop-blur-md dark:bg-stone-900/95 dark:ring-white/10">
+              {!readOnly && (
+                <button type="button" onClick={addBlockHere} data-test="add-block-mobile" className="grid h-12 w-12 flex-none place-items-center rounded-2xl bg-brand text-white shadow-[0_8px_20px_-8px_rgba(43,63,140,.7)] active:scale-95" aria-label="Add a block">
+                  <Plus size={22} weight="bold" />
+                </button>
+              )}
+              <button type="button" onClick={() => openSheet("pricing")} className="flex h-12 min-w-0 flex-1 flex-col items-center justify-center rounded-2xl px-2 text-[11.5px] font-medium text-stone-700 active:bg-stone-900/[.06] dark:text-stone-200" data-test="mobile-pricing">
+                <span className="inline-flex items-center gap-1"><Tag size={15} weight="bold" /> Pricing</span>
+                {barTotal && <span className="max-w-full truncate text-[12.5px] font-semibold tabular-nums text-ink dark:text-stone-50">{barTotal}</span>}
+              </button>
+              <button type="button" onClick={() => openSheet("options")} className="flex h-12 min-w-0 flex-1 flex-col items-center justify-center rounded-2xl px-2 text-[11.5px] font-medium text-stone-700 active:bg-stone-900/[.06] dark:text-stone-200" data-test="mobile-options">
+                <span className="inline-flex items-center gap-1"><SlidersHorizontal size={15} weight="bold" /> Options</span>
+                <span className="text-[12px] text-stone-500">Style, client, send</span>
+              </button>
+              <a href={`/p/${proposal.publicId}`} className="grid h-12 w-12 flex-none place-items-center rounded-2xl text-stone-700 active:bg-stone-900/[.06] dark:text-stone-200" aria-label="Preview as your client">
+                <Eye size={20} weight="regular" />
+              </a>
+            </div>
+          </nav>
+        )}
+        {sheet && (
+          <div role="dialog" aria-modal="true" aria-label={sheet === "pricing" ? "Pricing" : "Options"} className="fixed inset-0 z-30 bg-stone-950/40 backdrop-blur-sm lg:hidden" onClick={() => setSheet(null)} data-test="mobile-sheet">
+            <div className="qs-sheet absolute inset-x-0 bottom-0 max-h-[88dvh] overflow-y-auto rounded-t-[1.6rem] bg-[#f3f1ec] px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-2 dark:bg-stone-950" onClick={(e) => e.stopPropagation()}>
+              <div className="sticky top-0 z-10 -mx-4 mb-2 bg-[#f3f1ec]/95 px-4 pb-2 backdrop-blur dark:bg-stone-950/95">
+                <span aria-hidden="true" className="mx-auto mb-2 block h-1 w-10 rounded-full bg-stone-900/15 dark:bg-white/20" />
+                <div className="flex items-center justify-between">
+                <span className="text-[13px] font-semibold text-graphite dark:text-stone-400">{tab === "pricing" ? "Pricing" : "Options"}</span>
+                <button type="button" onClick={() => setSheet(null)} className="h-8 rounded-full bg-white px-3 text-[12.5px] font-medium shadow-[0_1px_2px_rgba(25,24,22,.1)] ring-1 ring-inset ring-stone-900/[.06] dark:bg-stone-800 dark:ring-white/10" data-test="sheet-done">Done</button>
+                </div>
+              </div>
+              {panel}
+            </div>
+          </div>
         )}
         {tplOpen && (
           <div role="dialog" aria-modal="true" aria-label="Save as template" className="fixed inset-0 z-30 grid place-items-end bg-stone-950/40 backdrop-blur-sm sm:place-items-center" onClick={() => setTplOpen(false)}>
@@ -704,7 +858,8 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
 }
 
 /** The cover the client sees first. Title, client and sender are edited in place. */
-function Cover(p: { title: string; readOnly: boolean; onTitle: (t: string) => void; clientName: string; onClientName: (v: string) => void; senderName: string; onSenderName: (v: string) => void; color: string; pageStyle: string }) {
+function Cover(p: { title: string; readOnly: boolean; onTitle: (t: string) => void; clientName: string; onClientName: (v: string) => void; senderName: string; onSenderName: (v: string) => void; color: string; pageStyle: string; centered?: boolean; art?: { url: string; caption: string } | null; canAddArt?: boolean; onReplaceArt?: (file: File) => void; onRemoveArt?: () => void; onArtCaption?: (caption: string) => void }) {
+  const picker = useRef<HTMLInputElement>(null);
   const style = styleOf(p.pageStyle);
   const accent = p.color;
   const titleRef = useRef<HTMLTextAreaElement>(null);
@@ -713,25 +868,30 @@ function Cover(p: { title: string; readOnly: boolean; onTitle: (t: string) => vo
     if (!el) return;
     el.style.height = "0px";
     el.style.height = el.scrollHeight + "px";
-  }, [p.title, p.pageStyle]);
+  }, [p.title, p.pageStyle, p.centered, p.art?.url]);
   const paper = style.paperCover;
   const lightAccent = !paper && style.id !== "night" && readableOn(accent) !== "#ffffff";
   const ink = paper ? "text-ink" : lightAccent ? "text-[#2f2e2b]" : "text-white";
   const coverBg: React.CSSProperties =
     style.id === "bold" ? { background: accent }
     : style.id === "night" ? { background: `radial-gradient(120% 120% at 100% 0%, color-mix(in srgb, ${accent} 55%, #000) 0%, #0e0e11 62%)` }
+    : style.id === "studio" ? { minHeight: 420 }
     : paper ? { background: style.id === "warm" ? "#f7f1e6" : "var(--sheet-bg)", borderBottom: style.id === "editorial" ? `6px solid ${accent}` : undefined }
     : { backgroundImage: `linear-gradient(135deg, color-mix(in srgb, ${accent} 78%, #000) 0%, ${accent} 55%, color-mix(in srgb, ${accent} 72%, #fff) 100%)` };
   const field = paper || lightAccent
-    ? "-mx-1.5 rounded-md border border-transparent bg-transparent px-1.5 text-inherit outline-none transition-colors hover:border-black/15 focus:border-black/30 focus:bg-black/[.04] placeholder:text-black/35 disabled:hover:border-transparent"
-    : "-mx-1.5 rounded-md border border-transparent bg-transparent px-1.5 text-white outline-none transition-colors hover:border-white/35 focus:border-white/70 focus:bg-white/10 placeholder:text-white/60 disabled:hover:border-transparent";
+    ? "qs-field -mx-1.5 rounded-md bg-transparent px-1.5 text-inherit outline-none focus:border-black/40 focus:bg-black/[.04] placeholder:text-black/40 disabled:border-transparent"
+    : "qs-field -mx-1.5 rounded-md bg-transparent px-1.5 text-white outline-none focus:border-white/80 focus:bg-white/10 placeholder:text-white/60 disabled:border-transparent";
   return (
-    <div className={cn("cover relative overflow-hidden px-6 pb-10 pt-14 sm:px-20 sm:pb-12 sm:pt-20", ink)} style={coverBg} data-test="cover" data-cover-style={style.id}>
-      {(style.id === "classic" || style.id === "warm" || style.id === "night") && (
-        <div aria-hidden="true" className="pointer-events-none absolute -bottom-[40%] -right-[10%] aspect-square w-[60%] rounded-full" style={{ background: style.id === "classic" ? "radial-gradient(circle, rgba(255,255,255,.18), transparent 65%)" : `radial-gradient(circle, color-mix(in srgb, ${accent} ${style.id === "night" ? "50%" : "60%"}, transparent), transparent 64%)`, filter: style.id === "night" ? "blur(20px)" : undefined }} />
+    <div className={cn("cover relative overflow-hidden rounded-t-[6px] px-6 pb-10 pt-14 sm:px-20 sm:pb-12 sm:pt-20", ink, (p.art || p.canAddArt) && "flex min-h-[560px] items-center sm:pb-14 sm:pt-16")} style={coverBg} data-test="cover" data-cover-style={style.id}>
+      {!p.readOnly && (p.art || p.canAddArt) && <input ref={picker} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) p.onReplaceArt?.(f); e.target.value = ""; }} />}
+      {style.id === "night" && (
+        <div aria-hidden="true" className="pointer-events-none absolute -bottom-[50%] -right-[20%] aspect-square w-[80%] rounded-full" style={{ background: `radial-gradient(circle, color-mix(in srgb, ${accent} 50%, transparent), transparent 65%)`, filter: "blur(20px)" }} />
       )}
-      <div className="relative">
-        <label className="mb-3 flex items-center gap-1.5 text-[14px] opacity-90">
+      {style.id === "classic" && <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,.14), transparent 55%)" }} />}
+      {style.id === "warm" && <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={{ background: `linear-gradient(215deg, color-mix(in srgb, ${accent} 16%, transparent) 0%, transparent 48%)` }} />}
+      <div className={cn("relative w-full", p.centered && "text-center", (p.art || p.canAddArt) && "grid items-center gap-8 sm:grid-cols-[1.1fr_.9fr] sm:gap-10")}>
+      <div className="min-w-0">
+        <label className={cn("mb-3 flex items-center gap-1.5 text-[14px] opacity-90", p.centered && "justify-center")}>
           <span className="whitespace-nowrap">Prepared for</span>
           <input value={p.clientName} disabled={p.readOnly} maxLength={200} aria-label="Client name" placeholder="your client" onChange={(e) => p.onClientName(e.target.value)} className={field + " min-w-[12ch] max-w-full py-0.5 text-[14px] [field-sizing:content]"} />
         </label>
@@ -745,15 +905,63 @@ function Cover(p: { title: string; readOnly: boolean; onTitle: (t: string) => vo
           placeholder="Untitled proposal"
           onChange={(e) => p.onTitle(e.target.value.replace(/\n/g, " "))}
           onKeyDown={(e) => { if (e.key === "Enter") e.preventDefault(); }}
-          className={field + " cover-title block w-full max-w-[16ch] resize-none overflow-hidden py-0 text-[clamp(34px,5.5vw,56px)] font-[650] leading-[1.02] tracking-[-0.04em]"}
+          className={cn(field, "cover-title block w-full max-w-[16ch] resize-none overflow-hidden py-0 text-[clamp(34px,5.5vw,56px)] font-[650] leading-[1.02] tracking-[-0.04em]", p.centered && "mx-auto text-center")}
         />
-        <label className="mt-7 flex items-center gap-1.5 text-[15px]">
+        <label className={cn("mt-7 flex items-center gap-1.5 text-[15px]", p.centered && "justify-center")}>
           <span className="whitespace-nowrap opacity-90">By</span>
           <input value={p.senderName} disabled={p.readOnly} maxLength={120} aria-label="Sender name" placeholder="your business name" onChange={(e) => p.onSenderName(e.target.value)} className={field + " min-w-[10ch] max-w-full py-0.5 text-[15px] font-medium [field-sizing:content]"} />
         </label>
       </div>
+      {p.art && (
+        <figure className={cn("relative m-0 aspect-[4/5] max-h-[440px] w-full overflow-hidden rounded-[24px] sm:-rotate-2", style.id === "night" ? "shadow-[0_0_0_1px_rgba(255,255,255,.08),0_60px_120px_-50px_#000]" : "shadow-[0_1px_2px_rgba(15,15,16,.06),0_60px_120px_-60px_rgba(15,15,16,.45)]")} data-test="cover-art" title="The first picture in the proposal. Change it in the page below, or switch it off under Options, Look.">
+          <img src={p.art.url} alt="" className="h-full w-full object-cover" />
+          <figcaption className="absolute bottom-3 left-3 right-3">
+            <input value={p.art.caption} disabled={p.readOnly} maxLength={120} placeholder="Caption (optional)" aria-label="Cover picture caption" onChange={(e) => p.onArtCaption?.(e.target.value)} className="w-fit max-w-full rounded-full bg-black/40 px-3 py-1 text-[12px] text-white outline-none backdrop-blur placeholder:text-white/70 focus:bg-black/60 [field-sizing:content]" data-test="cover-art-caption" />
+          </figcaption>
+          {!p.readOnly && (
+            <div className="absolute right-3 top-3 flex gap-1.5">
+              <button type="button" onClick={() => picker.current?.click()} className="h-8 rounded-full bg-white/90 px-3 text-[12.5px] font-medium text-stone-800 shadow ring-1 ring-inset ring-black/10 hover:bg-white" data-test="cover-art-replace">Change picture</button>
+              <button type="button" onClick={p.onRemoveArt} aria-label="Remove from the cover" title="Remove from the cover" className="grid h-8 w-8 place-items-center rounded-full bg-white/90 text-stone-700 shadow ring-1 ring-inset ring-black/10 hover:bg-white" data-test="cover-art-remove"><X size={14} weight="bold" /></button>
+            </div>
+          )}
+        </figure>
+      )}
+      {!p.art && p.canAddArt && !p.readOnly && (
+        <button type="button" onClick={() => picker.current?.click()} className={cn("grid aspect-[4/5] max-h-[440px] w-full place-items-center rounded-[24px] border border-dashed text-center text-[14px] transition-colors sm:-rotate-2", style.id === "night" ? "border-white/25 text-white/70 hover:bg-white/[.06]" : "border-black/20 text-black/60 hover:bg-black/[.04]")} data-test="cover-art-add">
+          <span><span className="block text-[15px] font-semibold">Add a cover picture</span><span className="mt-1 block opacity-80">It opens the page beside your title.</span></span>
+        </button>
+      )}
+      </div>
     </div>
   );
+}
+
+/** The first picture in the document, the way the client page promotes it into the cover. */
+function useHeroArt(editor: { document: unknown; onChange: (cb: () => void) => unknown }): { url: string; caption: string; blockId: string } | null {
+  const [art, setArt] = useState<{ url: string; caption: string; blockId: string } | null>(null);
+  useEffect(() => {
+    const compute = () => {
+      const doc = editor.document as { id: string; type: string; props?: Record<string, unknown> }[];
+      let next: { url: string; caption: string; blockId: string } | null = null;
+      for (const b of Array.isArray(doc) ? doc : []) {
+        if (b.type === "imageRow") {
+          try {
+            const list = JSON.parse(String(b.props?.images ?? "[]")) as { url?: string; caption?: string }[];
+            const first = Array.isArray(list) ? list.find((it) => it?.url) : null;
+            if (first?.url) { next = { url: String(first.url), caption: String(first.caption ?? ""), blockId: b.id }; break; }
+          } catch { /* not a list */ }
+        } else if (b.type === "image" && b.props?.url) {
+          next = { url: String(b.props.url), caption: String(b.props.caption ?? ""), blockId: b.id };
+          break;
+        }
+      }
+      setArt((cur) => (cur?.url === next?.url && cur?.caption === next?.caption && cur?.blockId === next?.blockId ? cur : next));
+    };
+    compute();
+    const off = editor.onChange(compute);
+    return () => { if (typeof off === "function") off(); };
+  }, [editor]);
+  return art;
 }
 
 const BAND_COLOURS = new Set(["gray", "brown", "red", "orange", "yellow", "green", "blue", "purple", "pink"]);
@@ -771,7 +979,7 @@ function useSectionBands(editor: { document: unknown; onChange: (cb: () => void)
       let ids: string[] = [];
       const flush = () => {
         if (color && ids.length) {
-          const sel = (id: string) => `.bn-editor > .bn-block-group > [data-id="${id}"]`;
+          const sel = (id: string) => `.bn-editor > .bn-block-group > [data-id="${safeId(id)}"]`;
           const bg = `color-mix(in srgb, var(--bn-colors-highlights-${color}-background) var(--band-mix), var(--sheet-bg))`;
           rules.push(`${ids.map(sel).join(",")}{background:${bg};margin-block:0;padding-block:.35em;margin-inline:calc(var(--sheet-pad) * -1);padding-inline:var(--sheet-pad)}`);
           rules.push(`${sel(ids[0]!)}{padding-top:44px;margin-top:20px}${sel(ids[0]!)} .bn-block,${sel(ids[0]!)} .bn-block-content{background:transparent!important}${sel(ids[0]!)} h2{margin-top:0}`);

@@ -100,7 +100,7 @@ app.get("/", async (c) => {
   const csp = analyticsCsp(ga);
   c.header(
     "content-security-policy",
-    `default-src 'none'; script-src 'nonce-${nonce}'${csp.script}; style-src 'nonce-${nonce}'; img-src 'self' data:${csp.img}; connect-src 'self'${csp.connect}; font-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`,
+    `default-src 'none'; script-src 'nonce-${nonce}'${csp.script}; style-src 'nonce-${nonce}'; img-src 'self' data:${csp.img}; connect-src 'self'${csp.connect}; font-src 'self'; frame-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`,
   );
   c.header("cache-control", "public, max-age=300");
   return c.html(renderLanding({ nonce, appUrl: appUrl(c), githubUrl: GITHUB_URL, analytics: ga }));
@@ -255,7 +255,9 @@ app.notFound(async (c) => {
   const path = url.pathname;
   // One address per page: a trailing slash redirects to the page itself.
   if ((c.req.method === "GET" || c.req.method === "HEAD") && path.length > 1 && path.endsWith("/")) {
-    return c.redirect(path.replace(/\/+$/, "") + url.search, 301);
+    // Leading slashes are collapsed too, so "//evil.example/" can never turn into a protocol-relative Location.
+    const clean = "/" + path.replace(/^\/+/, "").replace(/\/+$/, "");
+    return c.redirect(clean + url.search, 301);
   }
   const notFound = () => c.html(renderSimplePage("Page not found", "There is nothing at this address. Try the homepage, the templates or the comparisons."), 404);
   if (!c.env.ASSETS) return notFound();

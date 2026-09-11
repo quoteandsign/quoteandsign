@@ -87,6 +87,7 @@ export const proposals = sqliteTable(
     sendCount: integer("send_count").notNull().default(0), // emails sent to the client, including resends
     lastSentAt: integer("last_sent_at", { mode: "timestamp_ms" }),
     countersign: integer("countersign", { mode: "boolean" }).notNull().default(false), // the sender signs after the client
+    coverArt: integer("cover_art", { mode: "boolean" }).notNull().default(true), // Studio and Night: the first picture becomes the cover art
     declinedAt: integer("declined_at", { mode: "timestamp_ms" }),
     declineReason: text("decline_reason"), // what the client said, if anything
     status: text("status").notNull().default("draft"), // draft | sent | viewed | accepted | declined | archived (expired is derived)

@@ -37,12 +37,26 @@ function safeHref(href: string): string {
   const h = String(href ?? "").trim();
   if (/^(https?:|mailto:|tel:)/i.test(h)) return h;
   if (/^\/files\/(logos|images)\/[0-9a-f-]{36}\/[0-9a-f-]{36}\.(png|jpg|webp)$/i.test(h)) return h;
+  // Abstract artwork bundled with the app, used by the starter templates.
+  if (/^\/img\/art\/[a-z0-9-]{1,40}\.svg$/i.test(h)) return h;
   return "#";
 }
 
 function colourClass(props: Record<string, unknown> | undefined, kind: "bg" | "fg"): string {
   const v = String(props?.[kind === "bg" ? "backgroundColor" : "textColor"] ?? "default");
   return (COLOUR_NAMES as readonly string[]).includes(v) ? ` ${kind}-${v}` : "";
+}
+
+/**
+ * Plain text split into word spans for a staggered reveal, with the unsplit text kept for
+ * assistive technology. Anything with links or styles is left whole.
+ */
+export function wordSpans(content: Inline[] | string | undefined): string | null {
+  const plain = typeof content === "string" ? content : Array.isArray(content) && content.every((n) => n && n.type === "text" && !Object.values(n.styles ?? {}).some(Boolean)) ? content.map((n) => (n as { text: string }).text).join("") : null;
+  if (plain == null) return null;
+  const words = plain.split(/\s+/).filter(Boolean);
+  if (words.length < 2 || words.length > 40) return null;
+  return `<span class="sr">${esc(plain)}</span><span class="ws" aria-hidden="true">${words.map((w) => `<span class="w">${esc(w)}</span>`).join(" ")}</span>`;
 }
 
 function renderInline(content: Inline[] | string | undefined): string {
@@ -161,7 +175,8 @@ function renderBlock(b: Block, depth: number): string {
   switch (b.type) {
     case "heading": {
       const level = Math.min(3, Math.max(1, Number(props.level) || 2));
-      return `<h${level}${blockClass(b)}>${renderInline(b.content as Inline[] | string)}</h${level}>${renderChildren(b, depth)}`;
+      const split = level === 2 ? wordSpans(b.content as Inline[] | string) : null;
+      return `<h${level}${blockClass(b)}>${split ?? renderInline(b.content as Inline[] | string)}</h${level}>${renderChildren(b, depth)}`;
     }
     case "paragraph":
       return isEmptyText(b.content) && !b.children?.length
@@ -177,13 +192,14 @@ function renderBlock(b: Block, depth: number): string {
       const url = safeHref(String(props.url ?? ""));
       if (url === "#") return "";
       const caption = props.caption ? `<figcaption>${esc(props.caption)}</figcaption>` : "";
-      return `<figure class="img${imageSize(props)}${imageAlign(props)}"><img src="${esc(url)}" alt="${esc(props.caption ?? "")}" loading="lazy">${caption}</figure>`;
+      return `<figure class="img${imageSize(props)}${imageAlign(props)}"><div class="ph"><img src="${esc(url)}" alt="${esc(props.caption ?? "")}" loading="lazy"></div>${caption}</figure>`;
     }
     case "imageRow": {
       const list = parseJson<{ url?: string; caption?: string }[]>(props.images, []);
       const shown = (Array.isArray(list) ? list : []).map((it) => ({ url: safeHref(String(it?.url ?? "")), caption: String(it?.caption ?? "") })).filter((it) => it.url !== "#").slice(0, 4);
       if (!shown.length) return "";
-      return `<div class="imgrow cols-${shown.length}">${shown.map((it) => `<figure class="img"><img src="${esc(it.url)}" alt="${esc(it.caption)}" loading="lazy">${it.caption ? `<figcaption>${esc(it.caption)}</figcaption>` : ""}</figure>`).join("")}</div>`;
+      if (shown.length === 1) return `<figure class="img wide"><div class="ph"><img src="${esc(shown[0]!.url)}" alt="${esc(shown[0]!.caption)}" loading="lazy"></div>${shown[0]!.caption ? `<figcaption>${esc(shown[0]!.caption)}</figcaption>` : ""}</figure>`;
+      return `<div class="imgrow cols-${shown.length}">${shown.map((it) => `<figure class="img"><div class="ph"><img src="${esc(it.url)}" alt="${esc(it.caption)}" loading="lazy"></div>${it.caption ? `<figcaption>${esc(it.caption)}</figcaption>` : ""}</figure>`).join("")}</div>`;
     }
     case "video": {
       const url = String(props.url ?? "");
@@ -213,7 +229,7 @@ function renderBlock(b: Block, depth: number): string {
       return `<div class="tablewrap"><table>${head}<tbody>${body}</tbody></table></div>`;
     }
     case "statement":
-      return `<p class="statement${colourClass(b.props, "fg")}${colourClass(b.props, "bg")}">${renderInline(b.content as Inline[] | string)}</p>`;
+      return `<p class="statement${colourClass(b.props, "fg")}${colourClass(b.props, "bg")}">${wordSpans(b.content as Inline[] | string) ?? renderInline(b.content as Inline[] | string)}</p>`;
     case "featureGrid": {
       const items = parseJson<{ title?: string; text?: string }[]>(props.items, []);
       const cols = Number(props.cols) === 2 ? 2 : 3;

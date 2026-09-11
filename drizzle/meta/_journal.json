@@ -148,6 +148,13 @@
       "when": 1788750230652,
       "tag": "0020_webhooks",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1789009772500,
+      "tag": "0021_cover_art",
+      "breakpoints": true
     }
   ]
 }

@@ -17,6 +17,21 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: "Newsreader";
+  src: url("/fonts/Newsreader-Variable.woff2") format("woff2");
+  font-weight: 300 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Newsreader";
+  src: url("/fonts/Newsreader-Italic-Variable.woff2") format("woff2");
+  font-weight: 300 800;
+  font-style: italic;
+  font-display: swap;
+}
+
 @source "../../node_modules/@blocknote/shadcn/dist";
 
 @theme {
@@ -75,6 +90,13 @@
 .bn-editor h1 {
   letter-spacing: -0.03em;
 }
+
+/* The browser surfaces carry the brand too: selection, caret, focus, scrollbars. */
+::selection { background: color-mix(in srgb, var(--color-brand) 20%, transparent); }
+.sheet ::selection { background: color-mix(in srgb, var(--sheet-accent, var(--color-brand)) 22%, transparent); }
+body { caret-color: var(--color-brand); }
+html { scrollbar-color: rgba(25, 24, 22, 0.28) transparent; }
+.dark html, html.dark { scrollbar-color: rgba(255, 255, 255, 0.25) transparent; }
 
 /* Tabular figures everywhere numbers line up. */
 .tabular-nums {
@@ -169,14 +191,16 @@
   line-height: 1.2;
   letter-spacing: -0.025em;
   font-weight: 600;
-  margin-top: 1.6em;
 }
 .bn-editor h3 {
   font-size: 20px;
   letter-spacing: -0.015em;
   font-weight: 600;
-  margin-top: 1.2em;
 }
+/* Space above a heading belongs to the block, not to its content, so the hover frame hugs the words. */
+.bn-editor > .bn-block-group > .bn-block-outer:has(> .bn-block > .bn-block-content h2) { margin-top: 1.6em; }
+.bn-editor > .bn-block-group > .bn-block-outer:has(> .bn-block > .bn-block-content h3) { margin-top: 1.2em; }
+.bn-editor > .bn-block-group > .bn-block-outer:first-child { margin-top: 0; }
 /* Headings are ink by default, but a chosen text colour must win. */
 .bn-editor .bn-block-content:not([data-text-color]) :is(h1, h2, h3),
 .bn-editor .bn-block-content[data-text-color="default"] :is(h1, h2, h3) {
@@ -195,12 +219,120 @@
   pointer-events: none;
 }
 
+/* ---- Editability cues ------------------------------------------------------------------------
+   A newcomer should see what can be touched. Every top-level block gets a faint dashed frame and a
+   small name on hover; the frame drops while the caret is inside so writing stays clean. Custom
+   blocks carry one extra wrapper (.bn-react-node-view-renderer), hence the :is(). */
+.bn-editor > .bn-block-group > .bn-block-outer > .bn-block > .bn-block-content,
+.bn-editor > .bn-block-group > .bn-block-outer > .bn-block > .bn-react-node-view-renderer > .bn-block-content {
+  position: relative;
+  border-radius: 6px;
+  outline: 1px dashed transparent;
+  outline-offset: 8px;
+  transition: outline-color 0.15s ease-out;
+}
+.bn-block-content[data-content-type="heading"] { --qs-label: "Heading"; }
+.bn-block-content[data-content-type="paragraph"]:has(> .bn-inline-content > br.ProseMirror-trailingBreak:only-child) { --qs-label: "Empty line · type / to add something, or delete it"; }
+.bn-block-content[data-content-type="quote"] { --qs-label: "Quote"; }
+.bn-block-content[data-content-type="bulletListItem"],
+.bn-block-content[data-content-type="numberedListItem"],
+.bn-block-content[data-content-type="checkListItem"] { --qs-label: "List"; }
+.bn-block-content[data-content-type="table"] { --qs-label: "Table · click a cell to edit"; }
+.bn-block-content[data-content-type="image"] { --qs-label: "Image · drag the edge to resize"; }
+.bn-block-content[data-content-type="imageRow"] { --qs-label: "Image row"; }
+.bn-block-content[data-content-type="video"] { --qs-label: "Video"; }
+.bn-block-content[data-content-type="statement"] { --qs-label: "Big statement"; }
+.bn-block-content[data-content-type="featureGrid"] { --qs-label: "Cards · click any text to edit"; }
+.bn-block-content[data-content-type="testimonial"] { --qs-label: "Testimonial · click any text to edit"; }
+.bn-block-content[data-content-type="pricingTable"] { --qs-label: "Pricing · click a line to edit it"; }
+.bn-block-content[data-content-type="acceptBlock"] { --qs-label: "Accept button · your client signs here"; }
+.bn-block-content[data-content-type="divider"] { --qs-label: "Divider"; }
+@media (hover: hover) {
+  .bn-editor:not(.has-selection) > .bn-block-group > .bn-block-outer:hover > .bn-block > .bn-block-content:not(:focus-within),
+  .bn-editor:not(.has-selection) > .bn-block-group > .bn-block-outer:hover > .bn-block > .bn-react-node-view-renderer > .bn-block-content:not(:focus-within) {
+    outline-color: color-mix(in srgb, var(--color-brand) 45%, transparent);
+  }
+  .bn-editor > .bn-block-group > .bn-block-outer > .bn-block > .bn-block-content::after,
+  .bn-editor > .bn-block-group > .bn-block-outer > .bn-block > .bn-react-node-view-renderer > .bn-block-content::after {
+    content: var(--qs-label, "Text");
+    position: absolute;
+    top: -11px;
+    left: -4px;
+    z-index: 2;
+    padding: 2px 7px;
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--color-brand) 92%, #000);
+    color: #fff;
+    font: 600 10.5px/1.3 var(--font-sans);
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    opacity: 0;
+    transform: translateY(3px);
+    pointer-events: none;
+    transition: opacity 0.15s ease-out, transform 0.2s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  .bn-editor:not(.has-selection) > .bn-block-group > .bn-block-outer:hover > .bn-block > .bn-block-content:not(:focus-within)::after,
+  .bn-editor:not(.has-selection) > .bn-block-group > .bn-block-outer:hover > .bn-block > .bn-react-node-view-renderer > .bn-block-content:not(:focus-within)::after {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The block handles: a small white pill instead of three loose grey glyphs. */
+.bn-side-menu {
+  gap: 2px;
+  padding: 3px;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(25, 24, 22, 0.08), 0 0 0 1px rgba(25, 24, 22, 0.08), 0 8px 24px -12px rgba(25, 24, 22, 0.3);
+}
+.dark .sheet-dark .bn-side-menu,
+.sheet[data-style="night"] .bn-side-menu {
+  background: #26262b;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+}
+.bn-side-menu button {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  color: #57534e;
+}
+.bn-side-menu button:hover {
+  background: rgba(25, 24, 22, 0.07);
+  color: #191816;
+}
+.sheet[data-style="night"] .bn-side-menu button { color: #d4d4d8; }
+.sheet[data-style="night"] .bn-side-menu button:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+
+/* A custom block with a focused field frames itself the same way. */
+.bn-editor > .bn-block-group > .bn-block-outer > .bn-block > .bn-react-node-view-renderer > .bn-block-content:focus-within {
+  outline: 1.5px solid color-mix(in srgb, var(--color-brand) 55%, transparent);
+  outline-offset: 8px;
+}
+
+/* Fields inside cards, testimonials and the cover look like fields before you hover them. */
+.qs-field {
+  border: 1px dashed color-mix(in srgb, currentColor 22%, transparent);
+  transition: border-color 0.15s ease-out, background-color 0.15s ease-out;
+}
+.qs-field:hover { border-color: color-mix(in srgb, currentColor 45%, transparent); border-style: solid; }
+.qs-field:focus { border-style: solid; }
+
+/* The first-run coach strip slides in once and is dismissed for good. */
+@keyframes qs-coach-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.qs-coach { animation: qs-coach-in 0.4s cubic-bezier(0.32, 0.72, 0, 1) both; }
+
+/* Bottom sheet on phones. */
+@keyframes qs-sheet-in { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+.qs-sheet { animation: qs-sheet-in 0.32s cubic-bezier(0.32, 0.72, 0, 1) both; }
+@media (prefers-reduced-motion: reduce) { .qs-coach, .qs-sheet { animation: none; } }
+
 
 /* The editor sheet mirrors the client page: section bands need the sheet's padding and ground. */
 .sheet {
   --sheet-pad: 24px;
   --sheet-bg: #ffffff;
-  --band-mix: 70%;
+  --band-mix: 45%;
 }
 @media (min-width: 640px) {
   .sheet {
@@ -220,7 +352,8 @@
 
 /* Page styles mirrored in the editor sheet: display type and the ground the cover sits on. */
 .sheet[data-style="editorial"] {
-  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --font-display: "Newsreader", Georgia, "Times New Roman", serif;
+  font-optical-sizing: auto;
 }
 .sheet[data-style="editorial"] .cover-title,
 .sheet[data-style="editorial"] .bn-editor :is(h1, h2),
@@ -267,6 +400,123 @@
   --doc-text: #e4e4e7;
   --doc-heading: #fafafa;
   --bn-colors-editor-text: #f4f4f5;
+}
+.sheet[data-style="studio"] {
+  --sheet-bg: #fafafa;
+  --band-mix: 26%;
+  background: #fafafa;
+}
+.sheet[data-style="studio"] .cover {
+  background: #fafafa;
+}
+.sheet[data-style="studio"] .cover::before {
+  content: "";
+  position: absolute;
+  inset: -30% -20% -10% -20%;
+  background: radial-gradient(38% 46% at 22% 28%, color-mix(in srgb, var(--sheet-accent) 42%, transparent) 0%, transparent 72%), radial-gradient(34% 44% at 82% 18%, color-mix(in srgb, var(--sheet-accent) 22%, #fff) 0%, transparent 70%);
+  filter: blur(28px) saturate(1.15);
+  pointer-events: none;
+}
+@supports (color: hsl(from red h s l)) {
+  .sheet[data-style="studio"] .cover::before {
+    background: radial-gradient(38% 46% at 22% 28%, color-mix(in srgb, var(--sheet-accent) 44%, transparent) 0%, transparent 72%), radial-gradient(34% 44% at 82% 18%, hsl(from var(--sheet-accent) calc(h + 40) 70% 82% / 0.75) 0%, transparent 70%), radial-gradient(30% 40% at 65% 80%, hsl(from var(--sheet-accent) calc(h - 30) 60% 84% / 0.7) 0%, transparent 70%);
+  }
+}
+.sheet[data-style="studio"] .cover > * {
+  position: relative;
+}
+.sheet[data-style="studio"] .cover-title {
+  font-weight: 640;
+  letter-spacing: -0.055em;
+  line-height: 0.94;
+  max-width: 12ch;
+}
+.sheet[data-style="studio"] .bn-editor h2 {
+  font-size: 38px;
+  letter-spacing: -0.045em;
+  font-weight: 620;
+  line-height: 1;
+}
+.sheet[data-style="studio"] .bn-editor .bn-block-content[data-content-type="statement"] p,
+.sheet[data-style="night"] .bn-editor .bn-block-content[data-content-type="statement"] p {
+  font-size: clamp(30px, 4.6vw, 46px);
+  letter-spacing: -0.045em;
+  line-height: 1.02;
+  max-width: 20ch;
+}
+.sheet[data-style="night"] .bn-editor h2 {
+  font-size: 34px;
+  letter-spacing: -0.04em;
+}
+/* The rest of the Studio sheet reads like the page: bigger measure, roomier sections, the same
+   card, quote, picture and pricing treatments. */
+.sheet[data-style="studio"] .bn-editor,
+.sheet[data-style="night"] .bn-editor {
+  font-size: 18px;
+  line-height: 1.6;
+}
+.sheet[data-style="studio"] > div:last-child,
+.sheet[data-style="night"] > div:last-child {
+  padding-top: 48px;
+}
+.sheet[data-style="studio"] .bn-editor > .bn-block-group > .bn-block-outer:has(> .bn-block > .bn-block-content h2),
+.sheet[data-style="night"] .bn-editor > .bn-block-group > .bn-block-outer:has(> .bn-block > .bn-block-content h2) {
+  margin-top: 2.6em;
+}
+.sheet[data-style="studio"] .bn-editor [data-content-type="featureGrid"] .grid > div {
+  border: 0;
+  border-radius: 24px;
+  padding: 26px 24px 22px;
+  box-shadow: 0 1px 2px rgba(15, 15, 16, 0.04), 0 30px 70px -40px rgba(15, 15, 16, 0.28);
+}
+.sheet[data-style="night"] .bn-editor [data-content-type="featureGrid"] .grid > div {
+  border-color: #26262b;
+  background: #17171b;
+  border-radius: 16px;
+}
+.sheet[data-style="studio"] .bn-editor [data-content-type="testimonial"] figure {
+  border: 0;
+  background: rgba(15, 15, 16, 0.045);
+  border-radius: 28px;
+  padding: 36px 36px 30px;
+}
+.sheet[data-style="studio"] .bn-editor [data-content-type="testimonial"] figure textarea:first-child {
+  font-size: 26px;
+  letter-spacing: -0.025em;
+  line-height: 1.3;
+}
+.sheet[data-style="night"] .bn-editor [data-content-type="testimonial"] figure {
+  background: #17171b;
+  border-color: #26262b;
+}
+.sheet[data-style="studio"] .bn-editor [data-content-type="imageRow"] img,
+.sheet[data-style="studio"] .bn-editor [data-content-type="imageRow"] button {
+  border-radius: 22px;
+}
+.sheet[data-style="studio"] .bn-editor [data-content-type="imageRow"] .grid {
+  gap: 18px;
+}
+.sheet[data-style="studio"] .bn-editor [data-content-type="pricingTable"] > div,
+.sheet[data-style="studio"] .bn-editor [data-content-type="acceptBlock"] > div {
+  --tw-ring-color: transparent;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 15, 16, 0.04), 0 40px 90px -50px rgba(15, 15, 16, 0.35);
+}
+.sheet[data-style="studio"] .bn-editor [data-content-type="table"] table {
+  border-radius: 20px;
+}
+.sheet[data-style="studio"] .bn-editor [data-content-type="table"] .tableWrapper,
+.sheet[data-style="studio"] .bn-editor .bn-table-wrapper {
+  border: 0;
+  box-shadow: 0 1px 2px rgba(15, 15, 16, 0.04), 0 24px 60px -40px rgba(15, 15, 16, 0.25);
+  border-radius: 20px;
+}
+.sheet[data-style="studio"] .bn-editor > .bn-block-group > [data-id] {
+  --band-mix: 26%;
+}
+.bn-editor .bn-block-content[data-content-type="imageRow"] figure {
+  position: relative;
 }
 .sheet[data-style="warm"] {
   --sheet-bg: #fffaf2;

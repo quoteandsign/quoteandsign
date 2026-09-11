@@ -1,0 +1,2 @@
+GSAP 3.15.0 by GreenSock/Webflow. Standard "no charge" licence: https://gsap.com/standard-license
+Files: gsap.min.js, ScrollTrigger.min.js (unmodified minified builds from the npm package "gsap").

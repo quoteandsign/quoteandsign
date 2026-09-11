@@ -130,7 +130,7 @@ try {
   await page.getByRole("button", { name: /new proposal/i }).first().click();
   await page.waitForURL("**/app/templates", { timeout: 10000 });
   await page.waitForSelector("[data-template]");
-  ok("New proposal shows the six templates and nothing else to decide", (await page.locator("[data-template]").count()) === 6 && (await page.getByRole("radio").count()) === 0);
+  ok("New proposal shows the seven templates and nothing else to decide", (await page.locator("[data-template]").count()) === 7 && (await page.getByRole("radio").count()) === 0);
   ok("the gallery never shows an email address", !(await page.locator("main").innerText()).includes("@"));
   const tp = await ctx.request.get(BASE + "/t/web-project");
   const tpHtml = await tp.text();
@@ -142,7 +142,7 @@ try {
   await page.waitForSelector(".bn-editor");
   const templId = page.url().split("/").pop();
   const g0 = await get("/api/proposals/" + templId);
-  ok("the new proposal uses the template's style and the brand color", g0.proposal.style === "bold" && g0.proposal.accentColor === null);
+  ok("the new proposal uses the template's style and the brand color", g0.proposal.style === "studio" && g0.proposal.accentColor === null);
   ok("editor cover carries the title and the brand name", (await page.locator("[data-test=cover] textarea").inputValue()) === "Website redesign" && (await page.locator("[data-test=cover] input[aria-label='Sender name']").inputValue()) === "Northwind Studio");
   ok("no email anywhere in the editor", !(await page.locator("main").innerText()).includes("@"));
   const bandBg = await page.evaluate(() => {
@@ -188,7 +188,7 @@ try {
   ok("the phone preview shows the live client page at phone width", Math.round((await phoneFrame.boundingBox()).width) === 370 && (await phoneDoc.locator("h1").innerText()) === "Website redesign" && (await phoneDoc.locator(".ribbon").count()) === 0);
   await page.keyboard.press("Escape");
   await aside.locator("[data-test=style-menu]").click();
-  ok("the style row opens a picker with every style and color", (await aside.getByRole("radiogroup", { name: "Page style" }).getByRole("radio").count()) === 6 && (await aside.getByRole("radiogroup", { name: "Accent color" }).getByRole("radio").count()) === 6);
+  ok("the style row opens a picker with every style and color", (await aside.getByRole("radiogroup", { name: "Page style" }).getByRole("radio").count()) === 7 && (await aside.getByRole("radiogroup", { name: "Accent color" }).getByRole("radio").count()) === 6);
   await aside.getByRole("radiogroup", { name: "Page style" }).getByRole("radio", { name: "Editorial" }).click();
   await aside.getByRole("textbox", { name: /color hex/i }).fill("#6941c6");
   await page.getByLabel("Signed by").fill("Alex at Northwind");
@@ -315,7 +315,7 @@ try {
   await ctx.request.put(BASE + "/auth/me", { data: { brandName: "" } });
 
   // ---- Every template creates a proposal -----------------------------------------------
-  for (const t of ["blank", "web-project", "consulting", "retainer", "photography", "software"]) {
+  for (const t of ["blank", "web-project", "brand", "consulting", "retainer", "photography", "software"]) {
     const r = await ctx.request.post(BASE + "/api/proposals", { data: { template: t } });
     const { id } = await r.json();
     const g = await get(`/api/proposals/${id}`);
@@ -415,7 +415,7 @@ try {
   await cp.waitForTimeout(700);
   const scrolledTo = await cp.evaluate(() => window.scrollY);
   ok("scrolling down the client page stays down (the nav highlighter never pulls the page up)", scrolledTo >= 1400, String(scrolledTo));
-  const ctotal = () => cp.locator("[data-total]").innerText();
+  const ctotal = async () => { await cp.waitForTimeout(550); return cp.locator("[data-total]").innerText(); };
   ok("client page opens with the sender's total in CAD", (await ctotal()) === money(1265600, "CAD"), await ctotal());
   const copy = saved.items.find((i) => i.name === "Copywriting");
   const pages = saved.items.find((i) => i.name === "Extra pages");

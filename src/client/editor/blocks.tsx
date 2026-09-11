@@ -8,18 +8,19 @@ import { shrinkImage } from "../lib/image";
 
 // The editor shows a live preview of the pricing table inside the document. The data
 // itself lives in the pricing panel; this context hands it to the block.
-export const PricingContext = createContext<{ items: PricingLine[]; currency: string; defaultTaxBps: number; taxLabel: string; openPricing: (lineId?: string) => void }>({
+export const PricingContext = createContext<{ items: PricingLine[]; currency: string; defaultTaxBps: number; taxLabel: string; openPricing: (lineId?: string) => void; coverArtBlockId: string | null }>({
   items: [],
   currency: "USD",
   defaultTaxBps: 0,
   taxLabel: "",
   openPricing: () => {},
+  coverArtBlockId: null, // the block whose first picture is on the cover, so it is not shown twice
 });
 
 // Keys typed inside a block's own inputs must not reach the editor's shortcuts.
 const stop = (e: KeyboardEvent) => e.stopPropagation();
 const fieldCls =
-  "w-full rounded-lg border border-transparent bg-transparent px-2 py-1 text-inherit outline-none transition-colors hover:border-stone-900/10 focus:border-brand/50 focus:bg-white placeholder:text-stone-400 dark:hover:border-white/10 dark:focus:bg-stone-900";
+  "qs-field w-full rounded-lg bg-transparent px-2 py-1 text-inherit outline-none focus:border-brand/60 focus:bg-white placeholder:text-stone-400 dark:focus:bg-stone-900";
 
 function PricingPreview() {
   const { items, currency, defaultTaxBps, taxLabel, openPricing } = useContext(PricingContext);
@@ -213,6 +214,10 @@ function parseImages(v: unknown): RowImage[] {
 }
 function ImageRowEditor({ block, editor }: { block: any; editor: any }) {
   const images = parseImages(block.props.images);
+  const { coverArtBlockId } = useContext(PricingContext);
+  // On the page the first picture of this row is the cover art and the row shows the rest.
+  const onCover = coverArtBlockId === block.id ? Math.max(0, images.findIndex((it) => it.url)) : -1;
+  const shown = images.map((it, i) => ({ it, i })).filter(({ i }) => i !== onCover);
   const [busy, setBusy] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const pickers = useRef<(HTMLInputElement | null)[]>([]);
@@ -233,19 +238,25 @@ function ImageRowEditor({ block, editor }: { block: any; editor: any }) {
   };
   return (
     <div className="my-4 w-full" contentEditable={false}>
-      <div className={"grid gap-3 " + (images.length <= 2 ? "grid-cols-2" : images.length === 3 ? "grid-cols-3" : "grid-cols-4")}>
-        {images.map((it, i) => (
+      {onCover >= 0 && (
+        <div className="mb-2 flex items-center gap-2 text-[12.5px] text-stone-500" data-test="row-cover-note">
+          <span className="inline-flex h-5 items-center rounded-full bg-stone-900/[.06] px-2 font-medium text-stone-700 dark:bg-white/10 dark:text-stone-200">On the cover</span>
+          {shown.length ? "The first picture of this row opens the page; the rest stay here." : "This picture opens the page. Change it at the top, or add more pictures here."}
+        </div>
+      )}
+      <div className={"grid gap-3 " + (shown.length <= 1 ? "grid-cols-1" : shown.length === 2 ? "grid-cols-2" : shown.length === 3 ? "grid-cols-3" : "grid-cols-4")}>
+        {shown.map(({ it, i }) => (
           <figure key={i} className="group relative m-0">
             <input ref={(el) => { pickers.current[i] = el; }} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(i, f); e.target.value = ""; }} />
             {it.url ? (
-              <img src={it.url} alt={it.caption} className="aspect-[4/3] w-full rounded-xl object-cover" />
+              <img src={it.url} alt={it.caption} className={(shown.length === 1 ? "aspect-[16/10] " : "aspect-[4/3] ") + "w-full rounded-xl object-cover"} />
             ) : (
               <button type="button" onMouseDown={(e) => pick(e, i)} disabled={busy === i} className="grid aspect-[4/3] w-full cursor-pointer place-items-center rounded-xl border border-dashed border-stone-900/[.15] bg-stone-900/[.03] text-[13px] text-stone-500 hover:bg-stone-900/[.06] dark:border-white/15 dark:bg-white/[.04]">
                 {busy === i ? "Uploading…" : "+ Upload image"}
               </button>
             )}
             <input className={fieldCls + " mt-1 text-[12.5px]"} value={it.caption} placeholder="Caption (optional)" onKeyDown={stop} onChange={(e) => save(images.map((x, k) => (k === i ? { ...x, caption: e.target.value } : x)))} />
-            {images.length > 2 && (
+            {(images.length > 2 || onCover >= 0) && (
               <button type="button" aria-label="Remove image" onClick={() => save(images.filter((_, k) => k !== i))} className="absolute right-2 top-2 hidden h-6 w-6 place-items-center rounded-full bg-white/90 text-[12px] text-stone-700 shadow group-hover:grid">×</button>
             )}
             {it.url && (

@@ -30,7 +30,7 @@ export const COMPETITORS: Competitor[] = [
     theirPerDoc: "$2.50 per document after the plan's monthly allowance (40 on Starter).",
     theyDoBetter: [
       "Native connectors for HubSpot, Salesforce and other CRMs, with two-way sync. Quote and Sign offers signed webhooks instead, which reach the same tools through Zapier, Make or n8n, but there is no native app.",
-      "A large library of designed page templates and a block library shared across a team. Quote and Sign ships six templates and lets you save your own.",
+      "A large library of designed page templates and a block library shared across a team. Quote and Sign ships seven templates and lets you save your own.",
       "Built-in payment collection with QwilrPay. Quote and Sign shows your own payment link after signing rather than processing the payment.",
       "Larger team features: roles, approval workflows, brand locking across many users.",
     ],

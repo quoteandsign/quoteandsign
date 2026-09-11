@@ -10,7 +10,7 @@
     "not_found_handling": "single-page-application",
     // Every page request goes through the Worker (so unknown addresses get a real 404 and a
     // trailing slash redirects); the static files are served straight from the edge.
-    "run_worker_first": ["/*", "!/assets/*", "!/brand/*", "!/fonts/*", "!/img/*", "!/favicon.ico"]
+    "run_worker_first": ["/*", "!/assets/*", "!/brand/*", "!/fonts/*", "!/img/*", "!/vendor/*", "!/favicon.ico"]
   },
   "workers_dev": false,
   "routes": [

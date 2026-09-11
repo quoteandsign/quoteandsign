@@ -1,0 +1,1 @@
+ALTER TABLE `proposals` ADD `cover_art` integer DEFAULT true NOT NULL;

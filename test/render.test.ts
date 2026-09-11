@@ -30,7 +30,10 @@ describe("new blocks", () => {
       { type: "featureGrid", props: { cols: "2", items: JSON.stringify([{ title: "T<1>", text: "x" }, { title: "T2", text: "y" }]) } } as Block,
       { type: "testimonial", props: { quote: "Great", name: "Sam \"S\"", role: "CEO", photo: "" } } as Block,
     ]);
-    expect(html).toContain('<p class="statement">Big &lt;b&gt;idea&lt;/b&gt;</p>');
+    // Statements reveal word by word; the unsplit text stays for assistive technology.
+    expect(html).toContain('<p class="statement"><span class="sr">Big &lt;b&gt;idea&lt;/b&gt;</span>');
+    expect(html).toContain('<span class="w">Big</span>');
+    expect(html).not.toContain("style=");
     expect(html).toContain('class="grid cols-2"');
     expect(html).toContain("T&lt;1&gt;");
     expect(html).toContain("Sam &quot;S&quot;");

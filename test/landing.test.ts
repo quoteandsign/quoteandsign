@@ -50,7 +50,7 @@ describe("what crawlers are told", () => {
     const sitemap = await app.request("http://localhost:5173/sitemap.xml", {}, env);
     expect(sitemap.headers.get("content-type")).toContain("application/xml");
     const x = await sitemap.text();
-    expect((x.match(/<url>/g) ?? []).length).toBe(16);
+    expect((x.match(/<url>/g) ?? []).length).toBe(17);
     expect(x).not.toContain("/login");
     const idx = await (await app.request("http://localhost:5173/compare", {}, env)).text();
     for (const s of ["qwilr", "pandadoc", "proposify"]) expect(idx).toContain(`/compare/${s}`);
@@ -137,5 +137,11 @@ describe("search metadata on the shared pages", () => {
     const slash = await app.request("http://localhost:5173/templates/?x=1", {}, env);
     expect(slash.status).toBe(301);
     expect(slash.headers.get("location")).toBe("/templates?x=1");
+    // A double leading slash must not become a protocol-relative redirect to another host.
+    const evil = await app.request("http://localhost:5173//evil.example/", {}, env);
+    expect(evil.status).toBe(301);
+    expect(evil.headers.get("location")).toBe("/evil.example");
+    const root = await app.request("http://localhost:5173//", {}, env);
+    expect(root.headers.get("location")).toBe("/");
   });
 });

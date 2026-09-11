@@ -1,13 +1,14 @@
 /** A tiny picture of a page style: the cover treatment plus two lines of "text". */
 export function StyleSwatch({ id, accent, className = "h-10 w-14" }: { id: string; accent: string; className?: string }) {
   const cover =
-    id === "bold" ? accent
+    id === "studio" ? `radial-gradient(60% 80% at 20% 30%, color-mix(in srgb, ${accent} 45%, transparent), transparent 70%), radial-gradient(50% 70% at 90% 10%, color-mix(in srgb, ${accent} 25%, #fff), transparent 70%), #fafafa`
+    : id === "bold" ? accent
     : id === "night" ? `radial-gradient(100% 100% at 100% 0%, ${accent}, #0e0e11 70%)`
     : id === "warm" ? "#f7f1e6"
     : id === "editorial" || id === "minimal" ? "#ffffff"
     : `linear-gradient(135deg, color-mix(in srgb, ${accent} 78%, #000), ${accent})`;
   const lightText = id === "night" || id === "bold" || id === "classic";
-  const ground = id === "night" ? "#0e0e11" : id === "warm" ? "#f7f1e6" : "#fff";
+  const ground = id === "night" ? "#0e0e11" : id === "warm" ? "#f7f1e6" : id === "studio" ? "#fafafa" : "#fff";
   const line = id === "night" ? "#3a3a40" : "#d6d3d1";
   return (
     <span className={"grid flex-none overflow-hidden rounded-md ring-1 ring-inset ring-stone-900/10 dark:ring-white/10 " + className} style={{ background: ground, gridTemplateRows: "1fr 1fr" }} aria-hidden="true">

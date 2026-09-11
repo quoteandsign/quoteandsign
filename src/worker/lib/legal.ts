@@ -33,7 +33,8 @@ p,li{max-width:68ch}ul{padding-left:1.2em}li{margin:.35em 0}
 .box{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin:20px 0}
 .muted{color:var(--muted)}
 footer{max-width:760px;margin:0 auto;padding:0 20px 48px;font-size:13.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:8px 20px}footer a{color:inherit;text-decoration:none;display:inline-block;padding:8px 0}footer a:hover{color:var(--fg)}
-@media(max-width:600px){.top nav a{margin-left:12px}}
+.top .brand{white-space:nowrap}.top nav{display:flex;align-items:center;white-space:nowrap}
+@media(max-width:640px){.top{padding:16px 16px}.top .brand{font-size:16px}.top nav a{margin-left:12px;padding:8px 0}.top nav a.sm-hide{display:none}.top nav a.cta{padding:8px 13px}}
 `;
 
 /** The public address of the service; canonical and share links always point here. */
@@ -89,7 +90,7 @@ ${meta.noindex ? `<meta name="robots" content="noindex">` : ""}${share}
 ${extraHead}
 </head>
 <body>
-<div class="top"><a class="brand" href="/"><i></i><span>Quote <span class="and">and</span> Sign</span></a><nav><a href="/templates">Templates</a><a href="/#plans">Pricing</a><a href="/compare">Compare</a><a href="/login">Sign in</a><a class="cta" href="/login">Start free</a></nav></div>
+<div class="top"><a class="brand" href="/"><i></i><span>Quote <span class="and">and</span> Sign</span></a><nav><a href="/templates">Templates</a><a class="sm-hide" href="/#plans">Pricing</a><a class="sm-hide" href="/compare">Compare</a><a href="/login">Sign in</a><a class="cta" href="/login">Start free</a></nav></div>
 <main>
 ${body}
 </main>
