@@ -48,7 +48,7 @@ nav.main .links a.cta{background:var(--fg);color:var(--bg);padding:10px 18px;bor
 
 .stage{position:relative;display:grid;place-items:center;perspective:1600px;padding:16px 0}
 .stage .halo{position:absolute;inset:auto;width:520px;height:520px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--accent) 14%,transparent),transparent 62%);filter:blur(10px);z-index:0}
-.phone{position:relative;z-index:1;width:min(392px,100%);background:#141311;border-radius:46px;padding:12px;box-shadow:0 2px 3px rgba(25,24,22,.12),0 60px 100px -40px rgba(25,24,22,.55),inset 0 0 0 1px rgba(255,255,255,.08);transform:rotateY(-10deg) rotateX(5deg);transform-style:preserve-3d;transition:transform .9s cubic-bezier(.32,.72,0,1)}
+.phone{position:relative;z-index:1;width:min(392px,100%);background:#141311;border-radius:46px;padding:12px;box-shadow:0 2px 3px rgba(25,24,22,.12),0 60px 100px -40px rgba(25,24,22,.55),inset 0 0 0 1px rgba(255,255,255,.08);transform:none;transform-style:preserve-3d;transition:transform .9s cubic-bezier(.32,.72,0,1)}
 .phone.flat{transform:none}
 .screen{background:var(--card);border-radius:36px;overflow:hidden;height:min(720px,72svh);min-height:560px;display:flex;flex-direction:column}
 .statusbar{display:flex;justify-content:space-between;align-items:center;padding:14px 26px 6px;font-size:13px;font-weight:600;color:var(--fg)}
@@ -241,9 +241,17 @@ nav.main .links a.cta:hover{background:#000}
 .hero{position:relative;min-height:min(calc(100svh - 20px),940px);padding:118px 0 72px;isolation:isolate;overflow-x:clip;margin:0 calc(50% - 50vw);padding-inline:calc(50vw - 50%)}
 .hero .mesh{position:absolute;top:-30%;bottom:-10%;left:-10%;right:-10%;z-index:-1;pointer-events:none;background:radial-gradient(38% 42% at 18% 22%,color-mix(in srgb,var(--accent) 22%,transparent),transparent 70%),radial-gradient(30% 34% at 86% 14%,rgba(190,170,255,.42),transparent 70%),radial-gradient(34% 36% at 74% 78%,rgba(255,214,170,.5),transparent 70%),radial-gradient(28% 30% at 22% 86%,rgba(170,220,232,.55),transparent 70%);filter:blur(34px);animation:qs-drift 26s ease-in-out infinite alternate;mask-image:linear-gradient(to bottom,#000 70%,transparent)}
 @keyframes qs-drift{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(2%,-2%,0) scale(1.05)}}
-.hero h1{font-size:clamp(46px,6.9vw,86px);letter-spacing:-.05em;max-width:11.5ch}
+.hero h1{font-size:clamp(40px,4.9vw,62px);letter-spacing:-.035em;line-height:1.04;font-weight:640;max-width:14ch}
+.hero .kicker{margin:0 0 18px;font-size:14px;font-weight:500;color:var(--muted)}
+.hero .specs{list-style:none;margin:28px 0 0;padding:22px 0 0;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;font-size:14.5px;color:var(--fg)}
+.hero .specs li{position:relative;padding-left:18px}
+.hero .specs li::before{content:"";position:absolute;left:0;top:.55em;width:7px;height:7px;border-radius:50%;background:var(--accent)}
+.hero .mesh{display:none}
+.stage .halo{display:none}
+.moment.m1,.moment.m3{display:none}
+.moment.m2{right:-22%;top:44%}
 .hero .lede{font-size:20px;max-width:42ch;margin:30px 0 38px}
-.ctas .primary{height:56px;padding:0 8px 0 26px;gap:12px;font-size:16.5px;box-shadow:0 12px 30px -14px color-mix(in srgb,var(--accent) 80%,transparent)}
+.ctas .primary{height:54px;padding:0 26px;font-size:16px;box-shadow:none}
 .ctas .primary i{display:inline-grid;place-items:center;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.16);font-style:normal;transition:transform .35s cubic-bezier(.32,.72,0,1),background-color .3s}
 .ctas .primary:hover i{transform:translateX(3px);background:rgba(255,255,255,.26)}
 .ctas .primary:hover{filter:brightness(1.05)}
@@ -251,7 +259,7 @@ nav.main .links a.cta:hover{background:#000}
 .stage{padding:24px 0 8px}
 @supports(animation-timeline:scroll()){.hero .stage{animation:qs-stage linear both;animation-timeline:scroll(root);animation-range:0 70vh}}
 @keyframes qs-stage{to{transform:translateY(-6%) scale(.96);opacity:.55}}
-.moment{position:absolute;z-index:3;max-width:230px;display:grid;gap:3px;padding:12px 14px 12px 16px;border-radius:16px;background:rgba(255,255,255,.86);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 1px 2px rgba(25,24,22,.05),0 24px 50px -24px rgba(25,24,22,.45);border:1px solid rgba(25,24,22,.07);font-size:13px;color:var(--muted);min-width:180px;pointer-events:none}
+.moment{position:absolute;z-index:3;max-width:230px;display:grid;gap:3px;padding:12px 14px 12px 16px;border-radius:14px;background:#fff;box-shadow:0 1px 2px rgba(25,24,22,.05),0 24px 50px -24px rgba(25,24,22,.45);border:1px solid rgba(25,24,22,.07);font-size:13px;color:var(--muted);min-width:180px;pointer-events:none}
 .moment b{display:flex;align-items:center;gap:8px;color:var(--fg);font-size:14px;letter-spacing:-.01em}
 .moment b i{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none}
 .moment.m1{left:-16%;top:5%;animation:qs-float 7s ease-in-out infinite}
@@ -383,7 +391,9 @@ html.gs .plan .price{font-variant-numeric:tabular-nums}
 .hero h1{font-size:clamp(40px,11.4vw,54px);max-width:none}
 .hero .lede{font-size:17px;line-height:1.5;margin:18px 0 24px;max-width:none}
 .ctas{flex-direction:column;align-items:stretch;gap:6px}
-.ctas .primary{display:flex;width:100%;justify-content:space-between}
+.ctas .primary{display:flex;width:100%;justify-content:center}
+.hero .specs{grid-template-columns:1fr;gap:8px;margin-top:22px;padding-top:18px}
+.hero .kicker{font-size:13px;margin-bottom:12px}
 .ctas .secondary{justify-content:center;border:0;height:44px}
 .hero .fine{font-size:13px;text-align:center;margin-top:6px}
 .stage{order:2;margin:0;padding:6px 0 0;overflow:visible}
@@ -502,7 +512,7 @@ intro.from(".hero h1",{y:44,autoAlpha:0,duration:1.1},0)
 .from(".hero .lede",{y:30,autoAlpha:0,duration:1},.14)
 .from(".hero .ctas",{y:26,autoAlpha:0,duration:.9},.26)
 .from(".hero .fine",{y:20,autoAlpha:0,duration:.9},.34)
-.from("#phone",{y:110,rotateY:-26,rotateX:9,autoAlpha:0,duration:1.6,ease:"power3.out"},.12)
+.from("#phone",{y:60,autoAlpha:0,duration:1.4,ease:"power3.out"},.12)
 .from(".cur",{autoAlpha:0,y:12,duration:.8},.95)
 .from(".moment",{y:26,scale:.94,autoAlpha:0,duration:.9,stagger:.26},1.0);
 gsap.to(".moment",{y:-7,duration:3.2,ease:"sine.inOut",yoyo:true,repeat:-1,stagger:{each:.7},delay:2.2});
@@ -620,13 +630,20 @@ export function renderLanding(o: { nonce: string; appUrl: string; githubUrl: str
 <section class="hero">
   <div class="mesh" aria-hidden="true"></div>
   <div>
-    <h1 class="rise">Proposals your clients accept <span class="u">on their phone.<svg viewBox="0 0 340 20" preserveAspectRatio="none" aria-hidden="true"><path d="M3 13 C 70 4, 130 17, 200 9 S 300 3, 337 11"/></svg></span></h1>
-    <p class="lede rise d1">Send a link instead of a PDF. Your client toggles the options, watches the total change, types their name, and taps Accept. You get the signed copy in your inbox.</p>
+    <p class="kicker rise">Proposal software for freelancers and agencies</p>
+    <h1 class="rise">Send a proposal as a link. Get it signed.</h1>
+    <p class="lede rise d1">Your client opens it anywhere, switches the options on or off, sees the total change, and signs with their name. The signed copy lands in both inboxes as a PDF. Nothing to print, nothing to chase.</p>
     <div class="ctas rise d2">
-      <a class="primary" href="/login">Start free <i aria-hidden="true">&rarr;</i></a>
+      <a class="primary" href="/login">Start free</a>
       <a class="secondary" href="#record">See what your client gets</a>
     </div>
     <p class="fine rise d3">Fourteen days of Pro, then free for three live proposals. No card needed. <a href="${esc(o.githubUrl)}" rel="noopener">Open source</a>.</p>
+    <ul class="specs rise d3" aria-label="What is included">
+      <li>Live pricing the client can change</li>
+      <li>Typed signature with a content hash</li>
+      <li>Signed PDF to both sides</li>
+      <li>Flat pricing, free plan</li>
+    </ul>
   </div>
 
   <div class="stage rise d1">
@@ -674,7 +691,7 @@ export function renderLanding(o: { nonce: string; appUrl: string; githubUrl: str
 
 <section class="band rise-kids" id="how">
   <h2 class="rv"><span class="sr">A proposal in minutes, not an afternoon.</span><span class="ws" aria-hidden="true"><span class="w">A</span> <span class="w">proposal</span> <span class="w">in</span> <span class="w">minutes,</span> <span class="w">not</span> <span class="w">an</span> <span class="w">afternoon.</span></span></h2>
-  <p class="sub">Pick a template, set your prices, press Send. No PDF, no printing, no chasing.</p>
+  <p class="sub">Pick a template, set your prices, press Send. Nothing to attach, nothing to print, nothing to chase.</p>
   <div class="how">
     <div class="frames" id="frames" aria-label="The app, step by step">
       <img src="/img/step-template.jpg" width="1440" height="900" alt="Choosing a template: Website project, Consulting project, Monthly retainer, Photography package, Software build" class="on" loading="lazy" decoding="async">

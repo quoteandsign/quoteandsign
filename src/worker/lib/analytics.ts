@@ -43,12 +43,12 @@ export function analyticsCsp(id: string | null): { script: string; connect: stri
 }
 
 export const CONSENT_CSS = `
-.consent{position:fixed;left:16px;right:16px;bottom:16px;z-index:60;max-width:560px;margin:0 auto;background:var(--card,#fff);color:var(--fg,#191816);border:1px solid var(--line,#e6e2da);border-radius:16px;padding:16px 18px;box-shadow:0 20px 60px -20px rgba(25,24,22,.35);font-size:14px;line-height:1.55}
-.consent p{margin:0 0 12px}.consent a{color:inherit}
-.consent .row{display:flex;gap:8px;flex-wrap:wrap}
-.consent button{font:inherit;font-weight:600;border-radius:999px;padding:9px 16px;border:1px solid var(--line,#e6e2da);background:transparent;color:inherit;cursor:pointer}
-.consent button.yes{background:var(--accent,#2b3f8c);color:#fff;border-color:transparent}
-.consent[hidden]{display:none}`;
+.cookie-choice{position:fixed;left:16px;right:16px;bottom:16px;z-index:60;max-width:560px;margin:0 auto;background:var(--card,#fff);color:var(--fg,#191816);border:1px solid var(--line,#e6e2da);border-radius:16px;padding:16px 18px;box-shadow:0 20px 60px -20px rgba(25,24,22,.35);font-size:14px;line-height:1.55}
+.cookie-choice p{margin:0 0 12px}.cookie-choice a{color:inherit}
+.cookie-choice .row{display:flex;gap:8px;flex-wrap:wrap}
+.cookie-choice button{font:inherit;font-weight:600;border-radius:999px;padding:9px 16px;border:1px solid var(--line,#e6e2da);background:transparent;color:inherit;cursor:pointer}
+.cookie-choice button.yes{background:var(--accent,#2b3f8c);color:#fff;border-color:transparent}
+.cookie-choice[hidden]{display:none}`;
 
 /**
  * The consent banner and the loader. Nothing from Google is fetched until "Allow" is clicked;
@@ -56,7 +56,7 @@ export const CONSENT_CSS = `
  */
 export function consentMarkup(nonce: string, id: string): string {
   return `
-<div class="consent" id="consent" hidden role="dialog" aria-label="Cookie choice">
+<div class="cookie-choice" id="consent" hidden role="dialog" aria-label="Cookie choice">
   <p><b>Analytics cookies?</b> We would like to use Google Analytics to see which pages help people and which do not. It sets cookies and sends page views to Google. Nothing is loaded unless you allow it. <a href="/privacy">Privacy policy</a>.</p>
   <div class="row"><button type="button" class="yes" id="consentYes">Allow</button><button type="button" id="consentNo">Decline</button></div>
 </div>

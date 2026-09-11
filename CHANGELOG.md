@@ -97,6 +97,14 @@ All notable changes to Quote and Sign. Dates are the day the change went live at
   the record card straight away (labels stacked, hash on one line) with two bullets, about one screen tall;
   no stray line between the dark section and pricing; the secondary hero link is underlined.
 
+### Homepage hero
+- The hero drops the patterns readers associate with machine-made pages: the oversized headline with a
+  coloured phrase and a drawn underline, the colour mesh behind everything, the frosted floating cards, the
+  icon-in-a-circle button and the tilted 3D phone. In their place: a plain kicker, a shorter headline that no
+  longer implies a phone is required ("Send a proposal as a link. Get it signed."), a specific lede, a plain
+  button, and a four-line list of what is included. The demo phone stays, square, with one card beside the
+  total showing the price change.
+
 ### Security
 - A path beginning with two slashes no longer produces a protocol-relative redirect (the trailing-slash
   redirect now collapses leading slashes), with a regression test.
