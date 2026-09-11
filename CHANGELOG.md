@@ -105,6 +105,16 @@ All notable changes to Quote and Sign. Dates are the day the change went live at
   button, and a four-line list of what is included. The demo phone stays, square, with one card beside the
   total showing the price change.
 
+### Speed and accessibility
+- The motion libraries load deferred and both page scripts wait for them, so nothing blocks the first paint.
+  Template previews in the gallery are fetched only when the gallery comes within a screen of view: the first
+  load of the homepage drops from 57 requests and 1.6 MB to 9 requests and about 750 KB. Images, brand files
+  and vendored scripts are cached for a month.
+- The record timeline steps are real buttons inside list items, the template strip is a labelled region, and
+  switched-off pricing lines keep readable contrast.
+- Phones: the included list under the hero is hidden and the demo phone is a little taller, ending just after
+  "Type your name to sign".
+
 ### Security
 - A path beginning with two slashes no longer produces a protocol-relative redirect (the trailing-slash
   redirect now collapses leading slashes), with a regression test.

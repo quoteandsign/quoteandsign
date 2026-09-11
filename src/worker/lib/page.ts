@@ -182,7 +182,7 @@ ${COLOUR_CSS}
 .line .name{font-weight:600}.line .desc{grid-column:1;font-size:14px;color:var(--muted)}
 .line .amt{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .line .unit{grid-column:2;font-size:13px;color:var(--muted);text-align:right;white-space:nowrap}
-.line.off .name,.line.off .amt,.line.off .desc{opacity:.45;text-decoration:line-through}
+.line.off .name,.line.off .amt,.line.off .desc{opacity:.62;text-decoration:line-through}
 .line.off .desc{text-decoration:none}
 .opt{display:flex;align-items:center;gap:10px}
 .switch{appearance:none;width:40px;height:24px;border-radius:12px;background:var(--line);position:relative;cursor:pointer;flex:none;transition:background .25s cubic-bezier(.32,.72,0,1);margin:0}

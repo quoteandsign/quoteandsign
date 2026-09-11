@@ -142,7 +142,7 @@ section.band .sub{color:var(--muted);font-size:18px;max-width:50ch;margin:0;line
 .play .flow li::after{width:100%}
 .play .flow li:nth-child(1)::after{transition-delay:.1s}.play .flow li:nth-child(2)::after{transition-delay:1.75s}.play .flow li:nth-child(3)::after{transition-delay:3.5s}.play .flow li:nth-child(4)::after{transition-delay:5.25s}.play .flow li:nth-child(5)::after{transition-delay:7.2s}
 .play .flow li:nth-child(2){transition-delay:1.75s}.play .flow li:nth-child(3){transition-delay:3.5s}.play .flow li:nth-child(4){transition-delay:5.25s}.play .flow li:nth-child(5){transition-delay:7.2s}
-.flow li{cursor:pointer;border-radius:8px;outline-offset:6px}.flow li:hover{color:#d8d3c9}
+.flow li button{display:block;width:100%;text-align:left;font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;border-radius:8px;outline-offset:6px}.flow li:hover{color:#d8d3c9}
 .manual .flow li,.manual .flow li::after,.manual .state,.manual .receipt{transition-delay:0s!important;animation:none!important}
 .manual .flow li{opacity:.62}.manual .flow li.on{opacity:1}.manual .flow li.on::after{width:100%}
 .manual .state{opacity:0;transform:translateY(18px) scale(.98);filter:blur(6px);transition:opacity .45s cubic-bezier(.32,.72,0,1),transform .5s cubic-bezier(.32,.72,0,1),filter .4s}
@@ -392,7 +392,7 @@ html.gs .plan .price{font-variant-numeric:tabular-nums}
 .hero .lede{font-size:17px;line-height:1.5;margin:18px 0 24px;max-width:none}
 .ctas{flex-direction:column;align-items:stretch;gap:6px}
 .ctas .primary{display:flex;width:100%;justify-content:center}
-.hero .specs{grid-template-columns:1fr;gap:8px;margin-top:22px;padding-top:18px}
+.hero .specs{display:none}
 .hero .kicker{font-size:13px;margin-bottom:12px}
 .ctas .secondary{justify-content:center;border:0;height:44px}
 .hero .fine{font-size:13px;text-align:center;margin-top:6px}
@@ -466,9 +466,9 @@ html.gs .tpls{border-top:1px solid var(--line)}
 /* third pass */
 .hero{padding-top:116px}
 .hero h1{margin-top:0}
-.screen{height:596px;aspect-ratio:auto;position:relative}
+.screen{height:676px;aspect-ratio:auto;position:relative}
 .scroll{overflow-y:auto;pointer-events:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding-bottom:36px}
-.screen::after{content:"";position:absolute;left:0;right:0;bottom:0;height:22px;pointer-events:none;background:linear-gradient(to bottom,transparent,var(--card));border-radius:0 0 26px 26px}
+.screen::after{content:"";position:absolute;left:0;right:0;bottom:0;height:18px;pointer-events:none;background:linear-gradient(to bottom,transparent,var(--card));border-radius:0 0 26px 26px}
 .tcard.mid iframe{animation:none;transform:scale(.25)}
 .flow{display:none}
 /* the record card itself, straight away: no cycling cards on a phone */
@@ -486,7 +486,7 @@ html.gs .tpls{border-top:1px solid var(--line)}
 
 /* The homepage choreography. Runs only when the vendor scripts loaded; the page is complete without it. */
 const MOTION_JS = String.raw`
-(function(){
+document.addEventListener("DOMContentLoaded",function(){
 if(!window.gsap||!window.ScrollTrigger)return;
 var root=document.documentElement;root.classList.add("gs");
 var reduce=matchMedia("(prefers-reduced-motion: reduce)").matches,desktop=matchMedia("(min-width:960px)").matches,fine=matchMedia("(hover:hover) and (pointer:fine)").matches;
@@ -559,7 +559,7 @@ q("[data-price]").forEach(function(el){var n=parseInt(el.textContent,10);if(!isF
 var path=document.querySelector(".close .signature path");
 if(path)gsap.fromTo(path,{strokeDashoffset:440},{strokeDashoffset:0,ease:"none",scrollTrigger:{trigger:".close",start:"top 70%",end:"center 45%",scrub:1}});
 addEventListener("load",function(){ScrollTrigger.refresh()});
-})();
+});
 `;
 
 export function renderLanding(o: { nonce: string; appUrl: string; githubUrl: string; analytics?: string | null }): string {
@@ -714,8 +714,8 @@ export function renderLanding(o: { nonce: string; appUrl: string; githubUrl: str
     <p class="sub"><span class="d2">Not a document you fill in. </span>A page your client scrolls, with your prices already live. <span class="d2">Pick one, change the words, send. </span><span class="d">Hover to read one.</span><span class="m">Swipe through them.</span></p>
     <a href="/templates">See all templates</a>
   </div>
-  <div class="strip" aria-label="Templates">
-    ${TEMPLATES.filter((t) => t.id !== "blank").map((t) => { const page = TEMPLATE_PAGES.find((p) => p.id === t.id); return `<a class="tcard" href="${page ? `/templates/${page.slug}` : "/templates"}"><span class="thumb"><iframe src="/t/${esc(t.id)}?thumb=1" title="${esc(t.name)} preview" tabindex="-1" loading="lazy"></iframe></span><b>${esc(t.name)}<em class="style">${esc(t.style)}</em></b><span>${esc(t.summary)}</span></a>`; }).join("")}
+  <div class="strip" role="region" aria-label="Templates">
+    ${TEMPLATES.filter((t) => t.id !== "blank").map((t) => { const page = TEMPLATE_PAGES.find((p) => p.id === t.id); return `<a class="tcard" href="${page ? `/templates/${page.slug}` : "/templates"}"><span class="thumb"><iframe data-src="/t/${esc(t.id)}?thumb=1" title="${esc(t.name)} preview" tabindex="-1" loading="lazy"></iframe></span><b>${esc(t.name)}<em class="style">${esc(t.style)}</em></b><span>${esc(t.summary)}</span></a>`; }).join("")}
   </div>
 </section>
 
@@ -724,11 +724,11 @@ export function renderLanding(o: { nonce: string; appUrl: string; githubUrl: str
     <h2 class="rv"><span class="sr">What you both get the moment they accept.</span><span class="ws" aria-hidden="true"><span class="w">What</span> <span class="w">you</span> <span class="w">both</span> <span class="w">get</span> <span class="w">the</span> <span class="w">moment</span> <span class="w">they</span> <span class="w">accept.</span></span></h2>
     <p class="sub">Not a screenshot of a signature. A record that proves what was agreed, when, and by whom.</p>
     <ol class="flow" aria-label="What happens after you send">
-      <li role="button" tabindex="0" data-state="1" aria-label="Show: opened"><b>Opened</b><time>Tue 10:02</time><br>You get an email.</li>
-      <li role="button" tabindex="0" data-state="2" aria-label="Show: options chosen"><b>Options chosen</b><time>Tue 10:05</time><br>Copywriting kept, extra pages set to 0.</li>
-      <li role="button" tabindex="0" data-state="3" aria-label="Show: accepted"><b>Accepted</b><time>Tue 10:07</time><br>Sophie at Bramble &amp; Co types her name and taps Accept.</li>
-      <li role="button" tabindex="0" data-state="4" aria-label="Show: copies sent"><b>Copies sent</b><time>Tue 10:07</time><br>Both inboxes, with the record below.</li>
-      <li role="button" tabindex="0" data-state="5" aria-label="Show: the record"><b>The record</b><time>Kept</time><br>Name, time, hash and the agreed total.</li>
+      <li><button type="button" data-state="1"><b>Opened</b><time>Tue 10:02</time><br>You get an email.</button></li>
+      <li><button type="button" data-state="2"><b>Options chosen</b><time>Tue 10:05</time><br>Copywriting kept, extra pages set to 0.</button></li>
+      <li><button type="button" data-state="3"><b>Accepted</b><time>Tue 10:07</time><br>Sophie at Bramble &amp; Co types her name and taps Accept.</button></li>
+      <li><button type="button" data-state="4"><b>Copies sent</b><time>Tue 10:07</time><br>Both inboxes, with the record below.</button></li>
+      <li><button type="button" data-state="5"><b>The record</b><time>Kept</time><br>Name, time, hash and the agreed total.</button></li>
     </ol>
     <div class="grid">
       <div class="stack" aria-hidden="true">
@@ -826,15 +826,15 @@ export function renderLanding(o: { nonce: string; appUrl: string; githubUrl: str
 </footer>
 </div>
 ${pricingScript(o.nonce, clientItems, DEMO_CURRENCY, true)}
-<script nonce="${o.nonce}" src="/vendor/gsap.min.js"></script>
-<script nonce="${o.nonce}" src="/vendor/ScrollTrigger.min.js"></script>
-<script nonce="${o.nonce}" src="/vendor/lenis.min.js"></script>
+<script nonce="${o.nonce}" src="/vendor/gsap.min.js" defer></script>
+<script nonce="${o.nonce}" src="/vendor/ScrollTrigger.min.js" defer></script>
+<script nonce="${o.nonce}" src="/vendor/lenis.min.js" defer></script>
 <script nonce="${o.nonce}">${MOTION_JS}</script>
 <script nonce="${o.nonce}">
 (function(){var bs=[].slice.call(document.querySelectorAll("[data-interval]"));if(!bs.length)return;bs.forEach(function(b){b.addEventListener("click",function(){var i=b.dataset.interval;bs.forEach(function(x){x.setAttribute("aria-checked",String(x===b))});document.querySelectorAll("[data-price]").forEach(function(p){p.dataset.counted="done";p.textContent=p.dataset[i]});document.querySelectorAll("[data-billed]").forEach(function(p){p.textContent=p.dataset[i]})})})})();
 </script>
 <script nonce="${o.nonce}">
-(function(){
+document.addEventListener("DOMContentLoaded",function(){
 var reduce=matchMedia("(prefers-reduced-motion: reduce)").matches,GS=document.documentElement.classList.contains("gs");
 requestAnimationFrame(function(){document.body.classList.add("ready")});
 var phone=document.getElementById("phone");if(!phone)return;
@@ -844,6 +844,8 @@ if(!reduce&&matchMedia("(hover:hover)").matches)stage.addEventListener("pointerm
 stage.addEventListener("pointerleave",function(){phone.style.transform=""});
 // One guided moment: switch an option off and back on so the total visibly changes.
 document.querySelectorAll(".cur button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll(".cur button").forEach(function(x){x.setAttribute("aria-pressed",String(x===b))});if(window.qsSetCurrency)window.qsSetCurrency(b.dataset.cur)})});
+// Template previews are fetched only when the gallery comes within a screen of the viewport.
+(function(){var frames=[].slice.call(document.querySelectorAll(".tcard iframe[data-src]")),sec=document.getElementById("templates");if(!frames.length||!sec)return;var go=function(){frames.forEach(function(fr){if(!fr.src)fr.src=fr.dataset.src})};if(!("IntersectionObserver" in window)){go();return}new IntersectionObserver(function(es,o){es.forEach(function(e){if(e.isIntersecting){go();o.disconnect()}})},{rootMargin:"900px 0px"}).observe(sec)})();
 // Each template thumbnail scrolls exactly to the end of its page on hover, at a speed that suits its length.
 document.querySelectorAll(".tcard iframe").forEach(function(fr){var fit=function(){try{var d=fr.contentDocument;if(!d||!d.documentElement)return;var own=fr.clientHeight,win=own/3,doc=0;[].forEach.call(d.body.children,function(el){if(el.tagName==="SCRIPT"||el.tagName==="STYLE"||el.hidden)return;var r=el.getBoundingClientRect();if(r.height>0)doc=Math.max(doc,r.bottom+d.defaultView.scrollY)});if(!doc)doc=d.documentElement.scrollHeight;var travel=Math.max(0,Math.min(own-win,(doc-win)*.9));fr.style.setProperty("--travel",(-travel)+"px");fr.style.setProperty("--dur",(1.2+3.6*travel/(own-win)).toFixed(2)+"s")}catch(e){}};fr.addEventListener("load",fit);if(fr.contentDocument&&fr.contentDocument.readyState==="complete")fit()});
 var stripEl=document.querySelector(".tpls .strip");
@@ -869,7 +871,7 @@ var rec=document.getElementById("record");
 if(rec&&!rec.dataset.scrub){new IntersectionObserver(function(es,o){es.forEach(function(e){if(e.isIntersecting){rec.classList.add("play");o.disconnect()}})},{threshold:.3}).observe(rec)}
 if(rec){var flowLis=[].slice.call(rec.querySelectorAll(".flow li")),stateEls=[].slice.call(rec.querySelectorAll(".state")),rcpt=rec.querySelector(".receipt");
 var showState=function(n){rec.classList.remove("play");rec.classList.add("manual");stateEls.forEach(function(st,i){st.classList.toggle("show",i===n-1)});if(rcpt)rcpt.classList.toggle("show",n===5);flowLis.forEach(function(li,i){li.classList.toggle("on",i<n)})};
-flowLis.forEach(function(li){li.addEventListener("click",function(){showState(Number(li.dataset.state))});li.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();showState(Number(li.dataset.state))}})})}
+flowLis.forEach(function(li){var btn=li.querySelector("button");if(btn)btn.addEventListener("click",function(){showState(Number(btn.dataset.state))})})}
 var sw=phone.querySelector('[data-item="d2"]'),nm=document.getElementById("demoName"),sc=phone.querySelector(".scroll"),touched=false;
 phone.addEventListener("pointerdown",function(){touched=true},{once:true});
 if(sw&&!reduce){setTimeout(function(){sw.checked=false;sw.dispatchEvent(new Event("change"))},1800);setTimeout(function(){sw.checked=true;sw.dispatchEvent(new Event("change"))},3200)}
@@ -878,7 +880,7 @@ if(nm&&sc&&!reduce&&matchMedia("(min-width:980px)").matches){
 nm.addEventListener("focus",function(){if(nm.dataset.auto){delete nm.dataset.auto;nm.value="";nm.dispatchEvent(new Event("input"))}});
 setTimeout(function(){if(touched||document.hidden||scrollY>innerHeight*.6||document.activeElement===nm)return;var acc=phone.querySelector(".accept");sc.scrollTo({top:Math.max(0,acc.offsetTop-24),behavior:"smooth"});
 setTimeout(function(){if(touched)return;var s="Sophie Bennett",k=0;nm.dataset.auto="1";var iv=setInterval(function(){if(touched||!nm.dataset.auto){clearInterval(iv);return}k++;nm.value=s.slice(0,k);nm.dispatchEvent(new Event("input"));if(k>=s.length)clearInterval(iv)},70)},900)},4600)}
-})();
+});
 </script>
 ${o.analytics ? consentMarkup(o.nonce, o.analytics) : ""}
 </body>
