@@ -15,6 +15,8 @@ All notable changes to Quote and Sign. Dates are the day the change went live at
   preview) that opens a sheet, instead of sitting below the whole document.
 
 ### Templates and pages
+- The public templates page has the same category chips and search box as the in-app picker; every card
+  stays in the page for search engines and is filtered in the browser.
 - A new Studio page style: a full-screen opening with a slow colour mesh from your accent, huge type, sections
   that rise into view as the reader scrolls, and a reading-progress line in the nav. Night gets the same
   treatment in the dark.

@@ -76,7 +76,16 @@ const CSS = `
 .tpl-cta{display:inline-block;background:var(--accent);color:#fff;text-decoration:none;font-weight:600;border-radius:999px;padding:12px 22px;margin:8px 0 0}
 .tpl-cta.alt{background:transparent;color:var(--accent);border:1px solid var(--line)}
 main,.top,footer{max-width:1040px}
-.tpl-grid{display:grid;gap:22px;grid-template-columns:repeat(3,1fr);margin:28px 0 8px}
+.tpl-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin:26px 0 0}
+.tpl-chips{display:flex;flex-wrap:wrap;gap:8px}
+.tpl-chips button{height:32px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:#fff;color:inherit;font:inherit;font-size:13px;font-weight:500;cursor:pointer}
+.tpl-chips button[aria-pressed=true]{background:#1c1917;color:#fff;border-color:#1c1917}
+.tpl-search{position:relative;display:block;flex:1 1 220px;max-width:280px}
+.tpl-search input{width:100%;height:36px;box-sizing:border-box;border-radius:999px;border:1px solid var(--line);padding:0 14px;font:inherit;font-size:14px;background:#fff}
+.tpl-search input:focus{outline:2px solid var(--accent);outline-offset:1px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.tpl-card[hidden]{display:none}
+.tpl-grid{display:grid;gap:22px;grid-template-columns:repeat(3,1fr);margin:20px 0 8px}
 @media(max-width:860px){.tpl-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:540px){.tpl-grid{grid-template-columns:1fr}}
 .tpl-card{position:relative;display:flex;flex-direction:column;background:#efece5;border-radius:22px;padding:8px;box-shadow:inset 0 0 0 1px rgba(25,24,22,.06);transition:transform .45s cubic-bezier(.32,.72,0,1),box-shadow .45s cubic-bezier(.32,.72,0,1)}
@@ -106,13 +115,22 @@ main,.top,footer{max-width:1040px}
 export function renderTemplatesIndex(nonce: string, analytics: string | null = null): string {
   const cards = TEMPLATE_PAGES.map((p) => {
     const t = templateOf(p);
-    return `<article class="tpl-card"><a class="tpl-thumb" href="/templates/${p.slug}" tabindex="-1" aria-label="${esc(p.keyword)} preview"><iframe src="/t/${esc(t.id)}?thumb=1" title="${esc(p.keyword)} thumbnail" tabindex="-1" loading="lazy"></iframe></a><div class="tpl-body"><p class="tpl-eyebrow">For ${esc(p.audience)}</p><h2><a href="/templates/${p.slug}">${esc(p.keyword)}</a></h2><p>${esc(t.summary)}</p><span class="tpl-more">See the template <i aria-hidden="true">›</i></span></div></article>`;
+    const cat = t.group === "trade" ? (t.trade ?? "Other") : "Starting points";
+    return `<article class="tpl-card" data-cat="${esc(cat)}" data-text="${esc(`${p.keyword} ${t.summary} ${p.audience} ${cat}`.toLowerCase())}"><a class="tpl-thumb" href="/templates/${p.slug}" tabindex="-1" aria-label="${esc(p.keyword)} preview"><iframe src="/t/${esc(t.id)}?thumb=1" title="${esc(p.keyword)} thumbnail" tabindex="-1" loading="lazy"></iframe></a><div class="tpl-body"><p class="tpl-eyebrow">For ${esc(p.audience)}</p><h2><a href="/templates/${p.slug}">${esc(p.keyword)}</a></h2><p>${esc(t.summary)}</p><span class="tpl-more">See the template <i aria-hidden="true">›</i></span></div></article>`;
   }).join("\n") + `
-<article class="tpl-card tpl-soon"><p class="tpl-eyebrow">More on the way</p><h2>Yours might be next</h2><p>Event planning, catering, personal training and more are being written. Tell us which one you need and it moves to the front.</p><a href="/contact?kind=question">Ask for a template</a></article>`;
+<article class="tpl-card tpl-soon" data-cat="*"><p class="tpl-eyebrow">More on the way</p><h2>Yours might be next</h2><p>Event planning, catering, personal training and more are being written. Tell us which one you need and it moves to the front.</p><a href="/contact?kind=question">Ask for a template</a></article>`;
+  const cats = ["Starting points", "Everything", ...new Set(TEMPLATE_PAGES.map((p) => templateOf(p)).filter((t) => t.group === "trade").map((t) => t.trade ?? "Other"))];
+  const chips = cats.map((c, i) => `<button type="button" aria-pressed="${i === 0}">${esc(c)}</button>`).join("");
   const body = `
 <h1>Proposal templates</h1>
 <p class="eff">${TEMPLATE_PAGES.length} starting points, each a real proposal your client can read, adjust and accept on their phone. Pick one, put your own prices in, and send a link.</p>
+<div class="tpl-bar">
+<div class="tpl-chips" role="group" aria-label="Show">${chips}</div>
+<label class="tpl-search"><span class="sr">Search templates</span><input type="search" placeholder="Search all ${TEMPLATE_PAGES.length}" autocomplete="off"></label>
+</div>
+<p class="tpl-none muted" hidden>Nothing matches. Try a broader word, or start from the closest starting point and change the words.</p>
 <div class="tpl-grid">${cards}</div>
+<script nonce="${nonce}">(function(){var chips=document.querySelectorAll(".tpl-chips button"),input=document.querySelector(".tpl-search input"),cards=document.querySelectorAll(".tpl-grid .tpl-card"),none=document.querySelector(".tpl-none"),cat="Starting points";function apply(){var q=input.value.trim().toLowerCase().split(/\s+/).filter(Boolean),n=0;cards.forEach(function(c){var k=c.getAttribute("data-cat"),t=c.getAttribute("data-text")||"",show;if(q.length)show=k!=="*"&&q.every(function(w){return t.indexOf(w)>=0});else show=k==="*"||cat==="Everything"||k===cat;c.hidden=!show;if(show&&k!=="*")n++});none.hidden=n>0;chips.forEach(function(b){b.setAttribute("aria-pressed",String(!q.length&&b.textContent===cat))})}chips.forEach(function(b){b.addEventListener("click",function(){cat=b.textContent;input.value="";apply()})});input.addEventListener("input",apply);apply()})();</script>
 <h2>How a template becomes a proposal</h2>
 <ol>
 <li>Sign in with your email. No password, no card, fourteen days of Pro included.</li>

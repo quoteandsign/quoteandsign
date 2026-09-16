@@ -96,6 +96,8 @@ describe("template landing pages", () => {
     expect(index.status).toBe(200);
     const ih = await index.text();
     for (const s of ["consulting-proposal-template", "website-proposal-template", "retainer-proposal-template", "photography-proposal-template", "software-development-proposal-template"]) expect(ih).toContain(`/templates/${s}`);
+    for (const c of ["Starting points", "Everything", "Home and trades"]) expect(ih).toContain(`>${c}</button>`);
+    expect(ih).toContain('data-cat="Home and trades"');
     const page = await app.request("http://localhost:5173/templates/consulting-proposal-template", {}, env);
     expect(page.status).toBe(200);
     expect(page.headers.get("content-security-policy")).toContain("frame-src 'self'");
