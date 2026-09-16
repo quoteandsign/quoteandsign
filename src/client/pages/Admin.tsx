@@ -94,6 +94,27 @@ export function Admin() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [takedown, setTakedown] = useState("");
+  const [note, setNote] = useState<string | null>(null);
+  const disable = async (p: Person) => {
+    if (!window.confirm(`Disable ${p.email}? Their sessions end, every live proposal page goes offline, and the address cannot sign up again.`)) return;
+    try {
+      await api(`/api/admin/people/${p.id}/disable`, { method: "POST", json: {} });
+      setPeople((list) => (list ?? []).filter((x) => x.id !== p.id));
+      setNote(`${p.email} disabled.`);
+    } catch (e) {
+      setNote((e as Error).message || "Could not disable that account.");
+    }
+  };
+  const takeDown = async () => {
+    try {
+      await api("/api/admin/takedown", { method: "POST", json: { link: takedown } });
+      setNote("That proposal page is offline.");
+      setTakedown("");
+    } catch (e) {
+      setNote((e as Error).message || "Could not take that page down.");
+    }
+  };
 
   const loadTickets = () => api<{ tickets: Ticket[] }>(`/api/admin/tickets?status=${ticketStatus}`).then((r) => setTickets(r.tickets), (e) => setError((e as Error).message));
   useEffect(() => {
@@ -262,9 +283,14 @@ export function Admin() {
               <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by email or business" aria-label="Search people" className="h-10 w-full max-w-xs rounded-full bg-stone-900/[.05] px-4 text-[14px] outline-none placeholder:text-stone-400 focus:bg-white focus:shadow-[0_0_0_2px_rgba(43,63,140,.25)] dark:bg-white/[.07] dark:focus:bg-stone-900" />
               <a href="/api/admin/subscribers.csv" className="inline-flex h-9 items-center gap-1.5 rounded-full bg-stone-900/[.05] px-3.5 text-[13px] font-medium hover:bg-stone-900/[.08] dark:bg-white/[.08]"><DownloadSimple size={15} weight="light" /> Subscribers CSV</a>
             </div>
+            <form className="mt-3 flex flex-wrap items-center gap-2" onSubmit={(e) => { e.preventDefault(); void takeDown(); }}>
+              <input type="url" value={takedown} onChange={(e) => setTakedown(e.target.value)} placeholder="Take a page down: paste the proposal link" aria-label="Proposal link to take down" className="h-9 w-full max-w-md rounded-full bg-stone-900/[.05] px-4 text-[13px] outline-none placeholder:text-stone-400 focus:bg-white focus:shadow-[0_0_0_2px_rgba(43,63,140,.25)] dark:bg-white/[.07] dark:focus:bg-stone-900" />
+              <button type="submit" disabled={!takedown.trim()} className="h-9 rounded-full bg-stone-900 px-4 text-[13px] font-medium text-white disabled:opacity-40 dark:bg-white dark:text-stone-900">Take down</button>
+              {note && <span className="text-[13px] text-stone-500" role="status">{note}</span>}
+            </form>
             <div className="mt-4 overflow-x-auto rounded-[1.25rem] bg-white ring-1 ring-inset ring-stone-900/[.035] dark:bg-stone-900 dark:ring-white/[.08]">
               <table className="w-full text-[13.5px]">
-                <thead className="text-left text-[12px] text-stone-500"><tr><th className="px-4 py-3 font-medium">Account</th><th className="px-3 py-3 font-medium">Plan</th><th className="px-3 py-3 font-medium">Proposals</th><th className="px-3 py-3 font-medium">Signed</th><th className="px-3 py-3 font-medium">Emails</th><th className="px-3 py-3 font-medium">Onboarding</th><th className="px-3 py-3 font-medium">Joined</th><th className="px-3 py-3 font-medium">Last seen</th></tr></thead>
+                <thead className="text-left text-[12px] text-stone-500"><tr><th className="px-4 py-3 font-medium">Account</th><th className="px-3 py-3 font-medium">Plan</th><th className="px-3 py-3 font-medium">Proposals</th><th className="px-3 py-3 font-medium">Signed</th><th className="px-3 py-3 font-medium">Emails</th><th className="px-3 py-3 font-medium">Onboarding</th><th className="px-3 py-3 font-medium">Joined</th><th className="px-3 py-3 font-medium">Last seen</th><th className="px-3 py-3 font-medium"><span className="sr-only">Actions</span></th></tr></thead>
                 <tbody className="divide-y divide-hairline dark:divide-white/[.08]">
                   {shownPeople.map((p) => (
                     <tr key={p.id}>
@@ -276,6 +302,7 @@ export function Admin() {
                       <td className="px-3 py-2.5 whitespace-nowrap text-[13px]" title="Welcome on sign-up, then one nudge after three days without a sent proposal">{onboardingLabel(p)}</td>
                       <td className="px-3 py-2.5 tabular-nums">{fmtDay(p.createdAt)}</td>
                       <td className="px-3 py-2.5 tabular-nums">{p.lastSeen ? ago(p.lastSeen) : "Never"}</td>
+                      <td className="px-3 py-2.5"><button type="button" onClick={() => void disable(p)} className="rounded-full px-2.5 py-1 text-[12.5px] font-medium text-red-700 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-500/10">Disable</button></td>
                     </tr>
                   ))}
                 </tbody>

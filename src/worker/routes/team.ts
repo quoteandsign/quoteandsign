@@ -8,6 +8,7 @@ import { uuid } from "../lib/crypto";
 import { requireAuth, requireOwner } from "../lib/session";
 import { sendEmail } from "../lib/email";
 import { audit } from "../lib/audit";
+import { rateLimit } from "../lib/ratelimit";
 import { effectivePlan, PLANS } from "../lib/plan";
 import { businessName } from "../../shared/names";
 
@@ -41,6 +42,8 @@ teamRoutes.post("/invite", requireOwner, async (c) => {
   const existing = await db.select().from(schema.teamMembers).where(eq(schema.teamMembers.ownerId, owner.id)).all();
   if (existing.some((m) => m.email === email)) return c.json({ error: "Already invited." }, 409);
   if (existing.length >= seats) return c.json({ error: `Business includes up to ${seats} team members.` }, 409);
+  // Invite, remove, invite again would otherwise be an unlimited branded mailer.
+  if (!(await rateLimit(db, `invite:u:${owner.id}`, 20, 24 * 60 * 60_000)).allowed) return c.json({ error: "Invitation limit reached for today." }, 429);
   const id = uuid();
   await db.insert(schema.teamMembers).values({ id, ownerId: owner.id, email, invitedAt: new Date() });
   const brand = businessName(owner.brandName, owner.name, owner.email);

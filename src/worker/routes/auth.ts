@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { eq, and, isNull, gt, desc } from "drizzle-orm";
+import { eq, and, isNull, gt, or, asc } from "drizzle-orm";
 import { getCookie, setCookie } from "hono/cookie";
 import type { AppEnv } from "../env";
 import { clientIp, appUrl } from "../env";
@@ -21,6 +21,19 @@ import { businessName } from "../../shared/names";
 const LOGIN_COOKIE = "op_login";
 const esc = (s: string) => s.replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]!);
 const TOKEN_MINUTES = 15;
+
+/** The inbox behind an address: +tags dropped everywhere, dots dropped for Gmail, so one person gets one trial. */
+export function trialIdentity(email: string): string {
+  const at = email.lastIndexOf("@");
+  if (at < 0) return email.toLowerCase();
+  let local = email.slice(0, at).toLowerCase();
+  let domain = email.slice(at + 1).toLowerCase();
+  const plus = local.indexOf("+");
+  if (plus > 0) local = local.slice(0, plus);
+  if (domain === "googlemail.com") domain = "gmail.com";
+  if (domain === "gmail.com") local = local.split(".").join("");
+  return local + "@" + domain;
+}
 
 export const authRoutes = new Hono<AppEnv>();
 
@@ -137,9 +150,16 @@ authRoutes.post("/verify", async (c) => {
   let user = await db.select().from(schema.users).where(eq(schema.users.email, token.email)).get();
   if (!user) {
     const id = uuid();
-    // An address that deleted an account before keeps whatever trial it had left; deleting is not a reset.
-    const before = await db.select({ trialEndsAt: schema.users.trialEndsAt }).from(schema.users).where(eq(schema.users.deletedEmailHash, await hmacHex(c.env.SESSION_SECRET, token.email))).orderBy(desc(schema.users.deletedAt)).get();
-    await db.insert(schema.users).values({ id, email: token.email, createdAt: now, plan: "free", trialEndsAt: before ? before.trialEndsAt : trialEnd(now) });
+    // One trial per person: an address that deleted an account before keeps whatever trial it had
+    // left, and me+2@gmail.com or m.e@gmail.com is the same inbox as me@gmail.com.
+    const key = await hmacHex(c.env.SESSION_SECRET, "trial:" + trialIdentity(token.email));
+    const before = await db
+      .select({ trialEndsAt: schema.users.trialEndsAt })
+      .from(schema.users)
+      .where(or(eq(schema.users.deletedEmailHash, await hmacHex(c.env.SESSION_SECRET, token.email)), eq(schema.users.trialKey, key)))
+      .orderBy(asc(schema.users.trialEndsAt))
+      .get();
+    await db.insert(schema.users).values({ id, email: token.email, createdAt: now, plan: "free", trialKey: key, trialEndsAt: before ? before.trialEndsAt : trialEnd(now) });
     user = (await db.select().from(schema.users).where(eq(schema.users.id, id)).get())!;
     await audit(db, { userId: id, event: "user.created" });
     await sendWelcome(c.env, user);
@@ -226,7 +246,7 @@ authRoutes.put("/me", async (c) => {
   const caps = capsOf(user);
   const plan = (msg: string) => c.json({ error: msg, code: "plan" }, 402);
   if (!caps.brand && ((d.brandColor && d.brandColor !== user.brandColor) || (d.defaultStyle && d.defaultStyle !== user.defaultStyle))) return plan("Your brand color and page styles are part of Pro.");
-  if (!caps.payment && d.paymentUrl && d.paymentUrl !== user.paymentUrl) return plan("A payment link after signing is part of Pro.");
+  if (effectivePlan(user).paid === "free" && d.paymentUrl && d.paymentUrl !== user.paymentUrl) return plan("A payment link after signing is part of Pro, once the trial is paid for.");
   if (!caps.footerOff && d.hideMadeWith) return plan("Hiding the footer is part of Pro.");
   const set: Partial<typeof schema.users.$inferInsert> = {};
   if (d.hideMadeWith !== undefined) set.hideMadeWith = d.hideMadeWith;

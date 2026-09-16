@@ -4,6 +4,19 @@ All notable changes to Quote and Sign. Dates are the day the change went live at
 
 ## 1.1.0 — unreleased
 
+### Security and abuse
+- Payment links after signing are for paid plans only. A trial could otherwise put any link behind a
+  branded "Pay the deposit" button in the signed-copy email, sent from our domain.
+- Admin can disable an account (sessions end, every live page goes offline, the address cannot sign up
+  again) and take a proposal page down by its link, from the People tab.
+- One trial per inbox: plus-tags and Gmail dots no longer start a fresh fourteen days.
+- Team invitations are limited to twenty a day, and the daily sending allowance counts addresses, not sends.
+- The app itself now carries a script policy like every other page: only our own bundle, the analytics tag
+  and the sign-in check may run.
+- Pricing can no longer be rewritten in the instant between a client accepting and the save landing;
+  colours and page styles are gated on create as on edit; delivery errors are logged without addresses;
+  every proposal page has a Report link in the footer.
+
 ### Editor
 - The six-dot handle on a block now only drags. Clicking it used to open the colour and font menu, and dragging
   could leave the page stuck; the pencil next to it is the one that opens the block options.

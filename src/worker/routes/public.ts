@@ -354,11 +354,9 @@ publicRoutes.post("/:publicId/accept", async (c) => {
   }
   const senderBrand = proposal.senderName || businessName(owner.brandName, owner.name) || null;
   const senderAccent = proposal.accentColor ?? owner.brandColor;
-  // A trial account could otherwise send a branded "Pay the deposit" button to any address it
-  // typed as the signer. Paid accounts, or signers the sender addressed the proposal to, get it.
-  const addressed = [proposal.clientEmail, ...(proposal.ccEmails ?? [])].filter(Boolean).map((e) => String(e).toLowerCase());
-  const trustedSigner = effectivePlan(owner).paid !== "free" || addressed.includes(d.signerEmail.toLowerCase());
-  const payUrl = trustedSigner && capsOf(owner).payment ? proposal.paymentUrl || owner.paymentUrl : null;
+  // A trial account could otherwise send a branded "Pay the deposit" button to any address from
+  // our sending domain (it controls clientEmail too). Only accounts that have paid get the button.
+  const payUrl = effectivePlan(owner).paid !== "free" ? proposal.paymentUrl || owner.paymentUrl : null;
   await sendEmail(c.env, {
     to: await internalRecipients(db, owner, proposal),
     subject: `Accepted: ${oneLine(proposal.title)} (${total})`,

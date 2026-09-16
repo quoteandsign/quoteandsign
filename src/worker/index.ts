@@ -251,6 +251,20 @@ app.route("/p", publicRoutes);
 // answers every unknown path with the app shell and a 200, which search engines would index as
 // thin duplicate pages; so outside the app's own routes an unknown address gets a real 404.
 const SPA_PREFIXES = ["/app", "/login", "/admin"];
+const APP_SHELL_CSP = [
+  "default-src 'self'",
+  "script-src 'self' https://www.googletagmanager.com https://challenges.cloudflare.com",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self'",
+  "connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com",
+  "frame-src 'self' https://challenges.cloudflare.com https://www.youtube-nocookie.com https://player.vimeo.com https://www.loom.com",
+  "worker-src 'self' blob:",
+  "object-src 'none'",
+  "base-uri 'none'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+].join("; ");
 app.notFound(async (c) => {
   const url = new URL(c.req.url);
   const path = url.pathname;
@@ -265,7 +279,15 @@ app.notFound(async (c) => {
   const res = await c.env.ASSETS.fetch(c.req.raw);
   const isApp = SPA_PREFIXES.some((p) => path === p || path.startsWith(p + "/"));
   const looksLikeFile = /\.[a-z0-9]{1,8}$/i.test(path);
-  if (isApp || looksLikeFile || !(res.headers.get("content-type") ?? "").includes("text/html")) return res;
+  const html = (res.headers.get("content-type") ?? "").includes("text/html");
+  if (isApp && html) {
+    // The app shell gets a script policy like every other page: only our own bundle, the analytics
+    // tag and the Turnstile widget may run. Styles stay open because the editor sets them inline.
+    const out = new Response(res.body, res);
+    out.headers.set("Content-Security-Policy", APP_SHELL_CSP);
+    return out;
+  }
+  if (isApp || looksLikeFile || !html) return res;
   return notFound();
 });
 

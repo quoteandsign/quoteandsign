@@ -10,21 +10,22 @@ export async function rateLimit(
   key: string,
   limit: number,
   windowMs: number,
+  by = 1,
 ): Promise<{ allowed: boolean; remaining: number }> {
   const now = Date.now();
   // One statement: start a new window if the old one expired, otherwise increment. No read-then-write race.
   const row = await db
     .insert(schema.rateLimits)
-    .values({ key, count: 1, windowStart: new Date(now) })
+    .values({ key, count: by, windowStart: new Date(now) })
     .onConflictDoUpdate({
       target: schema.rateLimits.key,
       set: {
-        count: sql`case when ${schema.rateLimits.windowStart} + ${windowMs} <= ${now} then 1 else ${schema.rateLimits.count} + 1 end`,
+        count: sql`case when ${schema.rateLimits.windowStart} + ${windowMs} <= ${now} then ${by} else ${schema.rateLimits.count} + ${by} end`,
         windowStart: sql`case when ${schema.rateLimits.windowStart} + ${windowMs} <= ${now} then ${now} else ${schema.rateLimits.windowStart} end`,
       },
     })
     .returning({ count: schema.rateLimits.count })
     .get();
-  const count = row?.count ?? 1;
+  const count = row?.count ?? by;
   return { allowed: count <= limit, remaining: Math.max(0, limit - count) };
 }

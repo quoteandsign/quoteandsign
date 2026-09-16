@@ -91,7 +91,9 @@ export async function sendEmail(env: Bindings, mail: Mail): Promise<void> {
     }),
   });
   if (!res.ok) {
-    console.error("resend error", res.status, await res.text().catch(() => ""));
+    // Resend echoes the offending field in its error body, which can include an address; keep the message only.
+    const body = (await res.json().catch(() => null)) as { message?: string } | null;
+    console.error("resend error", res.status, String(body?.message ?? "").slice(0, 120));
   }
 }
 

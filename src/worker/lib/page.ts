@@ -766,7 +766,7 @@ ${tail}
 ${formClose}
 </article>
 ${ask}
-<footer class="made">${p.madeWith === false ? "" : `Made with <a href="${esc(p.appUrl)}" rel="noopener">Quote and Sign</a> · `}<a href="${esc(p.appUrl)}/privacy" rel="noopener">Privacy</a></footer>
+<footer class="made">${p.madeWith === false ? "" : `Made with <a href="${esc(p.appUrl)}" rel="noopener">Quote and Sign</a> · `}<a href="${esc(p.appUrl)}/privacy" rel="noopener">Privacy</a> · <a href="${esc(p.appUrl)}/contact?kind=abuse" rel="noopener">Report</a></footer>
 ${bar}
 ${script}
 ${revealScript}

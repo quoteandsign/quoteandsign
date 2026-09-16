@@ -184,6 +184,7 @@ proposalRoutes.post("/", async (c) => {
   }
   const now = new Date();
   const id = uuid();
+  const brand = capsOf(user).brand; // colours and page styles are part of Pro, on create as on edit
   await db.insert(schema.proposals).values({
     id,
     publicId: uuid(),
@@ -191,8 +192,8 @@ proposalRoutes.post("/", async (c) => {
     title: template.title,
     currency: (body.success && body.data.currency) || "USD",
     content: withIds(template.content),
-    accentColor: body.success && body.data.accentColor ? body.data.accentColor.toLowerCase() : savedAccent,
-    style: (body.success && body.data.style) || user.defaultStyle || template.style,
+    accentColor: brand && body.success && body.data.accentColor ? body.data.accentColor.toLowerCase() : brand ? savedAccent : null,
+    style: (brand && body.success && body.data.style) || user.defaultStyle || template.style,
     status: "draft",
     createdAt: now,
     updatedAt: now,
@@ -268,7 +269,7 @@ proposalRoutes.put("/:id", async (c) => {
   const gate = (msg: string) => c.json({ error: msg, code: "plan" }, 402);
   if (!caps.brand && (wants(d.accentColor?.toLowerCase(), proposal.accentColor) || wants(d.style, proposal.style) || wants(d.senderName, proposal.senderName))) return gate("Colors, page styles and a custom sender name are part of Pro.");
   if (!caps.protect && (wants(d.password, undefined) || wants(d.expiresAt, proposal.expiresAt?.getTime()))) return gate("Link passwords, expiry dates and reminders are part of Pro.");
-  if (!caps.payment && wants(d.paymentUrl, proposal.paymentUrl)) return gate("A payment link after signing is part of Pro.");
+  if (effectivePlan(user).paid === "free" && wants(d.paymentUrl, proposal.paymentUrl)) return gate("A payment link after signing is part of Pro, once the trial is paid for.");
   if (!caps.countersign && wants(d.countersign, proposal.countersign)) return gate("Countersigning is part of Business.");
 
   const set: Partial<typeof schema.proposals.$inferInsert> = { updatedAt: new Date() };
@@ -341,10 +342,18 @@ proposalRoutes.put("/:id/items", async (c) => {
     unit: it.unit || null,
   }));
 
+  // The status check above is a plain read; a client could accept between it and the rewrite.
+  // Bump updatedAt only while the proposal is still editable, and stop if that no longer holds.
+  const still = await db
+    .update(schema.proposals)
+    .set({ updatedAt: new Date() })
+    .where(and(eq(schema.proposals.id, proposal.id), inArray(schema.proposals.status, ["draft", "sent", "viewed", "declined"])))
+    .returning({ id: schema.proposals.id })
+    .get();
+  if (!still) return c.json({ error: "This proposal was just accepted and can no longer be edited." }, 409);
   await db.batch([
     db.delete(schema.pricingItems).where(eq(schema.pricingItems.proposalId, proposal.id)),
     ...chunk(rows, ITEM_CHUNK).map((part) => db.insert(schema.pricingItems).values(part)),
-    db.update(schema.proposals).set({ updatedAt: new Date() }).where(eq(schema.proposals.id, proposal.id)),
   ] as any);
   return c.json({ ok: true, items: rows });
 });
@@ -370,15 +379,17 @@ proposalRoutes.post("/:id/send", async (c) => {
     }
   }
 
-  const perProposal = await rateLimit(db, `send:p:${proposal.id}`, 5, 24 * 60 * 60_000);
-  const perUser = await rateLimit(db, `send:u:${user.id}`, 40, 24 * 60 * 60_000);
-  if (!perProposal.allowed || !perUser.allowed) {
-    return c.json({ error: "Sending limit reached for today. Share the link directly instead." }, 429);
-  }
   const oneLine = (s: string) => s.replace(/[\r\n\t]+/g, " ").trim();
 
   // email:false publishes the link (draft becomes sent) without emailing anyone: the sender shares it.
   const sendBody = z.object({ message: z.string().trim().max(1000).optional(), email: z.boolean().optional() }).safeParse(await c.req.json().catch(() => ({})));
+  // The daily allowance is in addresses, so ten cc lines cost ten of it, not one.
+  const addresses = sendBody.success && sendBody.data.email === false ? 1 : Math.max(1, recipientsOf(proposal).length);
+  const perProposal = await rateLimit(db, `send:p:${proposal.id}`, 5, 24 * 60 * 60_000);
+  const perUser = await rateLimit(db, `send:u:${user.id}`, 40, 24 * 60 * 60_000, addresses);
+  if (!perProposal.allowed || !perUser.allowed) {
+    return c.json({ error: "Sending limit reached for today. Share the link directly instead." }, 429);
+  }
   const message = sendBody.success && sendBody.data.message ? sendBody.data.message.replace(/[^\S\n]+/g, " ").replace(/\n{3,}/g, "\n\n") : "";
   const now = new Date();
   const link = `${appUrl(c)}/p/${proposal.publicId}`;

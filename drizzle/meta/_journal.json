@@ -162,6 +162,13 @@
       "when": 1789528757389,
       "tag": "0022_onboarding_sent",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1789536160839,
+      "tag": "0023_trial_key",
+      "breakpoints": true
     }
   ]
 }

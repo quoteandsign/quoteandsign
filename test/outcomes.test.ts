@@ -87,6 +87,9 @@ describe("declining", () => {
 describe("after signing", () => {
   it("shows the payment button on the accepted page and in the signed copy, proposal link over brand link", async () => {
     expect((await json("/auth/me", "PUT", { paymentUrl: "http://insecure.example/pay" })).status).toBe(400);
+    // A trial cannot set one (it would be a phishing button from our domain); a paid plan can.
+    expect((await json("/auth/me", "PUT", { paymentUrl: "https://pay.example/brand" })).status).toBe(402);
+    await applyPolarEvent(env as any, { type: "subscription.active", data: { status: "active", customer_id: "cus_o", metadata: { userId, plan: "pro" } } });
     expect((await json("/auth/me", "PUT", { paymentUrl: "https://pay.example/brand" })).status).toBe(200);
     expect((await (await req("/auth/me")).json()).user.paymentUrl).toBe("https://pay.example/brand");
     const { id, pub } = await sent("retainer");
@@ -112,7 +115,7 @@ describe("after signing", () => {
     const { pub } = await sent("blank");
     // On by default everywhere; a paid plan may turn it off; Free cannot.
     expect(await (await client(`/p/${pub}`)).text()).toContain("Made with");
-    await env.DB.prepare("UPDATE users SET trial_ends_at = NULL WHERE id = ?").bind(userId).run();
+    await env.DB.prepare("UPDATE users SET trial_ends_at = NULL, plan = 'free' WHERE id = ?").bind(userId).run();
     expect((await json("/auth/me", "PUT", { hideMadeWith: true })).status).toBe(402);
     expect(await (await client(`/p/${pub}`)).text()).toContain("Made with");
     await applyPolarEvent(env as any, { type: "subscription.active", data: { status: "active", customer_id: "cus_o", metadata: { userId, plan: "pro" } } });

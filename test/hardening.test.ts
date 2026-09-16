@@ -9,9 +9,9 @@ const APP = "http://localhost:5173";
 const logs: string[] = [];
 type Session = { cookie: string; id: string };
 
-async function signIn(email: string): Promise<Session> {
+async function signIn(email: string, ip = "203.0.113.77"): Promise<Session> {
   const n = logs.length;
-  await app.request(`${APP}/auth/request`, { method: "POST", headers: { "content-type": "application/json", "cf-connecting-ip": "203.0.113.77" }, body: JSON.stringify({ email }) }, env);
+  await app.request(`${APP}/auth/request`, { method: "POST", headers: { "content-type": "application/json", "cf-connecting-ip": ip }, body: JSON.stringify({ email }) }, env);
   const token = new URL(logs.slice(n).join("\n").match(/http:\/\/localhost:5173\/auth\/verify\?token=[A-Za-z0-9_-]+/)![0]).searchParams.get("token")!;
   const v = await app.request(`${APP}/auth/verify`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded", origin: APP }, body: new URLSearchParams({ token }), redirect: "manual" }, env);
   const cookie = (v.headers.get("set-cookie") ?? "").split(";")[0]!;
@@ -127,9 +127,11 @@ describe("public page hardening", () => {
     expect((await app.request(`${APP}/p/${pub}/pdf`, {}, env)).status).toBe(402);
   });
 
-  it("the signer copy carries a payment button only for paid accounts or addressed signers", async () => {
+  it("the signer copy carries a payment button only for paid accounts", async () => {
     const u = await signIn("trialpay@example.com");
-    expect((await as(u)("/auth/me", "PUT", { paymentUrl: "https://pay.example.com/deposit", brandName: "Trial Co" })).status).toBe(200);
+    expect((await as(u)("/auth/me", "PUT", { paymentUrl: "https://pay.example.com/deposit", brandName: "Trial Co" })).status).toBe(402);
+    // Even a link left over from a paid period stays out of the email once the account is not paid.
+    await env.DB.prepare("UPDATE users SET payment_url = ? WHERE id = ?").bind("https://pay.example.com/deposit", u.id).run();
     const created = await (await as(u)("/api/proposals", "POST", { template: "blank" })).json();
     await as(u)(`/api/proposals/${created.id}`, "PUT", { clientEmail: "real@client.example" });
     await as(u)(`/api/proposals/${created.id}/send`, "POST", { email: false });
@@ -142,5 +144,47 @@ describe("public page hardening", () => {
     const mail = logs.slice(n).join("\n");
     expect(mail).toContain("stranger@elsewhere.example");
     expect(mail).not.toContain("pay.example.com/deposit");
+  });
+});
+
+describe("abuse limits", () => {
+  it("one trial per inbox: +tags and Gmail dots do not start a new one", async () => {
+    const { trialIdentity } = await import("../src/worker/routes/auth");
+    expect(trialIdentity("Me.Name+promo@GMail.com")).toBe("mename@gmail.com");
+    expect(trialIdentity("me+x@googlemail.com")).toBe("me@gmail.com");
+    expect(trialIdentity("first.last+x@company.example")).toBe("first.last@company.example");
+    const a = await signIn("dupe@gmail.com", "203.0.113.92");
+    await env.DB.prepare("UPDATE users SET trial_ends_at = 1000 WHERE id = ?").bind(a.id).run();
+    const b = await signIn("d.u.p.e+again@gmail.com", "203.0.113.93");
+    expect(b.id).not.toBe(a.id);
+    const row = await env.DB.prepare("SELECT trial_ends_at AS t FROM users WHERE id = ?").bind(b.id).first<{ t: number }>();
+    expect(row?.t).toBe(1000);
+  });
+
+  it("an admin can disable an account and take a page down", async () => {
+    (env as any).ADMIN_EMAILS = "boss@example.com";
+    try {
+      const boss = await signIn("boss@example.com", "203.0.113.90");
+      const bad = await signIn("baddie@example.com", "203.0.113.91");
+      const created = await (await as(bad)("/api/proposals", "POST", { template: "blank" })).json();
+      await as(bad)(`/api/proposals/${created.id}/send`, "POST", { email: false });
+      const pub = (await (await as(bad)(`/api/proposals/${created.id}`)).json()).proposal.publicId;
+      expect((await app.request(`${APP}/p/${pub}`, {}, env)).status).toBe(200);
+      // A page comes down by its link.
+      expect((await as(boss)("/api/admin/takedown", "POST", { link: `https://quoteandsign.com/p/${pub}` })).status).toBe(200);
+      expect((await app.request(`${APP}/p/${pub}`, {}, env)).status).toBe(410);
+      // Disabling ends the session and the account cannot come back.
+      expect((await as(bad)(`/api/admin/people/${bad.id}/disable`, "POST", {})).status).toBe(404);
+      expect((await as(boss)(`/api/admin/people/${bad.id}/disable`, "POST", {})).status).toBe(200);
+      expect((await (await as(bad)("/auth/me")).json()).user).toBeNull();
+      expect((await as(bad)("/api/proposals")).status).toBe(401);
+      const n = logs.length;
+      await app.request(`${APP}/auth/request`, { method: "POST", headers: { "content-type": "application/json", "cf-connecting-ip": "203.0.113.78" }, body: JSON.stringify({ email: "baddie@example.com" }) }, env);
+      const token = new URL(logs.slice(n).join("\n").match(/http:\/\/localhost:5173\/auth\/verify\?token=[A-Za-z0-9_-]+/)![0]).searchParams.get("token")!;
+      const v = await app.request(`${APP}/auth/verify`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded", origin: APP }, body: new URLSearchParams({ token }), redirect: "manual" }, env);
+      expect(v.headers.get("location")).toBe("/login?error=deleted");
+    } finally {
+      delete (env as any).ADMIN_EMAILS;
+    }
   });
 });

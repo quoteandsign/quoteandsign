@@ -197,6 +197,49 @@ adminRoutes.get("/people", async (c) => {
   });
 });
 
+// Abuse handling. Disabling keeps the row (so the address cannot sign up again) but ends every
+// session, drops the plan, and takes every live page offline. Both are audited.
+adminRoutes.post("/people/:id/disable", async (c) => {
+  const db = getDb(c.env.DB);
+  const id = c.req.param("id");
+  const admin = c.get("user");
+  if (!/^[0-9a-f-]{36}$/.test(id) || id === admin.id) return c.json({ error: "not found" }, 404);
+  const now = new Date();
+  const gone = await db
+    .update(schema.users)
+    .set({ deletedAt: now, plan: "free", trialEndsAt: now, paymentUrl: null, notifyEmails: null })
+    .where(and(eq(schema.users.id, id), sql`deleted_at is null`))
+    .returning({ id: schema.users.id })
+    .get();
+  if (!gone) return c.json({ error: "not found" }, 404);
+  await db.batch([
+    db.delete(schema.sessions).where(eq(schema.sessions.userId, id)),
+    db.delete(schema.teamMembers).where(eq(schema.teamMembers.ownerId, id)),
+    db.update(schema.proposals).set({ status: "archived", updatedAt: now }).where(and(eq(schema.proposals.userId, id), inArray(schema.proposals.status, ["draft", "sent", "viewed", "declined"]))),
+  ] as any);
+  await audit(db, { userId: admin.id, event: "admin.user_disabled", meta: { target: id } });
+  return c.json({ ok: true });
+});
+
+adminRoutes.post("/takedown", async (c) => {
+  const db = getDb(c.env.DB);
+  const admin = c.get("user");
+  const parsed = z.object({ link: z.string().trim().max(300) }).safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ error: "Paste the proposal link." }, 400);
+  const m = parsed.data.link.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+  if (!m) return c.json({ error: "That does not look like a proposal link." }, 400);
+  const now = new Date();
+  const hit = await db
+    .update(schema.proposals)
+    .set({ status: "archived", updatedAt: now })
+    .where(and(eq(schema.proposals.publicId, m[1]!.toLowerCase()), inArray(schema.proposals.status, ["draft", "sent", "viewed", "declined"])))
+    .returning({ id: schema.proposals.id, userId: schema.proposals.userId })
+    .get();
+  if (!hit) return c.json({ error: "No live proposal with that link." }, 404);
+  await audit(db, { userId: admin.id, event: "admin.proposal_takedown", meta: { proposal: hit.id, owner: hit.userId } });
+  return c.json({ ok: true });
+});
+
 // Everyone who ticked the box, as a file for whichever mailing tool you use. Consent proof included.
 adminRoutes.get("/subscribers.csv", async (c) => {
   const db = getDb(c.env.DB);
