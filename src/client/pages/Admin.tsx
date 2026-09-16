@@ -12,7 +12,7 @@ import { formatMoney } from "../../shared/pricing";
 // Only accounts listed in ADMIN_EMAILS see it; everyone else gets a 404 from the API.
 
 type Overview = { users: number; byPlan: Record<string, number>; trialing: number; newUsers30: number; proposals: number; sent30: number; accepted30: number; acceptedTotal30: number; openTickets: number; subscribers: number; images: number; storageBytes: number; storageLimitBytes: number; mailToday: number; mailMonth: number; includeMine: boolean; adminAccounts: number };
-type Person = { id: string; email: string; brandName: string | null; plan: string; effective: string; interval: string | null; trialEndsAt: number | null; createdAt: number; marketingOptIn: boolean; proposals: number; accepted: number; lastSeen: number | null };
+type Person = { id: string; email: string; brandName: string | null; plan: string; effective: string; interval: string | null; trialEndsAt: number | null; createdAt: number; marketingOptIn: boolean; proposals: number; sentProposals: number; onboardingSent: number; accepted: number; lastSeen: number | null };
 type Ticket = { id: string; kind: string; name: string; email: string; subject: string; status: string; userId: string | null; createdAt: number; updatedAt: number };
 type Message = { id: string; from: string; body: string; createdAt: number };
 
@@ -26,6 +26,13 @@ function Stat({ label, value, sub }: { label: string; value: string; sub?: strin
       {sub && <div className="mt-1 text-[12px] text-stone-500">{sub}</div>}
     </div>
   );
+}
+
+/** Where an account is in the onboarding sequence. A sent proposal ends it, whatever was emailed. */
+function onboardingLabel(p: Person): string {
+  const welcome = p.onboardingSent >= 1 ? "Welcome ✓" : "Welcome —";
+  if (p.sentProposals > 0) return `${welcome} · Sent a proposal ✓`;
+  return `${welcome} · Day 3 ${p.onboardingSent >= 2 ? "✓" : "—"}`;
 }
 
 export function Admin() {
@@ -257,7 +264,7 @@ export function Admin() {
             </div>
             <div className="mt-4 overflow-x-auto rounded-[1.25rem] bg-white ring-1 ring-inset ring-stone-900/[.035] dark:bg-stone-900 dark:ring-white/[.08]">
               <table className="w-full text-[13.5px]">
-                <thead className="text-left text-[12px] text-stone-500"><tr><th className="px-4 py-3 font-medium">Account</th><th className="px-3 py-3 font-medium">Plan</th><th className="px-3 py-3 font-medium">Proposals</th><th className="px-3 py-3 font-medium">Signed</th><th className="px-3 py-3 font-medium">Emails</th><th className="px-3 py-3 font-medium">Joined</th><th className="px-3 py-3 font-medium">Last seen</th></tr></thead>
+                <thead className="text-left text-[12px] text-stone-500"><tr><th className="px-4 py-3 font-medium">Account</th><th className="px-3 py-3 font-medium">Plan</th><th className="px-3 py-3 font-medium">Proposals</th><th className="px-3 py-3 font-medium">Signed</th><th className="px-3 py-3 font-medium">Emails</th><th className="px-3 py-3 font-medium">Onboarding</th><th className="px-3 py-3 font-medium">Joined</th><th className="px-3 py-3 font-medium">Last seen</th></tr></thead>
                 <tbody className="divide-y divide-hairline dark:divide-white/[.08]">
                   {shownPeople.map((p) => (
                     <tr key={p.id}>
@@ -266,6 +273,7 @@ export function Admin() {
                       <td className="px-3 py-2.5 tabular-nums">{p.proposals}</td>
                       <td className="px-3 py-2.5 tabular-nums">{p.accepted}</td>
                       <td className="px-3 py-2.5">{p.marketingOptIn ? "Yes" : "No"}</td>
+                      <td className="px-3 py-2.5 whitespace-nowrap text-[13px]" title="Welcome on sign-up, then one nudge after three days without a sent proposal">{onboardingLabel(p)}</td>
                       <td className="px-3 py-2.5 tabular-nums">{fmtDay(p.createdAt)}</td>
                       <td className="px-3 py-2.5 tabular-nums">{p.lastSeen ? ago(p.lastSeen) : "Never"}</td>
                     </tr>

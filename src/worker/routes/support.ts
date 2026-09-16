@@ -182,6 +182,8 @@ adminRoutes.get("/people", async (c) => {
       createdAt: schema.users.createdAt,
       marketingOptIn: schema.users.marketingOptIn,
       proposals: sql<number>`(select count(*) from proposals p where p.user_id = users.id)`,
+      sentProposals: sql<number>`(select count(*) from proposals p where p.user_id = users.id and p.status <> 'draft')`,
+      onboardingSent: schema.users.onboardingSent,
       accepted: sql<number>`(select count(*) from acceptances a join proposals p on p.id = a.proposal_id where p.user_id = users.id)`,
       lastSeen: sql<number | null>`(select max(created_at) from audit_log l where l.user_id = users.id)`,
     })

@@ -116,6 +116,8 @@ All notable changes to Quote and Sign. Dates are the day the change went live at
   "Type your name to sign".
 
 ### Onboarding emails
+- The People tab shows where each account is in the sequence: welcome sent, day-3 sent, or a proposal
+  sent, which ends the sequence.
 - Two service emails for every new account, off until switched on in Admin, Settings: a welcome the moment the
   account exists (three steps to a first proposal, one button) and one nudge after three days without a sent
   proposal. Each goes once (users.onboarding_sent, migration 0022), never to admins or deleted accounts, and
