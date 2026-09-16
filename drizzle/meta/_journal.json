@@ -155,6 +155,13 @@
       "when": 1789009772500,
       "tag": "0021_cover_art",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "6",
+      "when": 1789528757389,
+      "tag": "0022_onboarding_sent",
+      "breakpoints": true
     }
   ]
 }

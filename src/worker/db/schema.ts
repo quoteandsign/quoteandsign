@@ -15,7 +15,8 @@ export const users = sqliteTable(
     paymentUrl: text("payment_url"), // default "pay the deposit" link shown once a client signs
     hideMadeWith: integer("hide_made_with", { mode: "boolean" }).notNull().default(false), // paid plans may hide the footer
     billingInterval: text("billing_interval"), // month | year, from the Polar product that was bought
-    trialWarned: integer("trial_warned").notNull().default(0),
+    trialWarned: integer("trial_warned").notNull().default(0), // 0 none, 1 three-day notice, 2 last-day notice, 3 ended notice
+    onboardingSent: integer("onboarding_sent").notNull().default(0), // 0 none, 1 welcome sent, 2 day-3 nudge sent
     marketingOptIn: integer("marketing_opt_in", { mode: "boolean" }).notNull().default(false), // express consent to product emails (CASL/GDPR)
     marketingOptInAt: integer("marketing_opt_in_at", { mode: "timestamp_ms" }),
     marketingOptInIpHash: text("marketing_opt_in_ip_hash"), // proof of consent, never the raw IP // 0 none, 1 three-day notice, 2 last-day notice, 3 ended notice

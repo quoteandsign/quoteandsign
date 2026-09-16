@@ -9,6 +9,7 @@ import { rateLimit } from "../lib/ratelimit";
 import { sendEmail } from "../lib/email";
 import { audit } from "../lib/audit";
 import { getSetting, setSetting, ANALYTICS_KEY, ANALYTICS_ID } from "../lib/analytics";
+import { ONBOARDING_KEY, sendOnboardingTest } from "../lib/onboarding";
 import { getSessionUser, requireAuth } from "../lib/session";
 import { effectivePlan } from "../lib/plan";
 import { turnstileOk } from "./auth";
@@ -79,19 +80,38 @@ adminRoutes.use("*", async (c, next) => {
   await next();
 });
 
-// Site settings: the Google Analytics id. Empty means off; the pages then carry no Google code at all.
-adminRoutes.get("/settings", async (c) => {
-  const db = getDb(c.env.DB);
-  return c.json({ analyticsId: await getSetting(db, ANALYTICS_KEY) });
+// Site settings: the Google Analytics id (empty means off; the pages then carry no Google code at all)
+// and the onboarding email switch. Each field is optional in a PUT, so one can change without the other.
+const readSettings = async (db: ReturnType<typeof getDb>) => ({
+  analyticsId: await getSetting(db, ANALYTICS_KEY),
+  onboardingEmails: (await getSetting(db, ONBOARDING_KEY)) === "1",
 });
+adminRoutes.get("/settings", async (c) => c.json(await readSettings(getDb(c.env.DB))));
 adminRoutes.put("/settings", async (c) => {
   const db = getDb(c.env.DB);
-  const body = (await c.req.json().catch(() => ({}))) as { analyticsId?: unknown };
-  const raw = typeof body.analyticsId === "string" ? body.analyticsId.trim().toUpperCase() : "";
-  if (raw && !ANALYTICS_ID.test(raw)) return c.json({ error: "That does not look like a Google Analytics id. It starts with G- (or GTM- for Tag Manager)." }, 400);
-  await setSetting(db, ANALYTICS_KEY, raw || null);
-  await audit(db, { userId: c.get("user").id, event: "settings.analytics", meta: { on: Boolean(raw) } });
-  return c.json({ analyticsId: raw || null });
+  const body = (await c.req.json().catch(() => ({}))) as { analyticsId?: unknown; onboardingEmails?: unknown };
+  if ("analyticsId" in body) {
+    const raw = typeof body.analyticsId === "string" ? body.analyticsId.trim().toUpperCase() : "";
+    if (raw && !ANALYTICS_ID.test(raw)) return c.json({ error: "That does not look like a Google Analytics id. It starts with G- (or GTM- for Tag Manager)." }, 400);
+    await setSetting(db, ANALYTICS_KEY, raw || null);
+    await audit(db, { userId: c.get("user").id, event: "settings.analytics", meta: { on: Boolean(raw) } });
+  }
+  if (typeof body.onboardingEmails === "boolean") {
+    await setSetting(db, ONBOARDING_KEY, body.onboardingEmails ? "1" : null);
+    await audit(db, { userId: c.get("user").id, event: "settings.onboarding", meta: { on: body.onboardingEmails } });
+  }
+  return c.json(await readSettings(db));
+});
+
+// The admin sends either onboarding email to their own address to see what a new account gets.
+const testSchema = z.object({ kind: z.enum(["welcome", "day3"]) });
+adminRoutes.post("/onboarding/test", async (c) => {
+  const parsed = testSchema.safeParse(await c.req.json().catch(() => ({})));
+  if (!parsed.success) return c.json({ error: "kind must be welcome or day3" }, 400);
+  const me = c.get("user");
+  await sendOnboardingTest(c.env, parsed.data.kind, me.email, me.name);
+  await audit(getDb(c.env.DB), { userId: me.id, event: "admin.onboarding_test", meta: { kind: parsed.data.kind } });
+  return c.json({ ok: true, to: me.email });
 });
 
 /** Free-tier D1 database ceiling. The nightly job emails support once when images pass STORAGE_WARN. */

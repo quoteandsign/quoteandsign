@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `onboarding_sent` integer DEFAULT 0 NOT NULL;

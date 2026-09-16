@@ -7,6 +7,7 @@ import { clientIp, appUrl } from "../env";
 import { getDb, schema } from "../lib/db";
 import { randomToken, sha256Hex, ipHash, uuid, hmacHex, signValue, verifyValue } from "../lib/crypto";
 import { rateLimit } from "../lib/ratelimit";
+import { sendWelcome } from "../lib/onboarding";
 import { sendEmail } from "../lib/email";
 import { createSession, destroySession, getSessionUser } from "../lib/session";
 import { audit } from "../lib/audit";
@@ -141,6 +142,7 @@ authRoutes.post("/verify", async (c) => {
     await db.insert(schema.users).values({ id, email: token.email, createdAt: now, plan: "free", trialEndsAt: before ? before.trialEndsAt : trialEnd(now) });
     user = (await db.select().from(schema.users).where(eq(schema.users.id, id)).get())!;
     await audit(db, { userId: id, event: "user.created" });
+    await sendWelcome(c.env, user);
   } else if (user.deletedAt) {
     return c.redirect("/login?error=deleted");
   }

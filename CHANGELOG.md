@@ -115,6 +115,15 @@ All notable changes to Quote and Sign. Dates are the day the change went live at
 - Phones: the included list under the hero is hidden and the demo phone is a little taller, ending just after
   "Type your name to sign".
 
+### Onboarding emails
+- Two service emails for every new account, off until switched on in Admin, Settings: a welcome the moment the
+  account exists (three steps to a first proposal, one button) and one nudge after three days without a sent
+  proposal. Each goes once (users.onboarding_sent, migration 0022), never to admins or deleted accounts, and
+  regardless of the marketing box because they concern the account itself. Replies go to the support address.
+  Admins can send either email to themselves from Settings, switch on or off, to see what a new account gets.
+  The emails are 600px table layouts with inline styles, a plain-text twin, and a product image, built to
+  render in Gmail, Outlook and Apple Mail.
+
 ### Security
 - A path beginning with two slashes no longer produces a protocol-relative redirect (the trailing-slash
   redirect now collapses leading slashes), with a regression test.

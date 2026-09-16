@@ -26,6 +26,7 @@ import { TEMPLATES } from "../shared/templates";
 import { isHex } from "../shared/looks";
 import { STYLE_IDS } from "../shared/styles";
 import { sendExpiryReminders, sendTrialNotices, pruneOldRows, warnOnStorage } from "./lib/reminders";
+import { sendDay3Nudges } from "./lib/onboarding";
 
 import type { Bindings } from "./env";
 export type { Bindings };
@@ -282,6 +283,7 @@ export default {
   scheduled(_event: ScheduledEvent, env: Bindings, ctx: ExecutionContext) {
     ctx.waitUntil(sendExpiryReminders(env));
     ctx.waitUntil(sendTrialNotices(env));
+    ctx.waitUntil(sendDay3Nudges(env));
     ctx.waitUntil(pruneOldRows(env));
     ctx.waitUntil(warnOnStorage(env));
     ctx.waitUntil(retryWebhooks(env));

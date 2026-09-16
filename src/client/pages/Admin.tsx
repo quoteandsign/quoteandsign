@@ -35,7 +35,33 @@ export function Admin() {
   const [gaId, setGaId] = useState("");
   const [gaState, setGaState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [gaError, setGaError] = useState<string | null>(null);
-  useEffect(() => { api<{ analyticsId: string | null }>("/api/admin/settings").then((r) => setGaId(r.analyticsId ?? ""), () => {}); }, []);
+  const [onb, setOnb] = useState(false);
+  const [onbState, setOnbState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [testState, setTestState] = useState<{ welcome: "idle" | "sending" | "sent" | "error"; day3: "idle" | "sending" | "sent" | "error" }>({ welcome: "idle", day3: "idle" });
+  useEffect(() => { api<{ analyticsId: string | null; onboardingEmails: boolean }>("/api/admin/settings").then((r) => { setGaId(r.analyticsId ?? ""); setOnb(Boolean(r.onboardingEmails)); }, () => {}); }, []);
+  const saveOnb = async (next: boolean) => {
+    setOnb(next);
+    setOnbState("saving");
+    try {
+      const r = await api<{ onboardingEmails: boolean }>("/api/admin/settings", { method: "PUT", json: { onboardingEmails: next } });
+      setOnb(Boolean(r.onboardingEmails));
+      setOnbState("saved");
+      setTimeout(() => setOnbState("idle"), 1500);
+    } catch {
+      setOnb(!next);
+      setOnbState("error");
+    }
+  };
+  const sendTest = async (kind: "welcome" | "day3") => {
+    setTestState((s) => ({ ...s, [kind]: "sending" }));
+    try {
+      await api("/api/admin/onboarding/test", { method: "POST", json: { kind } });
+      setTestState((s) => ({ ...s, [kind]: "sent" }));
+    } catch {
+      setTestState((s) => ({ ...s, [kind]: "error" }));
+    }
+    setTimeout(() => setTestState((s) => ({ ...s, [kind]: "idle" })), 2500);
+  };
   const saveGa = async () => {
     setGaState("saving");
     setGaError(null);
@@ -204,6 +230,22 @@ export function Admin() {
               <Button size="md" disabled={gaState === "saving"} onClick={() => void saveGa()}>{gaState === "saving" ? "Saving…" : gaState === "saved" ? "Saved" : "Save"}</Button>
             </div>
             {gaError && <p role="alert" className="mt-2 text-[13px] text-red-700 dark:text-red-400">{gaError}</p>}
+          </section>
+        )}
+        {tab === "settings" && (
+          <section className="mt-5 max-w-xl rounded-[1.25rem] bg-white p-6 shadow-[0_1px_1px_rgba(25,24,22,.04),0_12px_32px_-20px_rgba(25,24,22,.35)] ring-1 ring-inset ring-stone-900/[.035] dark:bg-stone-900 dark:shadow-none dark:ring-white/[.08]" data-test="admin-onboarding">
+            <div className="text-[15px] font-semibold">Onboarding emails</div>
+            <p className="mt-1 text-[13.5px] leading-relaxed text-stone-500">Two emails for every new account: a welcome the moment the account exists, and one nudge after three days without a sent proposal. They are about the account itself, so they go regardless of the marketing box. Admin accounts never get them, and nobody gets either one twice.</p>
+            <label className="mt-4 flex cursor-pointer items-center gap-3 text-[14.5px]">
+              <input type="checkbox" className="h-5 w-5 accent-[#2b3f8c]" checked={onb} disabled={onbState === "saving"} onChange={(e) => void saveOnb(e.target.checked)} data-test="onboarding-switch" />
+              <span>Send onboarding emails to new accounts</span>
+              <span className="text-[12.5px] text-stone-500">{onbState === "saving" ? "Saving…" : onbState === "saved" ? "Saved" : onbState === "error" ? "Could not save" : ""}</span>
+            </label>
+            <div className="mt-5 text-[13px] font-medium text-stone-500">See what they get first. Test emails go to {user?.email} and work while the switch is off.</div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Button size="md" variant="secondary" disabled={testState.welcome === "sending"} onClick={() => void sendTest("welcome")} data-test="test-welcome">{testState.welcome === "sending" ? "Sending…" : testState.welcome === "sent" ? "Sent to you" : testState.welcome === "error" ? "Failed" : "Send me the welcome email"}</Button>
+              <Button size="md" variant="secondary" disabled={testState.day3 === "sending"} onClick={() => void sendTest("day3")} data-test="test-day3">{testState.day3 === "sending" ? "Sending…" : testState.day3 === "sent" ? "Sent to you" : testState.day3 === "error" ? "Failed" : "Send me the day-3 email"}</Button>
+            </div>
           </section>
         )}
 
