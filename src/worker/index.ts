@@ -253,7 +253,7 @@ app.route("/p", publicRoutes);
 const SPA_PREFIXES = ["/app", "/login", "/admin"];
 const APP_SHELL_CSP = [
   "default-src 'self'",
-  "script-src 'self' https://www.googletagmanager.com https://challenges.cloudflare.com",
+  "script-src 'self' 'nonce-NONCE' https://www.googletagmanager.com https://challenges.cloudflare.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self'",
@@ -283,8 +283,9 @@ app.notFound(async (c) => {
   if (isApp && html) {
     // The app shell gets a script policy like every other page: only our own bundle, the analytics
     // tag and the Turnstile widget may run. Styles stay open because the editor sets them inline.
+    // The nonce is for Cloudflare, which copies it onto the bot-detection snippet it injects.
     const out = new Response(res.body, res);
-    out.headers.set("Content-Security-Policy", APP_SHELL_CSP);
+    out.headers.set("Content-Security-Policy", APP_SHELL_CSP.replace("NONCE", crypto.randomUUID().replace(/-/g, "")));
     return out;
   }
   if (isApp || looksLikeFile || !html) return res;
