@@ -5,6 +5,8 @@ All notable changes to Quote and Sign. Dates are the day the change went live at
 ## 1.1.0 — unreleased
 
 ### Editor
+- The six-dot handle on a block now only drags. Clicking it used to open the colour and font menu, and dragging
+  could leave the page stuck; the pencil next to it is the one that opens the block options.
 - Every block shows a faint dashed frame and its name on hover, so it is obvious what can be edited; the
   cover fields and the text inside cards and testimonials look like fields before you touch them.
 - Block handles sit in a small white pill instead of loose grey glyphs.
@@ -125,6 +127,18 @@ All notable changes to Quote and Sign. Dates are the day the change went live at
   Admins can send either email to themselves from Settings, switch on or off, to see what a new account gets.
   The emails are 600px table layouts with inline styles, a plain-text twin, and a product image, built to
   render in Gmail, Outlook and Apple Mail.
+
+### Templates, comparisons and the homepage
+- Thirty trade templates, one per profession, each a full proposal with realistic prices and options: logo
+  design, SEO, social media, copywriting, video, wedding photography, bookkeeping, coaching, interior design,
+  landscaping, cleaning, renovation, event planning, catering, personal training, marketing, mobile apps, IT
+  support, translation, tutoring, architecture, graphic design, illustration, podcasts, virtual assistance, HR,
+  accounting, website maintenance, online stores and real estate photography. Each has its own public page
+  under /templates. In the app, New proposal shows the core seven first, then all thirty under "By trade" with a
+  search box and category chips; the homepage strip keeps the core seven.
+- Comparison pages for Better Proposals and Bonsai, sourced and dated like the other three.
+- A six-question FAQ on the homepage as an accordion, with FAQ structured data.
+- Two analytics events, fired only when analytics is allowed: a click on Start free and a sign-in request.
 
 ### Security
 - A path beginning with two slashes no longer produces a protocol-relative redirect (the trailing-slash

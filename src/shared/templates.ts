@@ -6,48 +6,12 @@
 // Each template reads like a small site: an opening statement, what the client gets, proof, the
 // price, and the terms. Image rows ship with abstract artwork the sender replaces with their own.
 
-export type TemplateItem = {
-  name: string;
-  description?: string;
-  unitAmount: number;
-  quantity: number;
-  optional: boolean;
-  selectedByDefault: boolean;
-  taxRateBps: number | null;
-  minQuantity?: number;
-  maxQuantity?: number;
-  billing?: "once" | "month" | "quarter" | "year";
-  unit?: string;
-};
+import { h, p, li, num, quote, statement, grid, testimonial, table, images, PRICING, ACCEPT, ART } from "./templateKit";
+import type { Template, TemplateItem } from "./templateKit";
+import { TRADE_TEMPLATES } from "./templates-trades";
+export type { Template, TemplateItem };
 
-export type Template = {
-  id: string;
-  name: string;
-  summary: string;
-  title: string;
-  style: string; // default page style (shared/styles.ts)
-  content: unknown[];
-  items: TemplateItem[];
-};
-
-type Band = "gray" | "brown" | "red" | "orange" | "yellow" | "green" | "blue" | "purple" | "pink";
-const h = (level: 1 | 2 | 3, text: string, band?: Band) => ({ type: "heading", props: { level, ...(band ? { backgroundColor: band } : {}) }, content: text });
-const p = (text: string) => ({ type: "paragraph", content: text });
-const li = (text: string) => ({ type: "bulletListItem", content: text });
-const num = (text: string) => ({ type: "numberedListItem", content: text });
-const quote = (text: string) => ({ type: "quote", content: text });
-const statement = (text: string) => ({ type: "statement", content: text });
-const grid = (items: { title: string; text: string }[], cols: 2 | 3 = 3) => ({ type: "featureGrid", props: { cols: String(cols), items: JSON.stringify(items) } });
-const testimonial = (q: string, name: string, role: string) => ({ type: "testimonial", props: { quote: q, name, role, photo: "" } });
-const table = (rows: string[][]) => ({ type: "table", content: { type: "tableContent", headerRows: 1, rows: rows.map((cells) => ({ cells })) } });
-const images = (list: { url: string; caption: string }[]) => ({ type: "imageRow", props: { images: JSON.stringify(list) } });
-const PRICING = { type: "pricingTable" };
-const ACCEPT = { type: "acceptBlock" };
-
-// Abstract artwork that ships with the app, so a template never looks empty. Replace with your own.
-const ART = { cool: "/img/art/cool-1.svg", deep: "/img/art/cool-2.svg", warm: "/img/art/warm-1.svg", sage: "/img/art/sage-1.svg" };
-
-export const TEMPLATES: Template[] = [
+const CORE_TEMPLATES: Template[] = [
   {
     id: "blank",
     style: "minimal",
@@ -280,6 +244,10 @@ export const TEMPLATES: Template[] = [
     ],
   },
 ];
+
+/** The seven core templates, then the trade templates that live on the public template pages. */
+export const TEMPLATES: Template[] = [...CORE_TEMPLATES, ...TRADE_TEMPLATES];
+
 
 export function getTemplate(id: string | undefined): Template {
   return TEMPLATES.find((t) => t.id === id) ?? TEMPLATES[0]!;

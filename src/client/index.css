@@ -544,3 +544,7 @@ html { scrollbar-color: rgba(25, 24, 22, 0.28) transparent; }
 .qs-splash-ring { stroke-dasharray: 208; stroke-dashoffset: 208; animation: qs-draw .55s cubic-bezier(.32,.72,0,1) .1s forwards; }
 .qs-splash-check { stroke-dasharray: 44; stroke-dashoffset: 44; animation: qs-draw .35s cubic-bezier(.32,.72,0,1) .55s forwards; }
 @media (prefers-reduced-motion: reduce) { .qs-splash { animation: none; } .qs-splash-ring, .qs-splash-check { animation: none; stroke-dashoffset: 0; } }
+
+/* The six dots only move a block; the cursor says so. */
+.bn-side-menu .qs-drag { cursor: grab; }
+.bn-side-menu .qs-drag:active { cursor: grabbing; }

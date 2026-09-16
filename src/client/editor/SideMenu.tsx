@@ -1,6 +1,5 @@
 import { SideMenuExtension, SuggestionMenu } from "@blocknote/core/extensions";
 import {
-  DragHandleButton,
   DragHandleMenu,
   SideMenu,
   useBlockNoteEditor,
@@ -10,7 +9,7 @@ import {
   type SideMenuProps,
 } from "@blocknote/react";
 import { useEffect, useState } from "react";
-import { PencilSimple, Trash, Plus } from "@phosphor-icons/react";
+import { PencilSimple, Trash, Plus, DotsSixVertical } from "@phosphor-icons/react";
 import { cn } from "../components/ui";
 
 // BlockNote's named colors. The CSS variables come from index.css.
@@ -156,11 +155,40 @@ function AddHereButton() {
   );
 }
 
+/**
+ * The six dots only drag. BlockNote's own handle is also a menu trigger, which surprised people:
+ * a click showed the colour panel, and a click that turned into a drag froze the menu open.
+ * Options live behind the pencil.
+ */
+function DragOnlyHandle() {
+  const Components = useComponentsContext()!;
+  const sideMenu = useExtension(SideMenuExtension);
+  const block = useExtensionState(SideMenuExtension, { selector: (s) => s?.block }) as any;
+  if (!block) return null;
+  return (
+    <Components.SideMenu.Button
+      label="Drag to move"
+      draggable={true}
+      onDragStart={(e: React.DragEvent) => {
+        sideMenu.blockDragStart(e as any, block);
+        // The handle re-renders while the drop moves the block, so its own dragend can be lost.
+        // Clean up the drag preview from the document instead.
+        const done = () => sideMenu.blockDragEnd();
+        document.addEventListener("dragend", done, { once: true });
+        document.addEventListener("drop", done, { once: true });
+      }}
+      onDragEnd={() => sideMenu.blockDragEnd()}
+      className="bn-button qs-drag"
+      icon={<DotsSixVertical size={18} weight="bold" data-test="dragHandle" />}
+    />
+  );
+}
+
 export function ProposalSideMenu(props: SideMenuProps) {
   return (
     <SideMenu {...props}>
       <AddHereButton />
-      <DragHandleButton {...props} dragHandleMenu={BlockOptions} />
+      <DragOnlyHandle />
       <PencilButton />
     </SideMenu>
   );

@@ -219,6 +219,17 @@ section.band .sub{color:var(--muted);font-size:18px;max-width:50ch;margin:0;line
 .trust b{display:block;font-size:17px;letter-spacing:-.01em;margin-bottom:4px}
 .trust p{margin:0;color:var(--muted);font-size:15.5px;line-height:1.55}
 
+.faq{margin:28px 0 0;display:grid;gap:0 56px;align-items:start}
+@media(min-width:900px){.faq{grid-template-columns:1fr 1fr}}
+.faq .col{border-top:1px solid var(--line)}
+@media(max-width:899px){.faq .col+.col{border-top:0}}
+.faq details{border-bottom:1px solid var(--line)}
+.faq summary{cursor:pointer;list-style:none;outline-offset:-2px;border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 0;font-weight:600;font-size:17px;letter-spacing:-.01em}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"";flex:none;width:10px;height:10px;border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);transform:rotate(45deg);margin-right:4px;transition:transform .3s cubic-bezier(.32,.72,0,1)}
+.faq details[open] summary::after{transform:rotate(-135deg)}
+.faq summary:hover{color:var(--accent)}
+.faq p{margin:0;padding:0 40px 18px 0;color:var(--muted);font-size:15.5px;line-height:1.6}
 footer.site-foot{padding:44px 0 56px;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr auto auto;gap:18px 44px;align-items:center;font-size:14px;color:var(--muted)}
 footer.site-foot .foot-brand{display:inline-flex;align-items:center;gap:8px;font-weight:600;color:var(--fg)}
 footer.site-foot .foot-brand i{width:10px;height:10px;border-radius:50%;background:var(--accent)}
@@ -611,6 +622,7 @@ export function renderLanding(o: { nonce: string; appUrl: string; githubUrl: str
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <script type="application/ld+json" nonce="${o.nonce}">${JSON.stringify(jsonLd)}</script>
+<script type="application/ld+json" nonce="${o.nonce}">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Do my clients need an account?","acceptedAnswer":{"@type":"Answer","text":"No. They open the link, choose the options, type their name and tap Accept. Nothing to install, nothing to sign up for."}},{"@type":"Question","name":"Is a typed name a real signature?","acceptedAnswer":{"@type":"Answer","text":"Yes. The record stores the name, the time, the IP address, the exact consent sentence and a SHA-256 fingerprint of the proposal content. Electronic signatures of this kind are recognised in Canada, the United States, the United Kingdom and the European Union."}},{"@type":"Question","name":"Can the client change the price?","acceptedAnswer":{"@type":"Answer","text":"Only where you allow it. You mark which lines are optional and which quantities the client may change; the total updates as they choose, and what they chose is part of the signed record."}},{"@type":"Question","name":"What does the free plan include?","acceptedAnswer":{"@type":"Answer","text":"Fourteen days of Pro to start, no card needed, then three live proposals at a time for as long as you like. Sending, live pricing, one-tap accept and the signed PDF are all on Free."}},{"@type":"Question","name":"What happens the moment a client accepts?","acceptedAnswer":{"@type":"Answer","text":"Both of you get an email with the signed PDF attached and a link to the acceptance record. The proposal stays online at the same link."}},{"@type":"Question","name":"Is it really open source?","acceptedAnswer":{"@type":"Answer","text":"Yes, under the AGPL. You can read every line on GitHub, and you can run your own copy on a free Cloudflare account."}}]}</script>
 <style nonce="${o.nonce}">${PAGE_CSS}${LANDING_CSS}</style>
 </head>
 <body>
@@ -715,7 +727,7 @@ export function renderLanding(o: { nonce: string; appUrl: string; githubUrl: str
     <a href="/templates">See all templates</a>
   </div>
   <div class="strip" role="region" aria-label="Templates">
-    ${TEMPLATES.filter((t) => t.id !== "blank").map((t) => { const page = TEMPLATE_PAGES.find((p) => p.id === t.id); return `<a class="tcard" href="${page ? `/templates/${page.slug}` : "/templates"}"><span class="thumb"><iframe data-src="/t/${esc(t.id)}?thumb=1" title="${esc(t.name)} preview" tabindex="-1" loading="lazy"></iframe></span><b>${esc(t.name)}<em class="style">${esc(t.style)}</em></b><span>${esc(t.summary)}</span></a>`; }).join("")}
+    ${TEMPLATES.filter((t) => t.id !== "blank" && t.group !== "trade").map((t) => { const page = TEMPLATE_PAGES.find((p) => p.id === t.id); return `<a class="tcard" href="${page ? `/templates/${page.slug}` : "/templates"}"><span class="thumb"><iframe data-src="/t/${esc(t.id)}?thumb=1" title="${esc(t.name)} preview" tabindex="-1" loading="lazy"></iframe></span><b>${esc(t.name)}<em class="style">${esc(t.style)}</em></b><span>${esc(t.summary)}</span></a>`; }).join("")}
   </div>
 </section>
 
@@ -810,6 +822,23 @@ export function renderLanding(o: { nonce: string; appUrl: string; githubUrl: str
   </div>
 </section>
 
+
+<section class="band rise-kids" id="faq">
+  <h2>Questions people ask before they try it.</h2>
+  <div class="faq">
+    <div class="col">
+      <details open><summary>Do my clients need an account?</summary><p>No. They open the link, choose the options, type their name and tap Accept. Nothing to install, nothing to sign up for.</p></details>
+      <details><summary>Is a typed name a real signature?</summary><p>Yes. The record stores the name, the time, the IP address, the exact consent sentence and a SHA-256 fingerprint of the proposal content. Electronic signatures of this kind are recognised in Canada, the United States, the United Kingdom and the European Union.</p></details>
+      <details><summary>Can the client change the price?</summary><p>Only where you allow it. You mark which lines are optional and which quantities the client may change; the total updates as they choose, and what they chose is part of the signed record.</p></details>
+    </div>
+    <div class="col">
+      <details><summary>What does the free plan include?</summary><p>Fourteen days of Pro to start, no card needed, then three live proposals at a time for as long as you like. Sending, live pricing, one-tap accept and the signed PDF are all on Free.</p></details>
+      <details><summary>What happens the moment a client accepts?</summary><p>Both of you get an email with the signed PDF attached and a link to the acceptance record. The proposal stays online at the same link.</p></details>
+      <details><summary>Is it really open source?</summary><p>Yes, under the AGPL. You can read every line on GitHub, and you can run your own copy on a free Cloudflare account.</p></details>
+    </div>
+  </div>
+</section>
+
 <section class="close rv2" id="start">
   <div class="mesh" aria-hidden="true"></div>
   <h2>Your next proposal, sent before lunch.</h2>
@@ -848,6 +877,8 @@ document.querySelectorAll(".cur button").forEach(function(b){b.addEventListener(
 (function(){var frames=[].slice.call(document.querySelectorAll(".tcard iframe[data-src]")),sec=document.getElementById("templates");if(!frames.length||!sec)return;var go=function(){frames.forEach(function(fr){if(!fr.src)fr.src=fr.dataset.src})};if(!("IntersectionObserver" in window)){go();return}new IntersectionObserver(function(es,o){es.forEach(function(e){if(e.isIntersecting){go();o.disconnect()}})},{rootMargin:"900px 0px"}).observe(sec)})();
 // Each template thumbnail scrolls exactly to the end of its page on hover, at a speed that suits its length.
 document.querySelectorAll(".tcard iframe").forEach(function(fr){var fit=function(){try{var d=fr.contentDocument;if(!d||!d.documentElement)return;var own=fr.clientHeight,win=own/3,doc=0;[].forEach.call(d.body.children,function(el){if(el.tagName==="SCRIPT"||el.tagName==="STYLE"||el.hidden)return;var r=el.getBoundingClientRect();if(r.height>0)doc=Math.max(doc,r.bottom+d.defaultView.scrollY)});if(!doc)doc=d.documentElement.scrollHeight;var travel=Math.max(0,Math.min(own-win,(doc-win)*.9));fr.style.setProperty("--travel",(-travel)+"px");fr.style.setProperty("--dur",(1.2+3.6*travel/(own-win)).toFixed(2)+"s")}catch(e){}};fr.addEventListener("load",fit);if(fr.contentDocument&&fr.contentDocument.readyState==="complete")fit()});
+// Analytics events, only when the visitor allowed analytics (gtag exists only then).
+document.querySelectorAll('a[href="/login"]').forEach(function(a){a.addEventListener("click",function(){if(window.gtag)window.gtag("event","start_free_click",{placement:a.closest("section")?a.closest("section").id||"hero":"nav"})})});
 var stripEl=document.querySelector(".tpls .strip");
 if(stripEl&&matchMedia("(hover:none)").matches){var mcards=[].slice.call(stripEl.querySelectorAll(".tcard")),mraf=0;var pickMid=function(){mraf=0;var r=stripEl.getBoundingClientRect(),mid=r.left+r.width/2,best=null,bd=1e9;mcards.forEach(function(c){var cr=c.getBoundingClientRect(),d=Math.abs(cr.left+cr.width/2-mid);if(d<bd){bd=d;best=c}});mcards.forEach(function(c){c.classList.toggle("mid",c===best)})};stripEl.addEventListener("scroll",function(){if(!mraf)mraf=requestAnimationFrame(pickMid)},{passive:true});addEventListener("resize",pickMid);setTimeout(pickMid,50);
 if(!reduce){var autoT=null,autoStop=false,autoVis=false;var goTo=function(i){var c=mcards[i];if(!c)return;stripEl.scrollTo({left:c.offsetLeft-(stripEl.clientWidth-c.offsetWidth)/2,behavior:"smooth"})};

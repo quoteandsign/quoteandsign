@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, ArrowUpRight, X } from "@phosphor-icons/react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, ArrowUpRight, MagnifyingGlass, X } from "@phosphor-icons/react";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { Link, useRouter } from "../lib/router";
@@ -10,6 +10,7 @@ import { TEMPLATES } from "../../shared/templates";
 // Each card is the real client page, scaled down, already in your brand color and style.
 const FRAME_W = 1200;
 const FRAME_H = 1500;
+const TRADE_CATEGORIES = [...new Set(TEMPLATES.filter((t) => t.group === "trade").map((t) => t.trade ?? "Other"))];
 
 type Saved = { id: string; name: string; title: string; style: string | null; accentColor: string | null; createdAt: number };
 
@@ -65,6 +66,15 @@ export function Templates() {
   const [creating, setCreating] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<Saved[]>([]);
+  const [query, setQuery] = useState("");
+  const [cat, setCat] = useState("Starting points");
+  const shown = useMemo(() => {
+    const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if (words.length) return TEMPLATES.filter((t) => words.every((w) => `${t.name} ${t.summary} ${t.trade ?? ""} ${t.title}`.toLowerCase().includes(w)));
+    if (cat === "Starting points") return TEMPLATES.filter((t) => t.group !== "trade");
+    if (cat === "Everything") return TEMPLATES;
+    return TEMPLATES.filter((t) => t.trade === cat);
+  }, [query, cat]);
   const q = (base: string, style: string | null | undefined, thumb: boolean) => {
     const p = new URLSearchParams();
     if (thumb) p.set("thumb", "1");
@@ -145,14 +155,30 @@ export function Templates() {
           </section>
         )}
 
-        <section className="mt-10" aria-labelledby="starters-h">
-          {saved.length > 0 && <h2 id="starters-h" className="text-[18px] font-semibold tracking-[-0.01em]">Templates</h2>}
-          <div className={cn("grid gap-5 sm:grid-cols-2 lg:grid-cols-3", saved.length > 0 && "mt-4")}>
-            {TEMPLATES.map((t) => (
-              <Card key={t.id} id={t.id} name={t.name} blurb={t.summary} src={q(`/t/${t.id}`, user?.defaultStyle ?? t.style, true)} previewHref={q(`/t/${t.id}`, user?.defaultStyle ?? t.style, false)} busy={creating === t.id} onUse={() => void create(t.id, { template: t.id })} />
-            ))}
+        <section className="mt-8" aria-labelledby="starters-h" data-test="trade-picker">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Show">
+              {["Starting points", "Everything", ...TRADE_CATEGORIES].map((c) => (
+                <button key={c} type="button" onClick={() => { setCat(c); setQuery(""); }} aria-pressed={cat === c && !query} className={cn("h-8 rounded-full px-3.5 text-[13px] font-medium ring-1 ring-inset transition-colors", cat === c && !query ? "bg-stone-900 text-white ring-stone-900 dark:bg-white dark:text-stone-900 dark:ring-white" : "bg-white text-stone-700 ring-stone-900/10 hover:bg-stone-50 dark:bg-stone-900 dark:text-stone-200 dark:ring-white/10 dark:hover:bg-stone-800")}>{c}</button>
+              ))}
+            </div>
+            <label className="relative block w-full sm:w-[260px]">
+              <MagnifyingGlass size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" aria-hidden="true" />
+              <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search all 37" aria-label="Search templates" className="h-9 w-full rounded-full bg-white pl-9 pr-4 text-[14px] ring-1 ring-inset ring-stone-900/10 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-brand dark:bg-stone-900 dark:ring-white/10" data-test="trade-search" />
+            </label>
           </div>
+          <h2 id="starters-h" className="sr-only">Templates</h2>
+          {shown.length === 0 ? (
+            <p className="mt-8 text-[14.5px] text-stone-500">Nothing matches "{query}". Try a broader word, or start from the closest starting point and change the words.</p>
+          ) : (
+            <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {shown.map((t) => (
+                <Card key={t.id} id={t.id} name={t.name} blurb={t.summary} src={q(`/t/${t.id}`, user?.defaultStyle ?? t.style, true)} previewHref={q(`/t/${t.id}`, user?.defaultStyle ?? t.style, false)} busy={creating === t.id} onUse={() => void create(t.id, { template: t.id })} />
+              ))}
+            </div>
+          )}
         </section>
+
       </main>
     </div>
   );

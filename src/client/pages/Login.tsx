@@ -85,6 +85,7 @@ export function Login() {
     setError(null);
     try {
       const r = await api<{ ok: true; devLink?: string }>("/auth/request", { method: "POST", json: { email, marketing, ...(challenge ? { turnstile: challenge } : {}) } });
+      (window as unknown as { gtag?: (...a: unknown[]) => void }).gtag?.("event", "sign_in_requested");
       setChallenge(null);
       setDevLink(r.devLink ?? null);
       setSent(true);

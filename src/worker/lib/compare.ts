@@ -16,6 +16,7 @@ export type Competitor = {
   theirPricing: string;
   theirPerDoc: string;
   theyDoBetter: string[];
+  short?: string; // the one-sentence summary of their model; the default fits per-user, per-document tools
   rows: [string, string, string][]; // label, us, them
 };
 
@@ -67,6 +68,40 @@ export const COMPETITORS: Competitor[] = [
     ],
     rows: [],
   },
+  {
+    slug: "better-proposals",
+    name: "Better Proposals",
+    site: "betterproposals.io",
+    pricingUrl: "https://betterproposals.io/pricing",
+    checked: "September 2026",
+    theirPricing: "Starter $13, Premium $21 and Enterprise $42 per user per month, billed monthly or yearly at a discount. Fourteen-day trial, no free plan. Follow-up automation (NUDGE) is a $10 per user add-on.",
+    theirPerDoc: "A monthly document allowance per plan: 10 on Starter, 50 on Premium, unlimited on Enterprise.",
+    theyDoBetter: [
+      "Live chat with the client inside the proposal, and payment collection through Stripe, PayPal or GoCardless at the moment of signing. Quote and Sign shows your own payment link after signing instead.",
+      "A large marketplace of designed templates across many industries, against seven built in here.",
+      "Native integrations with HubSpot, Pipedrive, Zapier and others, and an automated follow-up add-on.",
+      "Team features on Enterprise: content locking, user roles, a custom domain for proposal links.",
+    ],
+    short: "Better Proposals charges per user with a monthly document allowance and gives you a polished, closed product with payments and chat built in.",
+    rows: [],
+  },
+  {
+    slug: "bonsai",
+    name: "Bonsai",
+    site: "hellobonsai.com",
+    pricingUrl: "https://www.hellobonsai.com/pricing",
+    checked: "September 2026",
+    theirPricing: "Basic $15, Essentials $25, Premium $39 and Elite $59 per user per month, or $9, $19, $29 and $49 on yearly billing. Proposals need Essentials or above. Seven-day trial with a card, no free plan.",
+    theirPerDoc: "No per-document fees. Payments taken through Bonsai with your own Stripe or PayPal carry a 1% platform fee on top of the processor's fee.",
+    theyDoBetter: [
+      "An all-in-one suite for freelancers: contracts, invoicing, time tracking, expenses, a CRM, scheduling and a client portal. Quote and Sign does proposals and acceptance only.",
+      "Invoicing with online payment and automatic reminders, plus bookkeeping and tax estimates on higher plans.",
+      "QuickBooks and Zapier integrations, Gantt views and profit reports on Premium.",
+      "Team permissions and staffing tools on Elite.",
+    ],
+    short: "Bonsai is an all-in-one freelancer suite priced per user; proposals are one module and need at least the Essentials plan.",
+    rows: [],
+  },
 ];
 
 function rowsFor(c: Competitor): [string, string, string][] {
@@ -93,7 +128,7 @@ export function renderCompare(c: Competitor, nonce: string, analytics: string | 
 <h1>Quote and Sign vs ${esc(c.name)}</h1>
 <p class="eff">An honest comparison for people choosing proposal software. ${esc(c.name)}'s prices and features are taken from ${esc(c.site)} as read in ${esc(c.checked)}; if something has changed since, tell us through the <a href="/contact">contact form</a> and it will be corrected.</p>
 
-<div class="box"><p><strong>The short version.</strong> ${esc(c.name)} charges per user and per document and gives you a polished, closed product with native CRM connectors. Quote and Sign charges a flat price per account, lets the client change options on the page, keeps a verifiable acceptance record, and publishes its source code. If you are a freelancer, a studio or a small agency sending proposals rather than managing a sales floor, the flat price usually wins. If you need a native Salesforce or HubSpot app today, ${esc(c.name)} has it and we do not.</p></div>
+<div class="box"><p><strong>The short version.</strong> ${esc(c.short ?? `${c.name} charges per user and per document and gives you a polished, closed product with native CRM connectors.`)} Quote and Sign charges a flat price per account, lets the client change options on the page, keeps a verifiable acceptance record, and publishes its source code. If you are a freelancer, a studio or a small agency sending proposals rather than managing a sales floor, the flat price usually wins. If you need a native Salesforce or HubSpot app today, ${esc(c.name)} has it and we do not.</p></div>
 
 <h2>Side by side</h2>
 <div class="wrap-x"><table class="cmp">
