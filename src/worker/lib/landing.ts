@@ -647,7 +647,7 @@ export function renderLanding(o: { nonce: string; appUrl: string; githubUrl: str
     <p class="lede rise d1">Your client opens it anywhere, switches the options on or off, sees the total change, and signs with their name. The signed copy lands in both inboxes as a PDF. Nothing to print, nothing to chase.</p>
     <div class="ctas rise d2">
       <a class="primary" href="/login">Start free</a>
-      <a class="secondary" href="#record">See what your client gets</a>
+      <a class="secondary" href="/try">Try the editor, no account</a>
     </div>
     <p class="fine rise d3">Fourteen days of Pro, then free for three live proposals. No card needed. <a href="${esc(o.githubUrl)}" rel="noopener">Open source</a>.</p>
     <ul class="specs rise d3" aria-label="What is included">
@@ -844,7 +844,7 @@ export function renderLanding(o: { nonce: string; appUrl: string; githubUrl: str
   <h2>Your next proposal, sent before lunch.</h2>
   <p class="sub">Fourteen days of Pro, no card. Then free for three live proposals, for as long as you like.</p>
   <div class="signature" aria-hidden="true"><span>Your next client</span><svg viewBox="0 0 420 18" preserveAspectRatio="none"><path d="M4 12 C 60 2, 120 16, 200 8 S 330 4, 416 11"/></svg></div>
-  <div class="ctas"><a class="primary" href="/login">Start free <i aria-hidden="true">&rarr;</i></a><a class="secondary" href="/templates">Browse the templates</a></div>
+  <div class="ctas"><a class="primary" href="/login">Start free <i aria-hidden="true">&rarr;</i></a><a class="secondary" href="/try">Try the editor, no account</a></div>
 </section>
 
 <footer class="site-foot">
@@ -879,6 +879,8 @@ document.querySelectorAll(".cur button").forEach(function(b){b.addEventListener(
 document.querySelectorAll(".tcard iframe").forEach(function(fr){var fit=function(){try{var d=fr.contentDocument;if(!d||!d.documentElement)return;var own=fr.clientHeight,win=own/3,doc=0;[].forEach.call(d.body.children,function(el){if(el.tagName==="SCRIPT"||el.tagName==="STYLE"||el.hidden)return;var r=el.getBoundingClientRect();if(r.height>0)doc=Math.max(doc,r.bottom+d.defaultView.scrollY)});if(!doc)doc=d.documentElement.scrollHeight;var travel=Math.max(0,Math.min(own-win,(doc-win)*.9));fr.style.setProperty("--travel",(-travel)+"px");fr.style.setProperty("--dur",(1.2+3.6*travel/(own-win)).toFixed(2)+"s")}catch(e){}};fr.addEventListener("load",fit);if(fr.contentDocument&&fr.contentDocument.readyState==="complete")fit()});
 // Analytics events, only when the visitor allowed analytics (gtag exists only then).
 document.querySelectorAll('a[href="/login"]').forEach(function(a){a.addEventListener("click",function(){if(window.gtag)window.gtag("event","start_free_click",{placement:a.closest("section")?a.closest("section").id||"hero":"nav"})})});
+document.querySelectorAll('a[href^="/try"]').forEach(function(a){a.addEventListener("click",function(){if(window.gtag)window.gtag("event","try_click",{placement:a.closest("section")?a.closest("section").id||"hero":"nav"})})});
+(function(){var ref=new URLSearchParams(location.search).get("ref");if(ref&&window.gtag)window.gtag("event","referred_visit",{ref:ref})})();
 var stripEl=document.querySelector(".tpls .strip");
 if(stripEl&&matchMedia("(hover:none)").matches){var mcards=[].slice.call(stripEl.querySelectorAll(".tcard")),mraf=0;var pickMid=function(){mraf=0;var r=stripEl.getBoundingClientRect(),mid=r.left+r.width/2,best=null,bd=1e9;mcards.forEach(function(c){var cr=c.getBoundingClientRect(),d=Math.abs(cr.left+cr.width/2-mid);if(d<bd){bd=d;best=c}});mcards.forEach(function(c){c.classList.toggle("mid",c===best)})};stripEl.addEventListener("scroll",function(){if(!mraf)mraf=requestAnimationFrame(pickMid)},{passive:true});addEventListener("resize",pickMid);setTimeout(pickMid,50);
 if(!reduce){var autoT=null,autoStop=false,autoVis=false;var goTo=function(i){var c=mcards[i];if(!c)return;stripEl.scrollTo({left:c.offsetLeft-(stripEl.clientWidth-c.offsetWidth)/2,behavior:"smooth"})};

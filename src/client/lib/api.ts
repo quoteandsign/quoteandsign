@@ -1,3 +1,5 @@
+import { guestApi, isGuestPath } from "./guest";
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -9,6 +11,8 @@ export class ApiError extends Error {
 }
 
 export async function api<T = unknown>(path: string, init: RequestInit & { json?: unknown } = {}): Promise<T> {
+  // Trying the editor without an account: a guest proposal never touches the network.
+  if (isGuestPath(path)) return guestApi<T>(path, init);
   const { json, ...rest } = init;
   const res = await fetch(path, {
     credentials: "same-origin",

@@ -19,6 +19,8 @@ export type Me = {
   paidPlan: string;
   trial: boolean;
   trialDaysLeft: number;
+  referralCode: string; // /r/<code>: give a month, get a month
+  referrals: number;
   workspace: { ownerName: string } | null; // set when working inside someone else's Business team
   pendingInvite: { id: string; ownerName: string } | null;
 };

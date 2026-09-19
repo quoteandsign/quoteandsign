@@ -2,6 +2,7 @@ import { and, eq, gt, inArray, isNull, isNotNull, lt, lte, or, sql } from "drizz
 import type { Bindings } from "../env";
 import { getDb, schema } from "./db";
 import { sendEmail } from "./email";
+import { reminderMail } from "./mailkit";
 import { businessName } from "../../shared/names";
 import { capsOf, effectivePlan } from "./plan";
 import { getSetting, setSetting } from "./analytics";
@@ -121,15 +122,7 @@ export async function sendExpiryReminders(env: Bindings, now = new Date()): Prom
       .returning({ id: schema.proposals.id })
       .get();
     if (!claimed || !to.length) continue;
-    const from = (proposal.senderName || businessName(user.brandName, user.name, user.email)).replace(/[\r\n\t]+/g, " ").trim();
-    const title = proposal.title.replace(/[\r\n\t]+/g, " ").trim();
-    const when = proposal.expiresAt!.toLocaleDateString("en-CA", { year: "numeric", month: "long", day: "numeric" });
-    await sendEmail(env, {
-      to,
-      replyTo: user.email,
-      subject: `Reminder: "${title}" is valid until ${when}`,
-      text: `A quick reminder from ${from}.\n\nThe proposal "${title}" can be accepted until ${when}. After that the pricing is no longer held.\n\nOpen it here:\n${env.APP_URL}/p/${proposal.publicId}\n\nReply to this email if you have a question.`,
-    });
+    await sendEmail(env, reminderMail({ to, sender: user, proposal, expiresAt: proposal.expiresAt!, appUrl: env.APP_URL }));
     sent++;
   }
 

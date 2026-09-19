@@ -25,6 +25,8 @@ type PageProps = {
   paymentLabel?: string | null;
   /** The "Made with" footer; off for paid plans. */
   madeWith?: boolean;
+  /** Where a client who signed can start their own account; carries the sender's referral code. */
+  inviteUrl?: string;
   justAccepted: boolean;
   consentText: string;
   appUrl: string;
@@ -234,6 +236,7 @@ textarea.t{resize:vertical;min-height:72px}
 .bar a{font-weight:600;text-decoration:none;color:var(--accent-fg);background:var(--accent);padding:10px 18px;border-radius:var(--radius-btn);font-size:15px;white-space:nowrap}
 article.pad{padding-top:64px}article.narrow{max-width:420px}.muted{color:var(--muted)}
 footer.made{padding:40px 0 48px;text-align:center;font-size:13px;color:var(--muted)}footer.made a{color:inherit}
+.accept.done p.grow{margin:22px 0 0;padding-top:16px;border-top:1px solid var(--line);font-size:14px;color:var(--muted)}.accept.done p.grow a{color:var(--accent);font-weight:600}
 .ask{padding:40px 0 8px;border-top:1px solid var(--line)}
 .ask h2{font-size:22px;letter-spacing:-.02em;margin:0 0 4px}.ask p.lead{margin:0 0 6px;color:var(--muted);font-size:15px}
 .ask .two{display:grid;gap:0 14px;grid-template-columns:1fr 1fr}@media(max-width:560px){.ask .two{grid-template-columns:1fr}}
@@ -560,6 +563,7 @@ export function renderProposalPage(p: PageProps): string {
   ${p.paymentUrl ? `<p class="rec"><a class="btn" href="${esc(p.paymentUrl)}" target="_blank" rel="noopener noreferrer">${esc(p.paymentLabel || "Pay the deposit")}</a></p>` : ""}
   <p class="rec"><a class="btn ghost" href="/p/${esc(proposal.publicId)}/pdf">Download the signed copy (PDF)</a></p>
   <p class="hash"><a href="/p/${esc(proposal.publicId)}/record.json">Acceptance record (JSON)</a></p>
+  ${p.madeWith !== false && p.inviteUrl ? `<p class="grow">Send proposals like this one to your own clients. <a href="${esc(p.inviteUrl)}" rel="noopener">Try Quote and Sign free</a>, no card needed.</p>` : ""}
 </section>`;
   } else if (p.declined) {
     acceptSection = `<section class="accept" id="accept"><h2>You passed on this one</h2><p class="lead">Thanks for letting ${esc(brand)} know. Changed your mind? Reply to their email and they can reopen it.</p></section>`;
@@ -766,7 +770,7 @@ ${tail}
 ${formClose}
 </article>
 ${ask}
-<footer class="made">${p.madeWith === false ? "" : `Made with <a href="${esc(p.appUrl)}" rel="noopener">Quote and Sign</a> · `}<a href="${esc(p.appUrl)}/privacy" rel="noopener">Privacy</a> · <a href="${esc(p.appUrl)}/contact?kind=abuse" rel="noopener">Report</a></footer>
+<footer class="made">${p.madeWith === false ? "" : `Made with <a href="${esc(p.appUrl)}/?ref=proposal" rel="noopener">Quote and Sign</a> · `}<a href="${esc(p.appUrl)}/privacy" rel="noopener">Privacy</a> · <a href="${esc(p.appUrl)}/contact?kind=abuse" rel="noopener">Report</a></footer>
 ${bar}
 ${script}
 ${revealScript}

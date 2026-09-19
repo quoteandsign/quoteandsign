@@ -389,6 +389,15 @@ export function Profile() {
         {/* ---------------- Plan ---------------- */}
         {tab === "plan" && (
           <div id="settings-panel-plan" role="tabpanel" aria-labelledby="settings-tab-plan" className="mt-6 grid gap-4">
+            <section className={panel} data-test="referral">
+              <SectionTitle hint="Anyone who starts an account from your link gets three weeks of Pro instead of two. When they take a paid plan, you get a month of Pro: added to a free account, credited to a paid one. Up to twelve a year; a refund takes it back. The same link is on every proposal your clients sign.">Give a month, get a month</SectionTitle>
+              <div className="flex max-w-xl flex-wrap items-center gap-2">
+                <input readOnly value={`${location.origin}/r/${user?.referralCode ?? ""}`} aria-label="Your referral link" onFocus={(e) => e.currentTarget.select()} className="h-10 min-w-0 flex-1 rounded-full bg-stone-900/[.04] px-4 font-mono text-[13px] ring-1 ring-inset ring-stone-900/10 dark:bg-white/[.06] dark:ring-white/10" data-test="referral-link" />
+                <Button variant="secondary" onClick={() => { void navigator.clipboard?.writeText(`${location.origin}/r/${user?.referralCode ?? ""}`); setState("saved"); setTimeout(() => setState("idle"), 1500); }}>{state === "saved" ? "Copied" : "Copy link"}</Button>
+              </div>
+              <p className="mt-3 text-[13px] text-stone-500">{user?.referrals ? `${user.referrals} ${user.referrals === 1 ? "account has" : "accounts have"} joined through your link.` : "Nobody has joined through your link yet. Share it with anyone who sends quotes."} <a href="/terms#referrals" className="underline underline-offset-4">Programme terms</a>.</p>
+            </section>
+
             <section id="plan" className={panel} data-test="plan">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>

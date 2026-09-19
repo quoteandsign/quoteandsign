@@ -16,17 +16,23 @@ import { analyticsId, analyticsCsp } from "./lib/analytics";
 import { robotsTxt, sitemapXml, llmsTxt } from "./lib/seo";
 import { compareBySlug, renderCompare, renderCompareIndex } from "./lib/compare";
 import { pageBySlug, renderTemplatePage, renderTemplatesIndex } from "./lib/templatesPage";
+import { rateBySlug, renderRatePage, renderRatesIndex } from "./lib/ratesPage";
 import { getSessionUser } from "./lib/session";
 import { businessName } from "../shared/names";
 import { eq, and } from "drizzle-orm";
 import { getDb, schema } from "./lib/db";
 import { renderLanding } from "./lib/landing";
+import { isCode, referrerFor, rememberReferral, rememberSource } from "./lib/referral";
+import { rateLimit } from "./lib/ratelimit";
+import { ipHash } from "./lib/crypto";
+import { clientIp } from "./env";
 import { renderTemplatePreview, renderSimplePage } from "./lib/page";
 import { TEMPLATES } from "../shared/templates";
 import { isHex } from "../shared/looks";
 import { STYLE_IDS } from "../shared/styles";
 import { sendExpiryReminders, sendTrialNotices, pruneOldRows, warnOnStorage } from "./lib/reminders";
 import { sendDay3Nudges } from "./lib/onboarding";
+import { sendSuspiciousActivityAlert } from "./lib/alerts";
 
 import type { Bindings } from "./env";
 export type { Bindings };
@@ -103,8 +109,20 @@ app.get("/", async (c) => {
     "content-security-policy",
     `default-src 'none'; script-src 'nonce-${nonce}'${csp.script}; style-src 'nonce-${nonce}'; img-src 'self' data:${csp.img}; connect-src 'self'${csp.connect}; font-src 'self'; frame-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`,
   );
-  c.header("cache-control", "public, max-age=300");
+  // A tagged arrival (?ref=signed, ?ref=email, ...) is remembered in a cookie, so the response is personal.
+  c.header("cache-control", rememberSource(c) ? "private, no-store" : "public, max-age=300");
   return c.html(renderLanding({ nonce, appUrl: appUrl(c), githubUrl: GITHUB_URL, analytics: ga }));
+});
+
+// A friend's link. Remembers the code for thirty days, then shows the homepage.
+app.get("/r/:code", async (c) => {
+  const code = c.req.param("code").toLowerCase();
+  const db = getDb(c.env.DB);
+  const ok = (await rateLimit(db, `ref:visit:${await ipHash(c.env.SESSION_SECRET, clientIp(c.req.raw))}`, 30, 60_000)).allowed;
+  if (ok && isCode(code) && (await referrerFor(db, code))) rememberReferral(c, code);
+  const ref = c.req.query("ref");
+  c.header("cache-control", "private, no-store");
+  return c.redirect(ref && /^[a-z0-9_-]{1,32}$/.test(ref) ? `/?ref=${ref}` : "/?ref=friend", 302);
 });
 
 // What crawlers and AI assistants may read: the public pages only, described once.
@@ -181,6 +199,24 @@ app.get("/contact", async (c) => {
   return c.html(renderContact(nonce, { siteKey, email: viewer?.email ?? null, name: viewer?.brandName ?? viewer?.name ?? null, kind: c.req.query("kind") ?? null, analytics: ga }));
 });
 
+// Rate guides: what to charge, one page per template, built from its pricing lines.
+app.get("/rates", async (c) => {
+  const nonce = crypto.randomUUID().replace(/-/g, "");
+  const ga = await analyticsId(c.env.DB);
+  c.header("content-security-policy", templateCsp(nonce, analyticsCsp(ga)));
+  c.header("cache-control", "public, max-age=3600");
+  return c.html(renderRatesIndex(nonce, ga));
+});
+app.get("/rates/:slug", async (c) => {
+  const page = rateBySlug(c.req.param("slug"));
+  if (!page) return c.html(renderSimplePage("Not found", "There is no pricing guide at this address."), 404);
+  const nonce = crypto.randomUUID().replace(/-/g, "");
+  const ga = await analyticsId(c.env.DB);
+  c.header("content-security-policy", templateCsp(nonce, analyticsCsp(ga)));
+  c.header("cache-control", "public, max-age=3600");
+  return c.html(renderRatePage(page, nonce, ga));
+});
+
 // Template previews: the real client page fed with template content. Our own gallery embeds
 // them as scaled thumbnails, so framing is allowed from this origin only.
 app.get("/t/:id", async (c) => {
@@ -250,7 +286,7 @@ app.route("/p", publicRoutes);
 // Anything the router does not own falls through to static assets / the SPA. The assets binding
 // answers every unknown path with the app shell and a 200, which search engines would index as
 // thin duplicate pages; so outside the app's own routes an unknown address gets a real 404.
-const SPA_PREFIXES = ["/app", "/login", "/admin"];
+const SPA_PREFIXES = ["/app", "/login", "/admin", "/try"];
 const APP_SHELL_CSP = [
   "default-src 'self'",
   "script-src 'self' 'nonce-NONCE' https://www.googletagmanager.com https://challenges.cloudflare.com",
@@ -280,7 +316,8 @@ app.notFound(async (c) => {
   const isApp = SPA_PREFIXES.some((p) => path === p || path.startsWith(p + "/"));
   const looksLikeFile = /\.[a-z0-9]{1,8}$/i.test(path);
   const html = (res.headers.get("content-type") ?? "").includes("text/html");
-  if (isApp && html) {
+  // In development Vite injects its own inline scripts (React refresh), so the policy is production-only.
+  if (isApp && html && c.env.ENVIRONMENT !== "development") {
     // The app shell gets a script policy like every other page: only our own bundle, the analytics
     // tag and the Turnstile widget may run. Styles stay open because the editor sets them inline.
     // The nonce is for Cloudflare, which copies it onto the bot-detection snippet it injects.
@@ -309,6 +346,7 @@ export default {
     ctx.waitUntil(sendDay3Nudges(env));
     ctx.waitUntil(pruneOldRows(env));
     ctx.waitUntil(warnOnStorage(env));
+    ctx.waitUntil(sendSuspiciousActivityAlert(env));
     ctx.waitUntil(retryWebhooks(env));
   },
 };

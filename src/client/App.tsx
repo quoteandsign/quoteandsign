@@ -9,6 +9,7 @@ import { Editor } from "./pages/Editor";
 import { Templates } from "./pages/Templates";
 import { Profile } from "./pages/Profile";
 import { Admin } from "./pages/Admin";
+import { Try } from "./pages/Try";
 import { Skeleton } from "./components/ui";
 
 function Routes() {
@@ -19,6 +20,7 @@ function Routes() {
   const templates = path === "/app/templates";
   const brand = path === "/app/profile" || path === "/app/brand";
   const admin = path === "/app/admin";
+  const tryIt = path === "/try" ? { template: null } : matchPath("/try/:template", path) ? { template: matchPath("/try/:template", path)!.template! } : null;
   const isApp = path === "/app" || templates || brand || admin || Boolean(editor);
 
   useEffect(() => {
@@ -43,6 +45,7 @@ function Routes() {
     );
   }
   if (path === "/login") return <Login />;
+  if (tryIt) return <Try template={tryIt.template} />;
   if (editor && user) return <Editor key={editor.id} id={editor.id!} />;
   if (templates && user) return <Templates />;
   if (brand && user) return <Profile />;

@@ -14,6 +14,8 @@ import { computeTotals, formatMoney, describeTotals, type Selection } from "../.
 import { renderProposalPage, renderSimplePage, renderUnlockPage, renderRecordPage } from "../lib/page";
 import { splitSections, type Block } from "../lib/render";
 import { PLANS, effectivePlan, capsOf } from "../lib/plan";
+import { ensureReferralCode } from "../lib/referral";
+import { acceptedSenderMail, acceptedSignerMail, proposalOpenedMail, questionMail } from "../lib/mailkit";
 import { businessName } from "../../shared/names";
 import { proposalPdf } from "../lib/pdf";
 import { emitWebhook } from "../lib/webhooks";
@@ -160,13 +162,7 @@ publicRoutes.get("/:publicId", async (c) => {
       : null;
     if (firstOpen) await emitWebhook(c, owner.id, "proposal.opened", proposal);
     if (firstOpen && capsOf(owner).notify) {
-      await sendEmail(c.env, {
-        to: owner.email,
-        subject: `${oneLine(proposal.clientName || "Your client")} opened "${oneLine(proposal.title)}"`,
-        heading: `${proposal.clientName || "Your client"} just opened it`,
-        buttons: [{ label: "See how it is going", url: `${appUrl(c)}/app/p/${proposal.id}` }],
-        text: `Your proposal "${proposal.title}" was just opened for the first time.\n\n${appUrl(c)}/app/p/${proposal.id}`,
-      });
+      await sendEmail(c.env, proposalOpenedMail({ to: owner.email, proposal, appUrl: appUrl(c) }));
     }
   }
 
@@ -198,6 +194,7 @@ publicRoutes.get("/:publicId", async (c) => {
       paymentUrl: caps.payment ? (proposal.paymentUrl ?? owner.paymentUrl ?? null) : null,
       paymentLabel: proposal.paymentLabel ?? null,
       madeWith: !(caps.footerOff && owner.hideMadeWith),
+      inviteUrl: acceptance && !(caps.footerOff && owner.hideMadeWith) ? `${appUrl(c)}/r/${await ensureReferralCode(db, owner)}?ref=signed` : undefined,
       ribbon: framed ? { hidden: true } : undefined,
       justAccepted: c.req.query("accepted") === "1",
       consentText: CONSENT_TEXT,
@@ -352,29 +349,14 @@ publicRoutes.post("/:publicId/accept", async (c) => {
   } catch (e) {
     console.error("signed pdf", e);
   }
-  const senderBrand = proposal.senderName || businessName(owner.brandName, owner.name) || null;
-  const senderAccent = proposal.accentColor ?? owner.brandColor;
   // A trial account could otherwise send a branded "Pay the deposit" button to any address from
   // our sending domain (it controls clientEmail too). Only accounts that have paid get the button.
   const payUrl = effectivePlan(owner).paid !== "free" ? proposal.paymentUrl || owner.paymentUrl : null;
-  await sendEmail(c.env, {
-    to: await internalRecipients(db, owner, proposal),
-    subject: `Accepted: ${oneLine(proposal.title)} (${total})`,
-    heading: `${d.signerName} signed ${proposal.title}`,
-    buttons: [{ label: "Open the signed copy", url: link }, { label: "Signing record", url: `${link}/record` }],
-    text: `${d.signerName} accepted "${proposal.title}" for ${total} on ${now.toUTCString()}.${attachments.length ? "\n\nThe signed PDF is attached." : ""}\n\nSigned copy: ${link}\nSigning record: ${link}/record\nContent hash: ${contentHash}`,
-    attachments,
-  });
-  await sendEmail(c.env, {
-    to: d.signerEmail,
-    subject: `Your accepted copy: ${oneLine(proposal.title)}`,
-    brand: senderBrand,
-    accent: senderAccent,
-    heading: "Thank you, it is signed",
-    buttons: [...(payUrl ? [{ label: proposal.paymentLabel || "Pay the deposit", url: payUrl }] : []), { label: "Open your signed copy", url: link }],
-    text: `Thank you. You accepted "${proposal.title}" for ${total} on ${now.toUTCString()}.${attachments.length ? "\n\nYour signed copy is attached as a PDF." : ""}\n\n${payUrl ? `${proposal.paymentLabel || "Pay the deposit"}: ${payUrl}\n\n` : ""}Open it any time: ${link}\nSigning record: ${link}/record\nContent hash: ${contentHash}`,
-    attachments,
-  });
+  await sendEmail(c.env, acceptedSenderMail({ to: await internalRecipients(db, owner, proposal), proposal, signerName: d.signerName, total, when: now, link, contentHash, attachments }));
+  await sendEmail(c.env, acceptedSignerMail({
+    to: d.signerEmail, sender: owner, proposal, total, when: now, link, contentHash, payUrl, attachments,
+    invite: capsOf(owner).footerOff && owner.hideMadeWith ? undefined : `${appUrl(c)}/r/${await ensureReferralCode(db, owner)}?ref=email`,
+  }));
 
   if (wantsJson) return c.json({ ok: true, redirect: `/p/${publicId}?accepted=1#accept` });
   return c.redirect(`/p/${publicId}?accepted=1#accept`);
@@ -450,20 +432,7 @@ publicRoutes.post("/:publicId/ask", async (c) => {
   const now = new Date();
   const oneLine = (t: string) => t.replace(/[\r\n\t]+/g, " ").trim();
   await db.insert(schema.messages).values({ id: uuid(), proposalId: proposal.id, name: parsed.data.name, email: parsed.data.email || null, body: parsed.data.body, createdAt: now });
-  await sendEmail(c.env, {
-    to: await internalRecipients(db, owner, proposal),
-    replyTo: parsed.data.email || undefined,
-    subject: `Question about "${oneLine(proposal.title)}" from ${oneLine(parsed.data.name)}`,
-    quote: parsed.data.body,
-    text: `${oneLine(parsed.data.name)}${parsed.data.email ? ` (${parsed.data.email})` : ""} asked a question on your proposal "${oneLine(proposal.title)}":
-
-${parsed.data.body}
-
-${parsed.data.email ? "Reply to this email to answer them directly." : "They did not leave an email address."}
-
-Open the proposal:
-${appUrl(c)}/app/p/${proposal.id}`,
-  });
+  await sendEmail(c.env, questionMail({ to: await internalRecipients(db, owner, proposal), proposal, name: parsed.data.name, email: parsed.data.email || null, body: parsed.data.body, appUrl: appUrl(c) }));
   await audit(db, { userId: owner.id, proposalId: proposal.id, event: "proposal.question", ipHash: viewerHash });
   return c.json({ ok: true });
 });

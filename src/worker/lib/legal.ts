@@ -90,7 +90,7 @@ ${meta.noindex ? `<meta name="robots" content="noindex">` : ""}${share}
 ${extraHead}
 </head>
 <body>
-<div class="top"><a class="brand" href="/"><i></i><span>Quote <span class="and">and</span> Sign</span></a><nav><a href="/templates">Templates</a><a class="sm-hide" href="/#plans">Pricing</a><a class="sm-hide" href="/compare">Compare</a><a href="/login">Sign in</a><a class="cta" href="/login">Start free</a></nav></div>
+<div class="top"><a class="brand" href="/"><i></i><span>Quote <span class="and">and</span> Sign</span></a><nav><a href="/templates">Templates</a><a class="sm-hide" href="/rates">Rates</a><a class="sm-hide" href="/#plans">Pricing</a><a class="sm-hide" href="/compare">Compare</a><a href="/login">Sign in</a><a class="cta" href="/login">Start free</a></nav></div>
 <main>
 ${body}
 </main>
@@ -198,10 +198,18 @@ export function renderTerms(nonce: string, analytics: string | null = null): str
 <h2>11. Indemnity</h2>
 <p>You will defend and indemnify us against claims, losses and costs (including reasonable legal fees) arising from your content, your proposals, your dealings with your clients, or your breach of these terms.</p>
 
-<h2>12. Termination</h2>
+<h2 id="referrals">12. Referral programme</h2>
+<ul>
+<li>Every account has a referral link. A person who creates a new account through it starts with a 21-day Pro trial instead of 14 days.</li>
+<li>When that account takes its first paid plan, the referring account receives one month of Pro: added as 30 days to a free account, or credited against the next invoice of a paid account. The credit is granted once per referred account, for at most twelve referred accounts in any twelve months.</li>
+<li>Credits have no cash value, cannot be paid out, transferred or combined with other offers, and are withdrawn if the referred subscription is refunded, charged back or revoked within 30 days.</li>
+<li>Referring yourself, creating accounts for people who did not ask for them, or sending unsolicited messages to promote your link is not allowed and forfeits the credit. We may end or change the programme at any time; credits already granted stay.</li>
+</ul>
+
+<h2>13. Termination</h2>
 <p>You may close your account at any time from the Settings page. We may suspend or close an account for breach of these terms or the Acceptable Use Policy, for non-payment, or where required by law. Sections 4, 5, 9, 10, 11, 14 and 15 survive termination.</p>
 
-<h2>13. Changes to these terms</h2>
+<h2>14. Changes to these terms</h2>
 <p>We may update these terms. For material changes we will email account holders at least 14 days before they take effect. Continued use after that date is acceptance of the new terms.</p>
 
 <h2>14. Governing law</h2>
@@ -245,7 +253,7 @@ export function renderPrivacy(nonce: string, analytics: string | null = null): s
 <li>Business name, color, logo, page style, payment link and team email addresses, to put on your proposals.</li>
 <li>Your proposals: the text, prices, client names and client email addresses you enter.</li>
 <li>Billing status from our payment provider (which plan, whether it is active). Card details never reach us.</li>
-<li>A security log of sign-ins, sends and account changes, with a hashed IP address, kept 12 months.</li>
+<li>A security log of sign-ins, sends and account changes, with a hashed IP address, kept 12 months. When an account is created through another member's referral link, the hashed address of the sign-up is compared with that member's recent sign-ins so that a person cannot refer themselves.</li>
 <li>If you tick the product-news box when signing up (it is unticked by default), or turn it on later, we record that choice with the time and a hashed IP address, and send you occasional product emails (a few a year). Every one has an unsubscribe link, and the setting is under Settings, Notifications.</li>
 <li>Messages you send through the contact form, with the email address you give, so we can reply.</li>
 </ul>

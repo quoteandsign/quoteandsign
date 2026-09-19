@@ -161,11 +161,11 @@ export function renderTemplatePage(p: TemplatePage, nonce: string, analytics: st
   const body = `
 <h1>${esc(p.keyword)}</h1>
 <p class="eff">For ${esc(p.audience)}. ${esc(p.intro)}</p>
-<p><a class="tpl-cta" href="/login?template=${esc(t.id)}">Use this template</a> <a class="tpl-cta alt" href="/t/${esc(t.id)}" target="_blank" rel="noopener">Open full size</a></p>
+<p><a class="tpl-cta" href="/try/${esc(t.id)}">Try it in the editor, no account</a> <a class="tpl-cta alt" href="/t/${esc(t.id)}" target="_blank" rel="noopener">Open full size</a></p>
 
 <h2>The template, as your client would see it</h2>
 <a class="tpl-thumb tpl-big" href="/t/${esc(t.id)}" target="_blank" rel="noopener" aria-label="Open the ${esc(p.keyword)} full size"><iframe src="/t/${esc(t.id)}?thumb=1" title="${esc(p.keyword)} preview" tabindex="-1" aria-hidden="true" loading="lazy"></iframe></a>
-<p class="muted">A scaled preview. <a href="/t/${esc(t.id)}" target="_blank" rel="noopener">Open full size</a> to read it as a client would.</p>
+<p class="muted">A scaled preview. <a href="/t/${esc(t.id)}" target="_blank" rel="noopener">Open full size</a> to read it as a client would. Wondering about the numbers? <a href="/rates/${esc(p.slug.replace(/-proposal-template$/, ""))}">What to charge for this work</a>.</p>
 
 <h2>What is inside</h2>
 <p>Sections: ${secs.map((s) => esc(s)).join(", ")}. Then the pricing table and the accept button.</p>
@@ -183,7 +183,7 @@ ${lines}
 
 <h2>Start with it</h2>
 <p>Sign in with your email, no password and no card. The template opens in the editor with your currency set, and fourteen days of Pro are included.</p>
-<p><a class="tpl-cta" href="/login?template=${esc(t.id)}">Use this template</a></p>
+<p><a class="tpl-cta" href="/try/${esc(t.id)}">Try it in the editor, no account</a> <a class="tpl-cta alt" href="/login?template=${esc(t.id)}">Sign in and use it</a></p>
 
 <p class="muted">Other templates: ${others}. Quote and Sign is open source under the AGPL; you can also run your own copy.</p>`;
   return shell(p.keyword, body, nonce, `${breadcrumbs(nonce, [["Templates", "/templates"], [p.keyword, `/templates/${p.slug}`]])}

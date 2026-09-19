@@ -74,10 +74,12 @@ export function Login() {
   // A plan picked on the homepage: keep it through the email round-trip, then land on the Plan tab.
   const wantedPlan = search.get("plan") === "pro" ? "Pro" : search.get("plan") === "business" ? "Business" : null;
   const wantedTemplate = /^[a-z-]{1,40}$/.test(search.get("template") ?? "") ? search.get("template") : null;
+  const guestSend = search.get("guest") === "1"; // a proposal made without an account is waiting to be sent
   useEffect(() => {
+    if (guestSend) { try { localStorage.setItem("qs-after-login", "/app/templates?guest=1"); } catch { /* private mode */ } return; }
     if (!wantedPlan && !wantedTemplate) return;
     try { localStorage.setItem("qs-after-login", wantedTemplate ? `/app/templates?use=${wantedTemplate}` : "/app/brand#plan"); } catch { /* private mode */ }
-  }, [wantedPlan, wantedTemplate]);
+  }, [wantedPlan, wantedTemplate, guestSend]);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -169,8 +171,8 @@ export function Login() {
               ) : (
                 <form onSubmit={submit} className="grid gap-6">
                   <div>
-                    <h2 className="text-[24px] font-[650] tracking-[-0.02em]">{wantedPlan ? `Start with ${wantedPlan}` : "Sign in"}</h2>
-                    <p className="mt-1.5 text-[15px] text-graphite dark:text-stone-400">{wantedPlan ? `No password. We email you a link, and the ${wantedPlan} plan is one click away once you are in.` : "No password. We email you a link."}</p>
+                    <h2 className="text-[24px] font-[650] tracking-[-0.02em]">{guestSend ? "Almost there" : wantedPlan ? `Start with ${wantedPlan}` : "Sign in"}</h2>
+                    <p className="mt-1.5 text-[15px] text-graphite dark:text-stone-400">{guestSend ? "Your proposal is saved in this browser. Enter your email and open the link we send; it lands in your account ready to go out." : wantedPlan ? `No password. We email you a link, and the ${wantedPlan} plan is one click away once you are in.` : "No password. We email you a link."}</p>
                   </div>
                   <Field label="Email" htmlFor="email" error={error}>
                     <Input

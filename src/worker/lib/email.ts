@@ -21,6 +21,8 @@ export type Mail = {
   buttons?: { label: string; url: string }[];
   /** Text a visitor wrote (a question, a reason). Shown as a quoted block, never made clickable. */
   quote?: string;
+  /** For mail that reaches the sender's client: a link inviting them to send their own proposals. */
+  invite?: string;
 };
 
 function base64(bytes: Uint8Array): string {
@@ -67,6 +69,10 @@ export async function sendEmail(env: Bindings, mail: Mail): Promise<void> {
   const to = Array.isArray(mail.to) ? mail.to : [mail.to];
   if (!to.length) return;
   if (!mail.uncounted) await countMail(env, to.length);
+  // The plain-text copy carries the invitation too, for clients that show no HTML.
+  if (mail.invite) mail = { ...mail, text: `${mail.text}
+
+Send your own proposals like this one, free: ${mail.invite}` };
   if (!env.RESEND_API_KEY) {
     if (env.ENVIRONMENT !== "development") {
       // Refuse to run a production Worker with no email provider: nothing should be printed to logs.
@@ -184,7 +190,7 @@ export function renderHtml(mail: Mail, appUrl: string): string {
 ${mail.heading ? `<tr><td style="padding:10px 32px 0;font-size:24px;line-height:1.25;font-weight:700;letter-spacing:-.01em">${escape(mail.heading)}</td></tr>` : ""}
 <tr><td style="padding:16px 32px 0;font-size:15.5px;line-height:1.65;color:#2a2826">${paragraphs.map((p) => (p === QUOTE ? quoteHtml : `<p style="margin:0 0 14px">${p}</p>`)).join("")}</td></tr>
 ${buttons ? `<tr><td style="padding:8px 32px 0">${buttons}</td></tr><tr><td style="padding:14px 32px 0;font-size:12.5px;line-height:1.6;color:#8a857d">${(mail.buttons ?? []).filter((b) => /^https?:\/\//.test(b.url)).map((b) => `${escape(b.label)}: <a href="${escape(b.url)}" style="color:#8a857d;word-break:break-all">${escape(b.url)}</a>`).join("<br>")}</td></tr>` : ""}
-<tr><td style="padding:28px 32px 26px;font-size:12.5px;line-height:1.6;color:#8a857d;border-top:1px solid #efece5;margin-top:24px">${mail.brand && mail.brand.trim() ? `Sent by ${escape(mail.brand.trim())} with ` : "Sent with "}<a href="${escape(appUrl)}" style="color:#8a857d">Quote and Sign</a></td></tr>
+<tr><td style="padding:28px 32px 26px;font-size:12.5px;line-height:1.6;color:#8a857d;border-top:1px solid #efece5;margin-top:24px">${mail.brand && mail.brand.trim() ? `Sent by ${escape(mail.brand.trim())} with ` : "Sent with "}<a href="${escape(appUrl)}" style="color:#8a857d">Quote and Sign</a>${mail.invite ? `<br><a href="${escape(mail.invite)}" style="color:#8a857d">Send your own proposals like this one, free.</a>` : ""}</td></tr>
 </table>
 </td></tr></table>
 </body></html>`;

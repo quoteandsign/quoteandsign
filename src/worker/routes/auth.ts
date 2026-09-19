@@ -14,6 +14,7 @@ import { audit } from "../lib/audit";
 import { analyticsId } from "../lib/analytics";
 import { STYLE_IDS } from "../../shared/styles";
 import { effectivePlan, capsOf, trialEnd } from "../lib/plan";
+import { readAttribution, referrerFor, isSelfReferral, ensureReferralCode, referralCount, REFERRED_TRIAL_BONUS_DAYS } from "../lib/referral";
 import { isAdmin } from "./support";
 import { workspaceOwner } from "../lib/session";
 import { businessName } from "../../shared/names";
@@ -84,6 +85,7 @@ authRoutes.post("/request", async (c) => {
     expiresAt: new Date(now.getTime() + TOKEN_MINUTES * 60_000),
     marketing: parsed.data.marketing === true, // the box on the form; becomes consent only once the link is used
     ipHash: ip,
+    ...readAttribution(c),
   });
 
   const link = `${appUrl(c)}/auth/verify?token=${raw}`;
@@ -143,7 +145,7 @@ authRoutes.post("/verify", async (c) => {
     .update(schema.magicTokens)
     .set({ usedAt: now })
     .where(and(eq(schema.magicTokens.tokenHash, tokenHash), isNull(schema.magicTokens.usedAt), gt(schema.magicTokens.expiresAt, now)))
-    .returning({ email: schema.magicTokens.email, marketing: schema.magicTokens.marketing, ipHash: schema.magicTokens.ipHash })
+    .returning({ email: schema.magicTokens.email, marketing: schema.magicTokens.marketing, ipHash: schema.magicTokens.ipHash, source: schema.magicTokens.source, referral: schema.magicTokens.referral })
     .get();
   if (!token) return c.redirect("/login?error=expired");
 
@@ -159,9 +161,15 @@ authRoutes.post("/verify", async (c) => {
       .where(or(eq(schema.users.deletedEmailHash, await hmacHex(c.env.SESSION_SECRET, token.email)), eq(schema.users.trialKey, key)))
       .orderBy(asc(schema.users.trialEndsAt))
       .get();
-    await db.insert(schema.users).values({ id, email: token.email, createdAt: now, plan: "free", trialKey: key, trialEndsAt: before ? before.trialEndsAt : trialEnd(now) });
+    // A friend's link: a longer first trial for the newcomer, a month of Pro for the friend. Only
+    // a genuinely new person earns it; a returning trial key or deleted address does not.
+    const candidate = before ? null : await referrerFor(db, token.referral);
+    const referrer = candidate && !(await isSelfReferral(db, candidate.id, token.ipHash ?? null, now)) ? candidate : null;
+    const ends = before ? before.trialEndsAt : referrer ? new Date(trialEnd(now).getTime() + REFERRED_TRIAL_BONUS_DAYS * 86_400_000) : trialEnd(now);
+    await db.insert(schema.users).values({ id, email: token.email, createdAt: now, plan: "free", trialKey: key, trialEndsAt: ends, source: token.source ?? null, referredBy: referrer?.id ?? null });
     user = (await db.select().from(schema.users).where(eq(schema.users.id, id)).get())!;
-    await audit(db, { userId: id, event: "user.created" });
+    await audit(db, { userId: id, event: "user.created", ipHash: token.ipHash ?? undefined, meta: { source: token.source ?? "direct", referred: Boolean(referrer) } });
+
     await sendWelcome(c.env, user);
   } else if (user.deletedAt) {
     return c.redirect("/login?error=deleted");
@@ -218,6 +226,8 @@ authRoutes.get("/me", async (c) => {
       caps: capsOf(owner),
       isAdmin: isAdmin(c.env, user.email),
       marketingOptIn: user.marketingOptIn,
+      referralCode: await ensureReferralCode(db, user),
+      referrals: await referralCount(db, user.id),
       workspace: owner.id === user.id ? null : { ownerName: businessName(owner.brandName, owner.name, "your team") },
       pendingInvite: invite && invite.owner.plan === "business" && !invite.owner.deletedAt ? { id: invite.id, ownerName: businessName(invite.owner.brandName, invite.owner.name, invite.owner.email) } : null,
     },

@@ -16,6 +16,7 @@ import { STYLE_IDS } from "../../shared/styles";
 import { businessName } from "../../shared/names";
 import { proposalPdf } from "../lib/pdf";
 import { PLANS, effectivePlan, capsOf } from "../lib/plan";
+import { proposalSentMail } from "../lib/mailkit";
 import { contentHashInput, CONSENT_MANUAL } from "./public";
 import { computeTotals } from "../../shared/pricing";
 import { sha256Hex } from "../lib/crypto";
@@ -403,25 +404,7 @@ proposalRoutes.post("/:id/send", async (c) => {
     if (!went) return c.json({ error: LIVE_LIMIT_MESSAGE(plan.liveLimit), code: "limit" }, 402);
   }
   const recipients = sendBody.success && sendBody.data.email === false ? [] : recipientsOf(proposal);
-  if (recipients.length) {
-    const from = oneLine(proposal.senderName || businessName(user.brandName, user.name, user.email));
-    const title = oneLine(proposal.title);
-    await sendEmail(c.env, {
-      to: recipients,
-      replyTo: user.email,
-      subject: `Proposal: ${title}`,
-      brand: from,
-      accent: proposal.accentColor ?? user.brandColor,
-      heading: title,
-      buttons: [{ label: "Open the proposal", url: link }],
-      text: `${from} sent you a proposal: ${title}.
-${message ? `\n${message}\n` : ""}
-Open it here:
-${link}
-
-You can review the pricing, choose options and accept online. Reply to this email if you have a question.`,
-    });
-  }
+  if (recipients.length) await sendEmail(c.env, proposalSentMail({ to: recipients, sender: user, proposal, link, message }));
   // Every email that goes out counts, so the dashboard can say "sent twice".
   if (recipients.length) await db.update(schema.proposals).set({ sendCount: sql`${schema.proposals.sendCount} + 1`, lastSentAt: now }).where(eq(schema.proposals.id, proposal.id));
   await audit(db, { userId: actor.id, proposalId: proposal.id, event: "proposal.sent", ipHash: await ipHash(c.env.SESSION_SECRET, clientIp(c.req.raw)), meta: { emailed: recipients.length } });

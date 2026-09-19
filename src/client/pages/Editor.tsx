@@ -17,6 +17,7 @@ import { styleOf } from "../../shared/styles";
 import { businessName } from "../../shared/names";
 import { isHex, readableOn } from "../../shared/looks";
 import { shrinkImage } from "../lib/image";
+import { isGuestId } from "../lib/guest";
 import { en as bnEn } from "@blocknote/core/locales";
 import { SuggestionMenu } from "@blocknote/core/extensions";
 // The editor's history plugin (a BlockNote dependency): how many steps can be undone or redone.
@@ -121,6 +122,7 @@ const accentOf = (hex: string | null | undefined) => (isHex(hex) ? hex : "#2b3f8
 
 function EditorLoaded({ initial }: { initial: Loaded }) {
   const { proposal } = initial;
+  const guest = isGuestId(proposal.id); // trying it without an account: saved in this browser only
   const readOnly = proposal.status === "accepted" || proposal.status === "archived";
   const { user, refresh } = useAuth();
   const { navigate } = useRouter();
@@ -223,6 +225,7 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
     initialContent: proposal.content.length ? (proposal.content as any) : undefined,
     dictionary: { ...bnEn, placeholders: { ...bnEn.placeholders, emptyDocument: "Type / to add pricing, headings, cards…", default: "Type / for blocks, or just write" } },
     uploadFile: async (file: File) => {
+      if (guest) throw new Error("Images need an account. Press Send, sign in, and add them after.");
       const small = await shrinkImage(file, 1400);
       const fd = new FormData();
       fd.append("file", small);
@@ -256,6 +259,7 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
   // (cover art state is declared above the pricing context; see useHeroArt)
   // Change the cover picture on the cover itself: replace the first picture in the page, or add one.
   const uploadImage = async (file: File): Promise<string> => {
+    if (guest) throw new Error("Images need an account. Press Send, sign in, and add them after.");
     const small = await shrinkImage(file, 1400);
     const fd = new FormData();
     fd.append("file", small);
@@ -510,7 +514,7 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
             </Button>
           )}
           {/* The client link, always here: copy it from the panel without opening anything. */}
-          <div className="min-w-0 overflow-hidden rounded-xl bg-stone-900/[.04] p-1.5 pl-3 dark:bg-white/[.06]" data-test="link-row">
+          {!guest && <div className="min-w-0 overflow-hidden rounded-xl bg-stone-900/[.04] p-1.5 pl-3 dark:bg-white/[.06]" data-test="link-row">
             <div className="flex items-center gap-2">
               <Globe size={15} weight="light" className="flex-none text-stone-500" />
               <span className="min-w-0 flex-1 truncate font-mono text-[12.5px] text-stone-700 dark:text-stone-300" title={link}>{link.replace(/^https?:\/\//, "")}</span>
@@ -527,7 +531,7 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
             <p className="px-0.5 pb-1 pt-1.5 text-[12px] text-stone-500">
               {live ? "Live. Anyone with the link can read it." : "Not live yet. Send it by email, or publish the link and share it yourself."}
             </p>
-          </div>
+          </div>}
         </div>
       </section>
 
@@ -614,9 +618,9 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
                 <button type="button" onClick={redo} disabled={!history.redo} title="Redo (Ctrl+Shift+Z)" aria-label="Redo" className="grid h-9 w-9 place-items-center text-stone-700 hover:bg-stone-900/[.07] disabled:opacity-35 disabled:hover:bg-transparent dark:text-stone-300 dark:hover:bg-white/[.1]" data-test="redo"><ArrowClockwise size={16} weight="bold" /></button>
               </span>
             )}
-            <a href={`/p/${proposal.publicId}`} className="hidden h-9 items-center gap-1.5 rounded-full px-3 text-sm text-stone-700 hover:bg-stone-900/[.05] sm:inline-flex dark:text-stone-300 dark:hover:bg-white/[.07]">
+            {!guest && <a href={`/p/${proposal.publicId}`} className="hidden h-9 items-center gap-1.5 rounded-full px-3 text-sm text-stone-700 hover:bg-stone-900/[.05] sm:inline-flex dark:text-stone-300 dark:hover:bg-white/[.07]">
               <Eye size={16} weight="light" /> Preview
-            </a>
+            </a>}
             <button type="button" onClick={() => { flushAll(); setPhoneOpen(true); }} className="hidden h-9 w-9 place-items-center rounded-full text-stone-700 hover:bg-stone-900/[.05] sm:grid dark:text-stone-300 dark:hover:bg-white/[.07]" aria-label="Preview on a phone" title="See it the way your client will, on a phone" data-test="phone-preview">
               <DeviceMobile size={18} weight="light" />
             </button>
@@ -740,9 +744,9 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
                 <span className="inline-flex items-center gap-1"><SlidersHorizontal size={15} weight="bold" /> Options</span>
                 <span className="text-[12px] text-stone-500">Style, client, send</span>
               </button>
-              <a href={`/p/${proposal.publicId}`} className="grid h-12 w-12 flex-none place-items-center rounded-2xl text-stone-700 active:bg-stone-900/[.06] dark:text-stone-200" aria-label="Preview as your client">
+              {!guest && <a href={`/p/${proposal.publicId}`} className="grid h-12 w-12 flex-none place-items-center rounded-2xl text-stone-700 active:bg-stone-900/[.06] dark:text-stone-200" aria-label="Preview as your client">
                 <Eye size={20} weight="regular" />
-              </a>
+              </a>}
             </div>
           </nav>
         )}
@@ -809,7 +813,7 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
                   <p className="mt-1 text-sm text-stone-500">
                     {recipients.length
                       ? `We email the link to ${recipients.length === 1 ? recipients[0] : recipients.length === 2 ? recipients.join(" and ") : `${recipients.length} people`}${live ? "." : " and mark this proposal as sent."}`
-                      : "Add an email and we send it, or publish the link and share it yourself."}
+                      : guest ? "Sending needs an account. Press the button: we ask for your email, and this proposal comes with you." : "Add an email and we send it, or publish the link and share it yourself."}
                   </p>
                 </div>
                 <Button variant="ghost" size="icon" aria-label="Close" onClick={() => setSendOpen(false)}>
@@ -842,12 +846,12 @@ function EditorLoaded({ initial }: { initial: Loaded }) {
                 )}
                 {sendError && <p className="rounded-xl bg-red-600/10 p-3 text-sm text-red-800 dark:text-red-300">{sendError}</p>}
                 <Button size="lg" disabled={sendBusy} onClick={() => void send(recipients.length > 0)} data-test="send-confirm">
-                  {sendBusy ? "Sending…" : recipients.length ? (live ? "Send again" : "Send") : live ? "Done" : "Publish the link"}
+                  {sendBusy ? "Sending…" : guest ? "Sign in and send" : recipients.length ? (live ? "Send again" : "Send") : live ? "Done" : "Publish the link"}
                 </Button>
-                <div className="flex min-w-0 items-center gap-2 overflow-hidden rounded-xl bg-stone-900/[.04] p-1.5 pl-3 dark:bg-white/[.06]">
+                {!guest && <div className="flex min-w-0 items-center gap-2 overflow-hidden rounded-xl bg-stone-900/[.04] p-1.5 pl-3 dark:bg-white/[.06]">
                   <span className="min-w-0 flex-1 truncate font-mono text-[12px] text-stone-600 dark:text-stone-300" title={link}>{link.replace(/^https?:\/\//, "")}</span>
                   <Button size="sm" variant="secondary" onClick={() => void copy()} className="bg-white dark:bg-stone-800">{copied ? <Check size={14} weight="bold" /> : <LinkSimple size={14} weight="light" />} {copied ? "Copied" : "Copy"}</Button>
-                </div>
+                </div>}
               </div>
             </div>
           </div>

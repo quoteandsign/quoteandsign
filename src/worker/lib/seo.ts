@@ -10,6 +10,7 @@ import { TEMPLATES } from "../../shared/templates";
 import { STYLES } from "../../shared/styles";
 import { COMPETITORS } from "./compare";
 import { TEMPLATE_PAGES } from "./templatesPage";
+import { RATE_PAGES } from "./ratesPage";
 
 /** Public pages, with a change-frequency hint for the sitemap. */
 export const PUBLIC_PAGES: { path: string; changefreq: "weekly" | "monthly"; legal?: boolean; sitemap?: false }[] = [
@@ -25,10 +26,12 @@ export const PUBLIC_PAGES: { path: string; changefreq: "weekly" | "monthly"; leg
   ...COMPETITORS.map((c) => ({ path: `/compare/${c.slug}`, changefreq: "monthly" as const })),
   { path: "/templates", changefreq: "monthly" },
   ...TEMPLATE_PAGES.map((p) => ({ path: `/templates/${p.slug}`, changefreq: "monthly" as const })),
+  { path: "/rates", changefreq: "monthly" },
+  ...RATE_PAGES.map((r) => ({ path: `/rates/${r.slug}`, changefreq: "monthly" as const })),
 ];
 
 /** Paths that exist for one person and must never be crawled. */
-export const PRIVATE_PREFIXES = ["/p/", "/app", "/api/", "/auth/", "/files/", "/t/", "/admin", "/billing/"];
+export const PRIVATE_PREFIXES = ["/p/", "/app", "/api/", "/auth/", "/files/", "/t/", "/admin", "/billing/", "/r/", "/try"];
 
 export function robotsTxt(appUrl: string): string {
   return [
@@ -97,6 +100,8 @@ Operated from ${LEGAL.province}, Canada. Prices in USD.
 - [Contact](${appUrl}/contact): contact form
 - [Proposal templates](${appUrl}/templates): each a real proposal a client can adjust and accept, with a full-screen Studio style for high-end work
 ${TEMPLATE_PAGES.map((p) => `- [${p.keyword}](${appUrl}/templates/${p.slug}): for ${p.audience}`).join("\n")}
+- [What to charge, by trade](${appUrl}/rates): pricing guides built from the templates
+${RATE_PAGES.map((r) => `- [How much to charge for ${r.topic}](${appUrl}/rates/${r.slug})`).join("\n")}
 
 ## Comparisons
 

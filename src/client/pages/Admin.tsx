@@ -12,7 +12,7 @@ import { formatMoney } from "../../shared/pricing";
 // Only accounts listed in ADMIN_EMAILS see it; everyone else gets a 404 from the API.
 
 type Overview = { users: number; byPlan: Record<string, number>; trialing: number; newUsers30: number; proposals: number; sent30: number; accepted30: number; acceptedTotal30: number; openTickets: number; subscribers: number; images: number; storageBytes: number; storageLimitBytes: number; mailToday: number; mailMonth: number; includeMine: boolean; adminAccounts: number };
-type Person = { id: string; email: string; brandName: string | null; plan: string; effective: string; interval: string | null; trialEndsAt: number | null; createdAt: number; marketingOptIn: boolean; proposals: number; sentProposals: number; onboardingSent: number; accepted: number; lastSeen: number | null };
+type Person = { id: string; email: string; brandName: string | null; plan: string; effective: string; interval: string | null; trialEndsAt: number | null; createdAt: number; marketingOptIn: boolean; proposals: number; sentProposals: number; onboardingSent: number; accepted: number; lastSeen: number | null; source: string | null; referrals: number; creditsOwed: number };
 type Ticket = { id: string; kind: string; name: string; email: string; subject: string; status: string; userId: string | null; createdAt: number; updatedAt: number };
 type Message = { id: string; from: string; body: string; createdAt: number };
 
@@ -68,6 +68,24 @@ export function Admin() {
       setTestState((s) => ({ ...s, [kind]: "error" }));
     }
     setTimeout(() => setTestState((s) => ({ ...s, [kind]: "idle" })), 2500);
+  };
+  const [sample, setSample] = useState<{ kind: string; state: "sending" | "sent" | "error"; proposalId?: string } | null>(null);
+  const SAMPLES: { kind: string; label: string; who: string }[] = [
+    { kind: "sent", label: "The proposal", who: "client" },
+    { kind: "reminder", label: "Expiry reminder", who: "client" },
+    { kind: "accepted-client", label: "Signed copy with PDF", who: "client" },
+    { kind: "opened", label: "Opened notice", who: "you" },
+    { kind: "question", label: "Question from the client", who: "you" },
+    { kind: "accepted-sender", label: "Accepted notice with PDF", who: "you" },
+  ];
+  const sendSample = async (kind: string) => {
+    setSample({ kind, state: "sending" });
+    try {
+      const r = await api<{ proposalId: string }>("/api/admin/emails/test", { method: "POST", json: { kind } });
+      setSample({ kind, state: "sent", proposalId: r.proposalId });
+    } catch {
+      setSample({ kind, state: "error" });
+    }
   };
   const saveGa = async () => {
     setGaState("saving");
@@ -277,6 +295,26 @@ export function Admin() {
           </section>
         )}
 
+        {tab === "settings" && (
+          <section className="mt-5 max-w-xl rounded-[1.25rem] bg-white p-6 shadow-[0_1px_1px_rgba(25,24,22,.04),0_12px_32px_-20px_rgba(25,24,22,.35)] ring-1 ring-inset ring-stone-900/[.035] dark:bg-stone-900 dark:shadow-none dark:ring-white/[.08]" data-test="email-previews">
+            <div className="text-[15px] font-semibold">Proposal emails, as a test</div>
+            <p className="mt-1 text-[13.5px] leading-relaxed text-stone-500">Each button sends you one email exactly as it goes out, built from a sample proposal in your account ("Sample: website for Harbor Coffee"). The links inside work, so you can follow the whole journey.</p>
+            {(["client", "you"] as const).map((who) => (
+              <div key={who} className="mt-4">
+                <div className="text-[12.5px] font-medium uppercase tracking-wide text-stone-500">{who === "client" ? "What the client receives" : "What you receive"}</div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {SAMPLES.filter((s) => s.who === who).map((s) => (
+                    <Button key={s.kind} size="md" variant="secondary" disabled={sample?.state === "sending"} onClick={() => void sendSample(s.kind)} data-test={`sample-${s.kind}`}>
+                      {sample?.kind === s.kind && sample.state === "sending" ? "Sending…" : sample?.kind === s.kind && sample.state === "sent" ? "Sent to you" : sample?.kind === s.kind && sample.state === "error" ? "Failed" : s.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            ))}
+            {sample?.proposalId && <p className="mt-4 text-[13px] text-stone-500">Sent to {user?.email}. <a href={`/app/p/${sample.proposalId}`} className="font-medium text-brand underline underline-offset-4 dark:text-indigo-300">Open the sample proposal</a> to change what the emails show.</p>}
+          </section>
+        )}
+
         {tab === "people" && (
           <div className="mt-8">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -290,7 +328,7 @@ export function Admin() {
             </form>
             <div className="mt-4 overflow-x-auto rounded-[1.25rem] bg-white ring-1 ring-inset ring-stone-900/[.035] dark:bg-stone-900 dark:ring-white/[.08]">
               <table className="w-full text-[13.5px]">
-                <thead className="text-left text-[12px] text-stone-500"><tr><th className="px-4 py-3 font-medium">Account</th><th className="px-3 py-3 font-medium">Plan</th><th className="px-3 py-3 font-medium">Proposals</th><th className="px-3 py-3 font-medium">Signed</th><th className="px-3 py-3 font-medium">Emails</th><th className="px-3 py-3 font-medium">Onboarding</th><th className="px-3 py-3 font-medium">Joined</th><th className="px-3 py-3 font-medium">Last seen</th><th className="px-3 py-3 font-medium"><span className="sr-only">Actions</span></th></tr></thead>
+                <thead className="text-left text-[12px] text-stone-500"><tr><th className="px-4 py-3 font-medium">Account</th><th className="px-3 py-3 font-medium">Plan</th><th className="px-3 py-3 font-medium">Proposals</th><th className="px-3 py-3 font-medium">Signed</th><th className="px-3 py-3 font-medium">Emails</th><th className="px-3 py-3 font-medium">Onboarding</th><th className="px-3 py-3 font-medium">Source</th><th className="px-3 py-3 font-medium">Joined</th><th className="px-3 py-3 font-medium">Last seen</th><th className="px-3 py-3 font-medium"><span className="sr-only">Actions</span></th></tr></thead>
                 <tbody className="divide-y divide-hairline dark:divide-white/[.08]">
                   {shownPeople.map((p) => (
                     <tr key={p.id}>
@@ -300,6 +338,7 @@ export function Admin() {
                       <td className="px-3 py-2.5 tabular-nums">{p.accepted}</td>
                       <td className="px-3 py-2.5">{p.marketingOptIn ? "Yes" : "No"}</td>
                       <td className="px-3 py-2.5 whitespace-nowrap text-[13px]" title="Welcome on sign-up, then one nudge after three days without a sent proposal">{onboardingLabel(p)}</td>
+                      <td className="px-3 py-2.5 whitespace-nowrap text-[13px]" title="Where the account came from; referrals are accounts this one brought in">{p.source ?? "direct"}{p.referrals ? ` · ${p.referrals} referred` : ""}{p.creditsOwed > 0 ? <span className="ml-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:text-amber-300" title="Apply this many free months at Polar">{p.creditsOwed} month{p.creditsOwed === 1 ? "" : "s"} owed</span> : null}</td>
                       <td className="px-3 py-2.5 tabular-nums">{fmtDay(p.createdAt)}</td>
                       <td className="px-3 py-2.5 tabular-nums">{p.lastSeen ? ago(p.lastSeen) : "Never"}</td>
                       <td className="px-3 py-2.5"><button type="button" onClick={() => void disable(p)} className="rounded-full px-2.5 py-1 text-[12.5px] font-medium text-red-700 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-500/10">Disable</button></td>

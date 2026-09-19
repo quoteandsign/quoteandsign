@@ -169,6 +169,13 @@
       "when": 1789536160839,
       "tag": "0023_trial_key",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1789842589758,
+      "tag": "0024_attribution_referrals",
+      "breakpoints": true
     }
   ]
 }

@@ -27,8 +27,12 @@ export const users = sqliteTable(
     deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
     deletedEmailHash: text("deleted_email_hash"), // keyed hash of the address a deleted account had, so a re-signup does not restart the trial
     trialKey: text("trial_key"), // keyed hash of the inbox behind the address (+tags and Gmail dots removed), so one person gets one trial
+    source: text("source"), // the ?ref= the account arrived with (proposal footer, signed page, email, guide, ad); null = direct
+    referralCode: text("referral_code"), // this account's give-a-month link, /r/<code>
+    referredBy: text("referred_by"), // user id of the account whose link brought this one in
+    referralRewardedAt: integer("referral_rewarded_at", { mode: "timestamp_ms" }), // set once this account sent its first proposal and the referrer was paid
   },
-  (t) => [uniqueIndex("users_email_uq").on(t.email), index("users_deleted_email_idx").on(t.deletedEmailHash), index("users_trial_key_idx").on(t.trialKey)],
+  (t) => [uniqueIndex("users_email_uq").on(t.email), index("users_deleted_email_idx").on(t.deletedEmailHash), index("users_trial_key_idx").on(t.trialKey), uniqueIndex("users_referral_code_uq").on(t.referralCode), index("users_referred_by_idx").on(t.referredBy)],
 );
 
 // One-time magic-link tokens. Stored hashed; the raw token only ever lives in the email.
@@ -42,6 +46,8 @@ export const magicTokens = sqliteTable(
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
     marketing: integer("marketing", { mode: "boolean" }).notNull().default(false), // the box ticked on the sign-in form
     ipHash: text("ip_hash"),
+    source: text("source"), // attribution cookies at the time the link was asked for; applied if the link creates an account
+    referral: text("referral"),
   },
   (t) => [index("magic_tokens_email_idx").on(t.email)],
 );

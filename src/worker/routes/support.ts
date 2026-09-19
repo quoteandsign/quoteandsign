@@ -10,6 +10,7 @@ import { sendEmail } from "../lib/email";
 import { audit } from "../lib/audit";
 import { getSetting, setSetting, ANALYTICS_KEY, ANALYTICS_ID } from "../lib/analytics";
 import { ONBOARDING_KEY, sendOnboardingTest } from "../lib/onboarding";
+import { SAMPLE_KINDS, sendSampleEmail } from "../lib/samples";
 import { getSessionUser, requireAuth } from "../lib/session";
 import { effectivePlan } from "../lib/plan";
 import { turnstileOk } from "./auth";
@@ -114,6 +115,16 @@ adminRoutes.post("/onboarding/test", async (c) => {
   return c.json({ ok: true, to: me.email });
 });
 
+// The admin sends themselves any email a proposal produces, built from a sample proposal in their account.
+adminRoutes.post("/emails/test", async (c) => {
+  const parsed = z.object({ kind: z.enum(SAMPLE_KINDS) }).safeParse(await c.req.json().catch(() => ({})));
+  if (!parsed.success) return c.json({ error: "Unknown email." }, 400);
+  const me = c.get("user");
+  const r = await sendSampleEmail(c.env, me, parsed.data.kind);
+  await audit(getDb(c.env.DB), { userId: me.id, event: "admin.email_test", meta: { kind: parsed.data.kind } });
+  return c.json({ ok: true, to: me.email, proposalId: r.proposalId });
+});
+
 /** Free-tier D1 database ceiling. The nightly job emails support once when images pass STORAGE_WARN. */
 export const STORAGE_LIMIT = 500 * 1024 * 1024;
 export const STORAGE_WARN = 350 * 1024 * 1024;
@@ -184,6 +195,9 @@ adminRoutes.get("/people", async (c) => {
       proposals: sql<number>`(select count(*) from proposals p where p.user_id = users.id)`,
       sentProposals: sql<number>`(select count(*) from proposals p where p.user_id = users.id and p.status <> 'draft')`,
       onboardingSent: schema.users.onboardingSent,
+      source: schema.users.source,
+      referrals: sql<number>`(select count(*) from users r where r.referred_by = users.id)`,
+      creditsOwed: sql<number>`(select count(*) from audit_log a where a.user_id = users.id and a.event = 'referral.credit_owed') - (select count(*) from audit_log a where a.user_id = users.id and a.event = 'referral.reversed' and users.plan <> 'free')`,
       accepted: sql<number>`(select count(*) from acceptances a join proposals p on p.id = a.proposal_id where p.user_id = users.id)`,
       lastSeen: sql<number | null>`(select max(created_at) from audit_log l where l.user_id = users.id)`,
     })

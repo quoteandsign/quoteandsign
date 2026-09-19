@@ -4,6 +4,26 @@ All notable changes to Quote and Sign. Dates are the day the change went live at
 
 ## 1.1.0 — unreleased
 
+### Growth built in
+- Try the editor without an account at /try: the real editor on any template, saved in the browser; Send asks
+  for an email and the draft arrives in the new account ready to go out.
+- Give a month, get a month: every account has a referral link (Settings, Plan). A newcomer through it gets
+  three weeks of Pro instead of two. When the newcomer takes a paid plan, the referrer gets a month of Pro: added
+  to a free account, credited to a paid one (shown as owed in the People tab). Twelve a year, one per referred
+  account, reversed on a refund or chargeback within thirty days, never for a self sign-up. Terms, section 12.
+- A client who signs is invited to send their own proposals, on the accepted page and in their signed copy;
+  the invitation carries the sender's referral link. Off when a paid plan hides the footer.
+- Every tagged arrival is remembered and recorded as the account's source; the admin People tab shows it,
+  along with how many accounts each one referred.
+- Admin Settings: six buttons that send you every proposal email as a test (the proposal, the reminder and
+  the signed copy as the client sees them; the opened notice, a question and the accepted notice as you see
+  them), built from a sample proposal in your account so the links work. The real flows and the tests now
+  share one set of email builders.
+- A daily alert email to the operator when something looks off: a sign-up burst, many accounts from one
+  address, a sending spike, or an open abuse report.
+- Thirty-six rate guides at /rates ("How much to charge for logo design"), built from each template's
+  pricing lines, with advice by trade and a path into the editor.
+
 ### Security and abuse
 - Payment links after signing are for paid plans only. A trial could otherwise put any link behind a
   branded "Pay the deposit" button in the signed-copy email, sent from our domain.
