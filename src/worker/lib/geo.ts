@@ -63,7 +63,7 @@ Updated ${CONTENT_UPDATED}. Prices in USD, flat per account (not per user), no p
 
 // ---- IndexNow --------------------------------------------------------------------------------
 
-/** The key is derived, so there is nothing new to store or leak. Served at /<key>.txt. */
+/** The key is derived, so there is nothing new to store or leak. Served at /indexnow.txt. */
 export const indexNowKey = (secret: string) => sha256Hex(secret + ":indexnow").then((h) => h.slice(0, 32));
 
 export async function submitIndexNow(env: Bindings, urls: string[]): Promise<{ ok: boolean; status: number; count: number }> {
@@ -73,7 +73,7 @@ export async function submitIndexNow(env: Bindings, urls: string[]): Promise<{ o
   const res = await fetch("https://api.indexnow.org/indexnow", {
     method: "POST",
     headers: { "content-type": "application/json; charset=utf-8" },
-    body: JSON.stringify({ host, key, keyLocation: `${env.APP_URL}/${key}.txt`, urlList: urls.slice(0, 10_000) }),
+    body: JSON.stringify({ host, key, keyLocation: `${env.APP_URL}/indexnow.txt`, urlList: urls.slice(0, 10_000) }),
   });
   return { ok: res.ok || res.status === 202, status: res.status, count: urls.length };
 }

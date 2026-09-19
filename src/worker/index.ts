@@ -133,12 +133,10 @@ app.get("/robots.txt", (c) => { c.header("cache-control", "public, max-age=3600"
 app.get("/sitemap.xml", (c) => { c.header("cache-control", "public, max-age=3600"); return c.body(sitemapXml(appUrl(c)), 200, { "content-type": "application/xml; charset=utf-8" }); });
 app.get("/llms.txt", (c) => { c.header("cache-control", "public, max-age=3600"); return c.text(llmsTxt(appUrl(c), GITHUB_URL)); });
 app.get("/pricing.md", (c) => { c.header("cache-control", "public, max-age=3600"); return c.text(pricingMd(appUrl(c)), 200, { "content-type": "text/markdown; charset=utf-8" }); });
-// IndexNow ownership proof: the key file, derived from the session secret.
-app.get("/:key{[0-9a-f]{32}}.txt", async (c) => {
-  const key = await indexNowKey(c.env.SESSION_SECRET);
-  if (c.req.param("key") !== key) return c.text("Not found", 404);
+// IndexNow ownership proof: a fixed file whose content is the key (IndexNow allows any key location on the host).
+app.get("/indexnow.txt", async (c) => {
   c.header("cache-control", "public, max-age=86400");
-  return c.text(key);
+  return c.text(await indexNowKey(c.env.SESSION_SECRET));
 });
 
 // Legal pages, server-rendered like the homepage.

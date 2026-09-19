@@ -88,11 +88,13 @@ export function Admin() {
     }
   };
   const [indexNow, setIndexNow] = useState<"idle" | "sending" | "sent" | "skipped" | "error">("idle");
+  const [indexNowNote, setIndexNowNote] = useState<string | null>(null);
   const pingIndexNow = async () => {
     setIndexNow("sending");
     try {
-      const r = await api<{ ok: boolean; submitted: boolean }>("/api/admin/indexnow", { method: "POST", json: {} });
+      const r = await api<{ ok: boolean; submitted: boolean; status?: number; count?: number; total: number }>("/api/admin/indexnow", { method: "POST", json: {} });
       setIndexNow(r.submitted ? "sent" : "skipped");
+      setIndexNowNote(r.submitted ? `${r.count} pages accepted by IndexNow.` : r.status ? `IndexNow answered ${r.status}. Nothing was submitted.` : "Only runs on the live site.");
     } catch {
       setIndexNow("error");
     }
@@ -330,7 +332,8 @@ export function Admin() {
             <div className="text-[15px] font-semibold">Search engines</div>
             <p className="mt-1 text-[13.5px] leading-relaxed text-stone-500">Every public page is sent to IndexNow (Bing, and the assistants that search through it) automatically once a day when the list changes. Press this after a deploy to do it now. Google does not take IndexNow; for Google, resubmit the sitemap in Search Console.</p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              <Button size="md" variant="secondary" disabled={indexNow === "sending"} onClick={() => void pingIndexNow()} data-test="indexnow-button">{indexNow === "sending" ? "Sending…" : indexNow === "sent" ? "Submitted" : indexNow === "skipped" ? "Not in production" : indexNow === "error" ? "Failed" : "Notify search engines now"}</Button>
+              <Button size="md" variant="secondary" disabled={indexNow === "sending"} onClick={() => void pingIndexNow()} data-test="indexnow-button">{indexNow === "sending" ? "Sending…" : indexNow === "sent" ? "Submitted" : indexNow === "skipped" ? "Not submitted" : indexNow === "error" ? "Failed" : "Notify search engines now"}</Button>
+              {indexNowNote && <span className="text-[13px] text-stone-500" role="status">{indexNowNote}</span>}
             </div>
           </section>
         )}
