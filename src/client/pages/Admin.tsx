@@ -87,6 +87,17 @@ export function Admin() {
       setSample({ kind, state: "error" });
     }
   };
+  const [indexNow, setIndexNow] = useState<"idle" | "sending" | "sent" | "skipped" | "error">("idle");
+  const pingIndexNow = async () => {
+    setIndexNow("sending");
+    try {
+      const r = await api<{ ok: boolean; submitted: boolean }>("/api/admin/indexnow", { method: "POST", json: {} });
+      setIndexNow(r.submitted ? "sent" : "skipped");
+    } catch {
+      setIndexNow("error");
+    }
+    setTimeout(() => setIndexNow("idle"), 4000);
+  };
   const saveGa = async () => {
     setGaState("saving");
     setGaError(null);
@@ -312,6 +323,15 @@ export function Admin() {
               </div>
             ))}
             {sample?.proposalId && <p className="mt-4 text-[13px] text-stone-500">Sent to {user?.email}. <a href={`/app/p/${sample.proposalId}`} className="font-medium text-brand underline underline-offset-4 dark:text-indigo-300">Open the sample proposal</a> to change what the emails show.</p>}
+          </section>
+        )}
+        {tab === "settings" && (
+          <section className="mt-5 max-w-xl rounded-[1.25rem] bg-white p-6 shadow-[0_1px_1px_rgba(25,24,22,.04),0_12px_32px_-20px_rgba(25,24,22,.35)] ring-1 ring-inset ring-stone-900/[.035] dark:bg-stone-900 dark:shadow-none dark:ring-white/[.08]" data-test="indexnow">
+            <div className="text-[15px] font-semibold">Search engines</div>
+            <p className="mt-1 text-[13.5px] leading-relaxed text-stone-500">Every public page is sent to IndexNow (Bing, and the assistants that search through it) automatically once a day when the list changes. Press this after a deploy to do it now. Google does not take IndexNow; for Google, resubmit the sitemap in Search Console.</p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <Button size="md" variant="secondary" disabled={indexNow === "sending"} onClick={() => void pingIndexNow()} data-test="indexnow-button">{indexNow === "sending" ? "Sending…" : indexNow === "sent" ? "Submitted" : indexNow === "skipped" ? "Not in production" : indexNow === "error" ? "Failed" : "Notify search engines now"}</Button>
+            </div>
           </section>
         )}
 

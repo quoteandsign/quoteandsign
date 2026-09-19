@@ -2,7 +2,8 @@
 // constants as the homepage so prices never drift. Truthful comparative advertising: every number
 // about the other product is sourced and dated, and the section on what they do better is real.
 
-import { shell, breadcrumbs, LEGAL } from "./legal";
+import { shell, breadcrumbs, LEGAL, SITE_URL } from "./legal";
+import { articleJsonLd, faqJsonLd, itemListJsonLd, updatedLabel } from "./geo";
 import { esc } from "./render";
 import { PLANS } from "./plan";
 import { SUPPORTED_CURRENCIES } from "../../shared/pricing";
@@ -123,9 +124,16 @@ function rowsFor(c: Competitor): [string, string, string][] {
 
 export function renderCompare(c: Competitor, nonce: string, analytics: string | null = null): string {
   const rows = rowsFor(c);
+  const faq: [string, string][] = [
+    [`Is Quote and Sign cheaper than ${c.name}?`, `Usually, for small teams. ${c.name}: ${c.theirPricing} Quote and Sign is a flat price per account: free for three live proposals, Pro at ${PLANS.pro.yearly} a month billed yearly (${PLANS.pro.monthly} monthly), Business at ${PLANS.business.yearly} a month billed yearly, with no per-user or per-document fees.`],
+    [`What does ${c.name} do that Quote and Sign does not?`, c.theyDoBetter.slice(0, 3).join(" ")],
+    [`What does Quote and Sign do that ${c.name} does not?`, "The client can switch optional lines on and off and set quantities on the proposal page while the total updates, and those choices are part of the signed record. The record carries a SHA-256 fingerprint of the accepted content. The product is open source under the AGPL and can be self-hosted."],
+    [`Can I move from ${c.name} to Quote and Sign?`, "Yes. Start from one of the built-in templates, paste your text, and set your own prices. Every account starts with fourteen days of Pro, no card needed, and everything you make exports as JSON and PDF at any time."],
+  ];
   const body = `
 <p class="cmp-switch">Compared with: ${COMPETITORS.map((o) => o.slug === c.slug ? `<strong>${esc(o.name)}</strong>` : `<a href="/compare/${o.slug}">${esc(o.name)}</a>`).join(" · ")}</p>
 <h1>Quote and Sign vs ${esc(c.name)}</h1>
+<p class="muted">Updated ${esc(updatedLabel())}. ${esc(c.name)} pricing read ${esc(c.checked)}.</p>
 <p class="eff">An honest comparison for people choosing proposal software. ${esc(c.name)}'s prices and features are taken from ${esc(c.site)} as read in ${esc(c.checked)}; if something has changed since, tell us through the <a href="/contact">contact form</a> and it will be corrected.</p>
 
 <div class="box"><p><strong>The short version.</strong> ${esc(c.short ?? `${c.name} charges per user and per document and gives you a polished, closed product with native CRM connectors.`)} Quote and Sign charges a flat price per account, lets the client change options on the page, keeps a verifiable acceptance record, and publishes its source code. If you are a freelancer, a studio or a small agency sending proposals rather than managing a sales floor, the flat price usually wins. If you need a native Salesforce or HubSpot app today, ${esc(c.name)} has it and we do not.</p></div>
@@ -152,10 +160,17 @@ ${c.theyDoBetter.map((t) => `<li>${esc(t)}</li>`).join("\n")}
 <li>Everything exports, and you can delete your account without asking anyone.</li>
 </ul>
 
+<h2>Questions people ask</h2>
+<dl class="cmp-faq">
+${faq.map(([q, a]) => `<dt>${esc(q)}</dt><dd>${esc(a)}</dd>`).join("\n")}
+</dl>
+
 <h2>Try it</h2>
-<p>Every account starts with fourteen days of Pro, no card needed, then Free for three live proposals. <a href="/login">Start free</a> or read the <a href="/#plans">plans</a>.</p>
+<p>Every account starts with fourteen days of Pro, no card needed, then Free for three live proposals. <a href="/try">Try the editor without an account</a>, <a href="/login">start free</a>, or read the <a href="/#plans">plans</a>.</p>
 `;
   const extraHead = `${breadcrumbs(nonce, [["Compare", "/compare"], [`Quote and Sign vs ${c.name}`, `/compare/${c.slug}`]])}
+${articleJsonLd(nonce, { appUrl: SITE_URL, path: `/compare/${c.slug}`, headline: `Quote and Sign vs ${c.name}`, description: `Pricing, client-side options, the acceptance record and what each product does better, sourced from ${c.site}, ${c.checked}.`, about: `${c.name} alternative` })}
+${faqJsonLd(nonce, faq)}
 <style nonce="${nonce}">
 .cmp{width:100%;border-collapse:separate;border-spacing:0;font-size:14.5px;line-height:1.5;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}
 .cmp th,.cmp td{text-align:left;padding:14px 16px;border-bottom:1px solid var(--line);vertical-align:top}
@@ -166,6 +181,7 @@ ${c.theyDoBetter.map((t) => `<li>${esc(t)}</li>`).join("\n")}
 .cmp th:nth-child(2){color:var(--accent)}
 .cmp td:nth-child(2),.cmp td:nth-child(3){width:46%}
 .wrap-x{overflow-x:auto;margin:8px 0 12px}
+.cmp-faq dt{font-weight:650;margin:14px 0 4px}.cmp-faq dd{margin:0 0 4px;color:#3d3a36}
 .cmp-switch{font-size:13.5px;color:var(--muted);margin:24px 0 -12px}.cmp-switch a{color:var(--accent);text-decoration:none}.cmp-switch a:hover{text-decoration:underline}
 @media(max-width:640px){.cmp td:first-child{white-space:normal;width:auto}.cmp{font-size:14px}.cmp th,.cmp td{padding:12px 12px}}
 </style>`;
@@ -192,6 +208,7 @@ export function renderCompareIndex(nonce: string, analytics: string | null = nul
 </ul>
 <p><a class="tpl-cta" href="/login">Start free</a></p>`;
   return shell("Compare", body, nonce, `${breadcrumbs(nonce, [["Compare", "/compare"]])}
+${itemListJsonLd(nonce, SITE_URL, COMPETITORS.map((o) => ({ name: `Quote and Sign vs ${o.name}`, path: `/compare/${o.slug}` })))}
 <style nonce="${nonce}">.cmp-grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));margin:20px 0}.cmp-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 20px}.cmp-card h2{margin:0 0 6px;font-size:18px}.cmp-card h2 a{color:var(--fg);text-decoration:none}.cmp-card p{margin:0 0 10px;color:var(--muted);font-size:14px}.tpl-cta{display:inline-block;background:var(--accent);color:#fff;text-decoration:none;font-weight:600;border-radius:999px;padding:12px 22px}</style>`, analytics, {
     path: "/compare",
     description: "Quote and Sign compared with Qwilr, PandaDoc and Proposify: pricing, client-side options, the acceptance record, and what each does better.",

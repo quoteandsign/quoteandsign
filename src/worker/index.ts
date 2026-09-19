@@ -33,6 +33,8 @@ import { STYLE_IDS } from "../shared/styles";
 import { sendExpiryReminders, sendTrialNotices, pruneOldRows, warnOnStorage } from "./lib/reminders";
 import { sendDay3Nudges } from "./lib/onboarding";
 import { sendSuspiciousActivityAlert } from "./lib/alerts";
+import { indexNowIfChanged, indexNowKey, orgJsonLd, pricingMd } from "./lib/geo";
+import { PUBLIC_PAGES } from "./lib/seo";
 
 import type { Bindings } from "./env";
 export type { Bindings };
@@ -111,7 +113,7 @@ app.get("/", async (c) => {
   );
   // A tagged arrival (?ref=signed, ?ref=email, ...) is remembered in a cookie, so the response is personal.
   c.header("cache-control", rememberSource(c) ? "private, no-store" : "public, max-age=300");
-  return c.html(renderLanding({ nonce, appUrl: appUrl(c), githubUrl: GITHUB_URL, analytics: ga }));
+  return c.html(renderLanding({ nonce, appUrl: appUrl(c), githubUrl: GITHUB_URL, analytics: ga, extraHead: orgJsonLd(nonce, appUrl(c)) }));
 });
 
 // A friend's link. Remembers the code for thirty days, then shows the homepage.
@@ -130,6 +132,14 @@ const GITHUB_URL = "https://github.com/quoteandsign/quoteandsign";
 app.get("/robots.txt", (c) => { c.header("cache-control", "public, max-age=3600"); return c.text(robotsTxt(appUrl(c))); });
 app.get("/sitemap.xml", (c) => { c.header("cache-control", "public, max-age=3600"); return c.body(sitemapXml(appUrl(c)), 200, { "content-type": "application/xml; charset=utf-8" }); });
 app.get("/llms.txt", (c) => { c.header("cache-control", "public, max-age=3600"); return c.text(llmsTxt(appUrl(c), GITHUB_URL)); });
+app.get("/pricing.md", (c) => { c.header("cache-control", "public, max-age=3600"); return c.text(pricingMd(appUrl(c)), 200, { "content-type": "text/markdown; charset=utf-8" }); });
+// IndexNow ownership proof: the key file, derived from the session secret.
+app.get("/:key{[0-9a-f]{32}}.txt", async (c) => {
+  const key = await indexNowKey(c.env.SESSION_SECRET);
+  if (c.req.param("key") !== key) return c.text("Not found", 404);
+  c.header("cache-control", "public, max-age=86400");
+  return c.text(key);
+});
 
 // Legal pages, server-rendered like the homepage.
 const legalPages: Record<string, (nonce: string, analytics: string | null) => string> = { "/terms": renderTerms, "/privacy": renderPrivacy, "/acceptable-use": renderAcceptableUse, "/dpa": renderDpa };
@@ -348,5 +358,6 @@ export default {
     ctx.waitUntil(warnOnStorage(env));
     ctx.waitUntil(sendSuspiciousActivityAlert(env));
     ctx.waitUntil(retryWebhooks(env));
+    ctx.waitUntil(indexNowIfChanged(env, PUBLIC_PAGES.filter((p) => p.sitemap !== false).map((p) => env.APP_URL + p.path)));
   },
 };

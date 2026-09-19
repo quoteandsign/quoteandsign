@@ -11,6 +11,8 @@ import { audit } from "../lib/audit";
 import { getSetting, setSetting, ANALYTICS_KEY, ANALYTICS_ID } from "../lib/analytics";
 import { ONBOARDING_KEY, sendOnboardingTest } from "../lib/onboarding";
 import { SAMPLE_KINDS, sendSampleEmail } from "../lib/samples";
+import { indexNowIfChanged } from "../lib/geo";
+import { PUBLIC_PAGES } from "../lib/seo";
 import { getSessionUser, requireAuth } from "../lib/session";
 import { effectivePlan } from "../lib/plan";
 import { turnstileOk } from "./auth";
@@ -113,6 +115,14 @@ adminRoutes.post("/onboarding/test", async (c) => {
   await sendOnboardingTest(c.env, parsed.data.kind, me.email, me.name);
   await audit(getDb(c.env.DB), { userId: me.id, event: "admin.onboarding_test", meta: { kind: parsed.data.kind } });
   return c.json({ ok: true, to: me.email });
+});
+
+// Tell Bing (and the assistants that search through it) about every public page, now.
+adminRoutes.post("/indexnow", async (c) => {
+  const urls = PUBLIC_PAGES.filter((p) => p.sitemap !== false).map((p) => c.env.APP_URL + p.path);
+  const r = await indexNowIfChanged(c.env, urls, true);
+  await audit(getDb(c.env.DB), { userId: c.get("user").id, event: "admin.indexnow", meta: r });
+  return c.json({ ok: r.submitted, ...r, total: urls.length });
 });
 
 // The admin sends themselves any email a proposal produces, built from a sample proposal in their account.

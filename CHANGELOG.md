@@ -4,6 +4,17 @@ All notable changes to Quote and Sign. Dates are the day the change went live at
 
 ## 1.1.0 — unreleased
 
+### Search and AI assistants
+- IndexNow: every public page is submitted to Bing (and the assistants that search through it) once a day
+  when the list changes, and on demand from Admin, Settings. The key file is served from the site itself.
+- Comparison pages and rate guides carry Article markup with publish and update dates, a visible "Updated"
+  line, and a short list of the questions people ask an assistant, with FAQ markup. The homepage carries
+  Organization and WebSite markup; the index pages carry ItemList markup.
+- Rate guides open with a short direct answer built from the template's numbers.
+- /pricing.md: the plans as one machine-readable table, linked from llms.txt.
+- robots.txt names the citing crawlers (GPTBot, OAI-SearchBot, PerplexityBot, ClaudeBot, Google-Extended,
+  Bingbot and others) with the same rules as everyone else.
+
 ### Growth built in
 - Try the editor without an account at /try: the real editor on any template, saved in the browser; Send asks
   for an email and the draft arrives in the new account ready to go out.

@@ -64,6 +64,22 @@ describe("what crawlers are told", () => {
     expect(llms).toContain("# Quote and Sign");
     expect(llms).toContain("Pro: $19 a month billed yearly or $24 monthly");
     expect(llms).toContain("16 currencies");
+    expect(llms).toContain("/pricing.md");
+    expect(r).toContain("User-agent: GPTBot");
+    expect(r).toContain("User-agent: PerplexityBot");
+    const pricing = await app.request("http://localhost:5173/pricing.md", {}, env);
+    expect(pricing.headers.get("content-type")).toContain("text/markdown");
+    expect(await pricing.text()).toContain("| Pro | $24 | $19 |");
+    const home = await (await app.request("http://localhost:5173/", {}, env)).text();
+    expect(home).toContain('"@type":"Organization"');
+    const cmp = await (await app.request("http://localhost:5173/compare/qwilr", {}, env)).text();
+    expect(cmp).toContain('"@type":"Article"');
+    expect(cmp).toContain('"@type":"FAQPage"');
+    expect(cmp).toContain("Is Quote and Sign cheaper than Qwilr?");
+    const rate = await (await app.request("http://localhost:5173/rates/logo-design", {}, env)).text();
+    expect(rate).toContain("Short answer:");
+    expect(rate).toContain('"dateModified":"');
+    expect(rate).toContain("How much should I charge for logo design?");
     expect(llms).toContain("AGPL");
     expect(llms).not.toContain("Cloudflare");
     // llms.txt convention: Markdown links, so agents can follow them.

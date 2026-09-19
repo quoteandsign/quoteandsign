@@ -8,6 +8,8 @@ import { esc } from "./render";
 import { TEMPLATES, type Template } from "../../shared/templates";
 import { formatMoney } from "../../shared/pricing";
 import { TEMPLATE_PAGES, type TemplatePage } from "./templatesPage";
+import { articleJsonLd, faqJsonLd, itemListJsonLd, updatedLabel } from "./geo";
+import { SITE_URL } from "./legal";
 
 export type RatePage = { slug: string; topic: string; page: TemplatePage; template: Template };
 
@@ -85,6 +87,7 @@ table.rt td small{display:block;color:var(--muted);font-size:13px;margin-top:2px
 @media(max-width:760px){.rt-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:480px){.rt-grid{grid-template-columns:1fr}}
 .rt-grid li a{font-weight:600;text-decoration:none;color:var(--accent)}.rt-grid li span{display:block;color:var(--muted);font-size:13.5px}
+.rt-faq dt{font-weight:650;margin:14px 0 4px}.rt-faq dd{margin:0 0 4px;color:#3d3a36}
 `;
 
 const cat = (t: Template) => (t.group === "trade" ? (t.trade ?? "Other") : "Starting points");
@@ -119,6 +122,7 @@ ${[...groups.entries()].map(([k, list]) => `<h2>${esc(k)}</h2><ul class="rt-grid
 <p>Each guide takes its lines and example prices from the matching proposal template. They are starting points in US dollars, not a survey; the point is the structure, which is the part most freelancers get wrong. Open any template in the editor and put your own prices in.</p>
 <p><a class="rt-cta" href="/try">Try the editor, no account</a> <a class="rt-cta alt" href="/templates">Browse the templates</a></p>`;
   return shell("What to charge, by trade", body, nonce, `${breadcrumbs(nonce, [["Rates", "/rates"]])}
+${itemListJsonLd(nonce, SITE_URL, RATE_PAGES.map((x) => ({ name: `How much to charge for ${x.topic}`, path: `/rates/${x.slug}` })))}
 <style nonce="${nonce}">${CSS}</style>`, analytics, {
     path: "/rates",
     description: "Pricing guides for freelancers and small agencies: what to charge for design, marketing, web, photography, trades and services, built from real proposals with optional lines and quantities.",
@@ -133,9 +137,18 @@ export function renderRatePage(r: RatePage, nonce: string, analytics: string | n
   const optional = t.items.filter((i) => i.optional);
   const counted = t.items.filter((i) => i.minQuantity != null || i.maxQuantity != null);
   const base = baseTotal(t);
+  const core = t.items.find((i) => !i.optional);
+  const shortAnswer = `Price ${r.topic} as one fixed line (${core ? `${core.name.toLowerCase()} at ${formatMoney(core.unitAmount, "USD")}` : "the defined work"}) with a starting total of ${formatMoney(base, "USD")}, then ${optional.length ? `${optional.length} optional ${optional.length === 1 ? "line" : "lines"} (${optional.map((i) => i.name.toLowerCase()).slice(0, 3).join(", ")}) the client can switch on` : "extras the client can add"}${counted.length ? `, and ${counted.length === 1 ? "a quantity" : "quantities"} the client sets within your limits` : ""}. Set your own numbers; the structure is what gets accepted.`;
+  const faq: [string, string][] = [
+    [`How much should I charge for ${r.topic}?`, shortAnswer],
+    [`What should be optional in a ${r.topic} proposal?`, optional.length ? `In this template: ${optional.map((i) => `${i.name} (${formatMoney(i.unitAmount, "USD")}${i.billing && i.billing !== "once" ? ` per ${i.billing}` : i.unit ? ` per ${i.unit}` : ""})`).join(", ")}. Optional lines sit next to the base price with a switch, so clients choose them without a follow-up email.` : "Anything a client tends to ask for mid-project: add it as an optional line with its own price so it can be switched on from the start."],
+    [`How do I present ${r.topic} pricing so it gets accepted?`, advice[0]!],
+  ];
   const body = `
 <h1>How much to charge for ${esc(r.topic)}</h1>
-<p class="eff">A worked example for ${esc(r.page.audience)}: the pricing lines from our ${esc(r.topic)} proposal, what is fixed, what the client can switch on, and how to present it so the total gets accepted rather than negotiated.</p>
+<p class="muted">Updated ${esc(updatedLabel())}. Example prices in US dollars from the ${esc(r.topic)} proposal template.</p>
+<p class="eff"><strong>Short answer:</strong> ${esc(shortAnswer)}</p>
+<p>A worked example for ${esc(r.page.audience)}: the pricing lines from our ${esc(r.topic)} proposal, what is fixed, what the client can switch on, and how to present it so the total gets accepted rather than negotiated.</p>
 
 <h2>The example pricing</h2>
 <table class="rt"><thead><tr><th>Line</th><th>Example price</th><th>How it is sold</th></tr></thead><tbody>
@@ -145,6 +158,11 @@ ${itemRows(t)}
 
 <h2>How to present it</h2>
 ${advice.map((p) => `<p>${esc(p)}</p>`).join("\n")}
+
+<h2>Questions people ask</h2>
+<dl class="rt-faq">
+${faq.map(([q, a]) => `<dt>${esc(q)}</dt><dd>${esc(a)}</dd>`).join("\n")}
+</dl>
 
 <h2>Why this structure gets accepted</h2>
 <ul>
@@ -160,6 +178,8 @@ ${advice.map((p) => `<p>${esc(p)}</p>`).join("\n")}
 ${related.length ? `<h2>More in ${esc(k)}</h2><ul class="rt-grid">${related.map((o) => `<li><a href="/rates/${o.slug}">${esc(o.topic)}</a><span>For ${esc(o.page.audience)}</span></li>`).join("")}</ul>` : ""}
 <p class="muted"><a href="/rates">All pricing guides</a> · Quote and Sign is open source under the AGPL.</p>`;
   return shell(`How much to charge for ${r.topic}`, body, nonce, `${breadcrumbs(nonce, [["Rates", "/rates"], [`How much to charge for ${r.topic}`, `/rates/${r.slug}`]])}
+${articleJsonLd(nonce, { appUrl: SITE_URL, path: `/rates/${r.slug}`, headline: `How much to charge for ${r.topic}`, description: `Example pricing lines for ${r.page.audience}, what to fix, what to make optional, and how to present it.`, about: `${r.topic} pricing` })}
+${faqJsonLd(nonce, faq)}
 <style nonce="${nonce}">${CSS}</style>`, analytics, {
     path: `/rates/${r.slug}`,
     description: `What to charge for ${r.topic}: example pricing lines for ${r.page.audience}, what to fix, what to make optional, and how to present it so the client accepts.`,

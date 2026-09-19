@@ -573,7 +573,7 @@ addEventListener("load",function(){ScrollTrigger.refresh()});
 });
 `;
 
-export function renderLanding(o: { nonce: string; appUrl: string; githubUrl: string; analytics?: string | null }): string {
+export function renderLanding(o: { nonce: string; appUrl: string; githubUrl: string; analytics?: string | null; extraHead?: string }): string {
   const totals = computeTotals(DEMO_ITEMS);
   const clientItems: ClientItem[] = DEMO_ITEMS.map(({ id, position, unitAmount, quantity, minQuantity, maxQuantity, optional, selectedByDefault, taxRateBps }) => ({ id, position, unitAmount, quantity, minQuantity, maxQuantity, optional, selectedByDefault, taxRateBps: taxRateBps ?? 0 }));
   const title = "Quote and Sign: open-source proposal software clients accept on their phone";
@@ -622,6 +622,7 @@ export function renderLanding(o: { nonce: string; appUrl: string; githubUrl: str
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <script type="application/ld+json" nonce="${o.nonce}">${JSON.stringify(jsonLd)}</script>
+${o.extraHead ?? ""}
 <script type="application/ld+json" nonce="${o.nonce}">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Do my clients need an account?","acceptedAnswer":{"@type":"Answer","text":"No. They open the link, choose the options, type their name and tap Accept. Nothing to install, nothing to sign up for."}},{"@type":"Question","name":"Is a typed name a real signature?","acceptedAnswer":{"@type":"Answer","text":"Yes. The record stores the name, the time, the IP address, the exact consent sentence and a SHA-256 fingerprint of the proposal content. Electronic signatures of this kind are recognised in Canada, the United States, the United Kingdom and the European Union."}},{"@type":"Question","name":"Can the client change the price?","acceptedAnswer":{"@type":"Answer","text":"Only where you allow it. You mark which lines are optional and which quantities the client may change; the total updates as they choose, and what they chose is part of the signed record."}},{"@type":"Question","name":"What does the free plan include?","acceptedAnswer":{"@type":"Answer","text":"Fourteen days of Pro to start, no card needed, then three live proposals at a time for as long as you like. Sending, live pricing, one-tap accept and the signed PDF are all on Free."}},{"@type":"Question","name":"What happens the moment a client accepts?","acceptedAnswer":{"@type":"Answer","text":"Both of you get an email with the signed PDF attached and a link to the acceptance record. The proposal stays online at the same link."}},{"@type":"Question","name":"Is it really open source?","acceptedAnswer":{"@type":"Answer","text":"Yes, under the AGPL. You can read every line on GitHub, and you can run your own copy on a free Cloudflare account."}}]}</script>
 <style nonce="${o.nonce}">${PAGE_CSS}${LANDING_CSS}</style>
 </head>
