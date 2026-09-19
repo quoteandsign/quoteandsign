@@ -44,7 +44,8 @@ describe("what crawlers are told", () => {
     const robots = await app.request("http://localhost:5173/robots.txt", {}, env);
     expect(robots.headers.get("content-type")).toContain("text/plain");
     const r = await robots.text();
-    expect(r).toContain("Content-Signal: search=yes, ai-input=yes, ai-train=no");
+    expect(r).not.toContain("Content-Signal:"); // validators flag the directive, so it lives in a comment
+    expect(r).toContain("search=yes, ai-input=yes, ai-train=no");
     for (const p of ["/p/", "/app", "/api/", "/auth/", "/files/", "/t/", "/admin"]) expect(r).toContain("Disallow: " + p);
     expect(r).toContain("Sitemap: http://localhost:5173/sitemap.xml");
     const sitemap = await app.request("http://localhost:5173/sitemap.xml", {}, env);

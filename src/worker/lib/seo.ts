@@ -48,7 +48,7 @@ export function robotsTxt(appUrl: string): string {
     "",
     "User-agent: *",
     ...rules,
-    "Content-Signal: search=yes, ai-input=yes, ai-train=no",
+    "# Content signals (contentsignals.org), kept as a note until validators accept the directive: search=yes, ai-input=yes, ai-train=no",
     "",
     `Sitemap: ${appUrl}/sitemap.xml`,
     "",
