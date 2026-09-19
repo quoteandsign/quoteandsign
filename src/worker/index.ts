@@ -226,7 +226,7 @@ app.get("/t/:id", async (c) => {
   const nonce = crypto.randomUUID().replace(/-/g, "");
   c.header(
     "content-security-policy",
-    `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; img-src 'self' data: https:; font-src 'self'; media-src https:; frame-src https://www.youtube-nocookie.com https://player.vimeo.com https://www.loom.com; form-action 'none'; base-uri 'none'; frame-ancestors 'self'`,
+    `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; media-src https:; frame-src https://www.youtube-nocookie.com https://player.vimeo.com https://www.loom.com; form-action 'none'; base-uri 'none'; frame-ancestors 'self'`,
   );
   c.header("X-Frame-Options", "SAMEORIGIN");
   c.header("cache-control", "private, no-store");
@@ -252,7 +252,7 @@ app.get("/t/u/:id", async (c) => {
   const nonce = crypto.randomUUID().replace(/-/g, "");
   c.header(
     "content-security-policy",
-    `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; img-src 'self' data: https:; font-src 'self'; media-src https:; frame-src https://www.youtube-nocookie.com https://player.vimeo.com https://www.loom.com; form-action 'none'; base-uri 'none'; frame-ancestors 'self'`,
+    `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; media-src https:; frame-src https://www.youtube-nocookie.com https://player.vimeo.com https://www.loom.com; form-action 'none'; base-uri 'none'; frame-ancestors 'self'`,
   );
   c.header("X-Frame-Options", "SAMEORIGIN");
   c.header("cache-control", "private, no-store");
