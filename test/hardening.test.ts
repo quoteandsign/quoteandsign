@@ -329,3 +329,130 @@ describe("admin email previews", () => {
     }
   });
 });
+
+describe("partner programme", () => {
+  it("creates a partner, ties sign-ups to it with extra days, records shares from paid orders, reverses refunds, and shows a private stats page", async () => {
+    (env as any).ADMIN_EMAILS = "boss3@example.com";
+    try {
+      const boss = await signIn("boss3@example.com", "203.0.113.140");
+      const created = await (await as(boss)("/api/admin/partners", "POST", { name: "Ownr", code: "ownr", contactEmail: "partners@ownr.example", sharePct: 25, bonusDays: 30 })).json();
+      expect(created.partner.code).toBe("ownr");
+      expect((await as(boss)("/api/admin/partners", "POST", { name: "Dup", code: "ownr" })).status).toBe(409);
+      // The link remembers the code, first touch wins, and an unknown code sets nothing.
+      const go = await app.request(`${APP}/go/ownr`, { redirect: "manual" }, env);
+      expect(go.headers.get("location")).toBe("/?ref=partner-ownr");
+      const cookie = (go.headers.get("set-cookie") ?? "").split(";")[0]!;
+      expect(cookie).toBe("qs-partner=ownr");
+      expect((await app.request(`${APP}/go/nobody`, { redirect: "manual" }, env)).headers.get("set-cookie")).toBeNull();
+      // A member signs up through the cookie.
+      let n = logs.length;
+      await app.request(`${APP}/auth/request`, { method: "POST", headers: { "content-type": "application/json", "cf-connecting-ip": "203.0.113.141", cookie }, body: JSON.stringify({ email: "member1@example.com" }) }, env);
+      let token = new URL(logs.slice(n).join("\n").match(/http:\/\/localhost:5173\/auth\/verify\?token=[A-Za-z0-9_-]+/)![0]).searchParams.get("token")!;
+      await app.request(`${APP}/auth/verify`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded", origin: APP }, body: new URLSearchParams({ token }), redirect: "manual" }, env);
+      const m1 = await env.DB.prepare("SELECT id, partner_id AS p, source, trial_ends_at AS t, created_at AS c FROM users WHERE email = ?").bind("member1@example.com").first<{ id: string; p: string; source: string; t: number; c: number }>();
+      expect(m1?.p).toBe(created.partner.id);
+      expect(m1?.source).toBe("partner-ownr");
+      expect(Math.round((m1!.t - m1!.c) / 86_400_000)).toBe(44);
+      // Another member types the code on the form instead.
+      n = logs.length;
+      await app.request(`${APP}/auth/request`, { method: "POST", headers: { "content-type": "application/json", "cf-connecting-ip": "203.0.113.142" }, body: JSON.stringify({ email: "member2@example.com", partner: "OWNR" }) }, env);
+      token = new URL(logs.slice(n).join("\n").match(/http:\/\/localhost:5173\/auth\/verify\?token=[A-Za-z0-9_-]+/)![0]).searchParams.get("token")!;
+      await app.request(`${APP}/auth/verify`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded", origin: APP }, body: new URLSearchParams({ token }), redirect: "manual" }, env);
+      expect((await env.DB.prepare("SELECT partner_id AS p FROM users WHERE email = ?").bind("member2@example.com").first<{ p: string }>())?.p).toBe(created.partner.id);
+      // Member 1 pays: the share is recorded once, even when Polar delivers the event twice; a refund reverses it.
+      await applyPolarEvent(env as any, { type: "order.paid", data: { id: "ord_1", status: "paid", customer_id: "cus_m1", net_amount: 22800, currency: "usd", metadata: { userId: m1!.id, plan: "pro" } } });
+      await applyPolarEvent(env as any, { type: "order.paid", data: { id: "ord_1", status: "paid", customer_id: "cus_m1", net_amount: 22800, currency: "usd", metadata: { userId: m1!.id, plan: "pro" } } });
+      let list = await (await as(boss)("/api/admin/partners")).json();
+      expect(list.partners[0].stats).toMatchObject({ signups: 2, paid: 1, earned: 5700, paidOut: 0, owed: 5700 });
+      // Pay out part (more than owed needs a second confirmation), then a refund on the order.
+      expect((await as(boss)(`/api/admin/partners/${created.partner.id}/payout`, "POST", { amount: 9000, note: "typo" })).status).toBe(409);
+      expect((await as(boss)(`/api/admin/partners/${created.partner.id}/payout`, "POST", { amount: 5000, note: "Wise Q3" })).status).toBe(200);
+      await applyPolarEvent(env as any, { type: "order.refunded", data: { id: "ord_1", customer_id: "cus_m1", metadata: { userId: m1!.id } } });
+      list = await (await as(boss)("/api/admin/partners")).json();
+      expect(list.partners[0].stats).toMatchObject({ earned: 0, reversed: 5700, paidOut: 5000, owed: -5000 });
+      // The private page shows counts and money, never member emails; a wrong token is a 404.
+      const page = await app.request(`${APP}/partner/${created.partner.viewToken}`, {}, env);
+      expect(page.status).toBe(200);
+      const html = await page.text();
+      expect(html).toContain("Ownr and Quote and Sign");
+      expect(html).toContain("/go/ownr");
+      expect(html).not.toContain("member1@example.com");
+      expect(html).toContain('name="robots" content="noindex');
+      expect((await app.request(`${APP}/partner/${"x".repeat(32)}`, {}, env)).status).toBe(404);
+      // The public programme page and robots rules.
+      expect((await app.request(`${APP}/partners`, {}, env)).status).toBe(200);
+      const robots = await (await app.request(`${APP}/robots.txt`, {}, env)).text();
+      expect(robots).toContain("Disallow: /go/");
+      expect(robots).toContain("Disallow: /partner/");
+      expect(robots).toContain("Allow: /partners");
+    } finally {
+      delete (env as any).ADMIN_EMAILS;
+    }
+  });
+});
+
+describe("bonus farming", () => {
+  it("gives the extra days to at most three accounts from one address a month", async () => {
+    (env as any).ADMIN_EMAILS = "boss4@example.com";
+    let partnerId = "";
+    try {
+      const boss = await signIn("boss4@example.com", "203.0.113.150");
+      partnerId = (await (await as(boss)("/api/admin/partners", "POST", { name: "Guild", code: "guild", bonusDays: 30 })).json()).partner.id;
+    } finally { delete (env as any).ADMIN_EMAILS; }
+    const days: number[] = [];
+    for (let i = 0; i < 4; i++) {
+      const n = logs.length;
+      await app.request(`${APP}/auth/request`, { method: "POST", headers: { "content-type": "application/json", "cf-connecting-ip": "203.0.113.151" }, body: JSON.stringify({ email: `farm${i}@farm-${i}.example`, partner: "guild" }) }, env);
+      const token = new URL(logs.slice(n).join("\n").match(/http:\/\/localhost:5173\/auth\/verify\?token=[A-Za-z0-9_-]+/)![0]).searchParams.get("token")!;
+      await app.request(`${APP}/auth/verify`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded", origin: APP }, body: new URLSearchParams({ token }), redirect: "manual" }, env);
+      const u = await env.DB.prepare("SELECT trial_ends_at AS t, created_at AS c, partner_id AS p FROM users WHERE email = ?").bind(`farm${i}@farm-${i}.example`).first<{ t: number; c: number; p: string | null }>();
+      days.push(Math.round((u!.t - u!.c) / 86_400_000));
+      expect(u!.p).toBe(partnerId); // the tie stays; only the extra days are capped
+    }
+    expect(days).toEqual([44, 44, 44, 14]);
+  });
+});
+
+describe("partner programme, edge cases", () => {
+  it("survives the nightly prune, stops accruing when paused, handles partial refunds, escapes names, and hides from non-admins", async () => {
+    const { pruneOldRows } = await import("../src/worker/lib/reminders");
+    const { recordPartnerOrder, reversePartnerOrder, partnerStats } = await import("../src/worker/lib/partners");
+    const { getDb } = await import("../src/worker/lib/db");
+    const db = getDb(env.DB);
+    (env as any).ADMIN_EMAILS = "boss5@example.com";
+    let p: any;
+    try {
+      const boss = await signIn("boss5@example.com", "203.0.113.160");
+      p = (await (await as(boss)("/api/admin/partners", "POST", { name: "<script>alert(1)</script> Co", code: "esc-co", bonusDays: 30 })).json()).partner;
+      // 2. Name is escaped on the private page.
+      const html = await (await app.request(`${APP}/partner/${p.viewToken}`, {}, env)).text();
+      expect(html).not.toContain("<script>alert(1)</script>");
+      expect(html).toContain("&lt;script&gt;");
+      // 3. A partial refund reduces the share in proportion; a paused partner earns nothing new.
+      await env.DB.prepare("INSERT INTO users (id, email, plan, created_at, partner_id) VALUES ('pu-1', 'pu1@example.com', 'free', ?, ?)").bind(Date.now(), p.id).run();
+      const u = { id: "pu-1", partnerId: p.id, createdAt: new Date() };
+      expect(await recordPartnerOrder(db, u, { id: "ord_p1", amount: 10000, currency: "usd" }, new Date())).toBe(true);
+      expect(await reversePartnerOrder(db, "ord_p1", new Date(), 2500)).toBe(true);
+      expect((await partnerStats(db, p.id)).earned).toBe(1875); // 25% of 10000, less a quarter
+      expect((await as(boss)(`/api/admin/partners/${p.id}/active`, "POST", { active: false })).status).toBe(200);
+      expect(await recordPartnerOrder(db, u, { id: "ord_p2", amount: 10000, currency: "usd" }, new Date())).toBe(false);
+      expect((await app.request(`${APP}/go/esc-co`, { redirect: "manual" }, env)).headers.get("set-cookie")).toBeNull();
+      expect(await (await app.request(`${APP}/partner/${p.viewToken}`, {}, env)).text()).toContain("This partnership is paused");
+      // 4. Old-year orders earn nothing.
+      expect(await recordPartnerOrder(db, { id: "pu-1", partnerId: p.id, createdAt: new Date(Date.now() - 400 * 86_400_000) }, { id: "ord_p3", amount: 10000, currency: "usd" }, new Date())).toBe(false);
+      // 5. The 30-day bonus counter survives the nightly prune run a day later.
+      const { rateLimit } = await import("../src/worker/lib/ratelimit");
+      await rateLimit(db, "bonus:ip:test-hash", 3, 30 * 86_400_000);
+      await pruneOldRows(env as any, new Date(Date.now() + 2 * 86_400_000));
+      expect((await env.DB.prepare("SELECT count(*) AS n FROM rate_limits WHERE key = 'bonus:ip:test-hash'").first<{ n: number }>())?.n).toBe(1);
+      await pruneOldRows(env as any, new Date(Date.now() + 31 * 86_400_000));
+      expect((await env.DB.prepare("SELECT count(*) AS n FROM rate_limits WHERE key = 'bonus:ip:test-hash'").first<{ n: number }>())?.n).toBe(0);
+    } finally {
+      delete (env as any).ADMIN_EMAILS;
+    }
+    // 5. Without the admin gate the routes do not exist.
+    const nobody = await signIn("nobody5@example.com", "203.0.113.161");
+    expect((await as(nobody)("/api/admin/partners")).status).toBe(404);
+    expect((await as(nobody)(`/api/admin/partners/${p.id}/payout`, "POST", { amount: 100 })).status).toBe(404);
+  });
+});

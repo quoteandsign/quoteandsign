@@ -4,6 +4,13 @@ All notable changes to Quote and Sign. Dates are the day the change went live at
 
 ## 1.1.0 — unreleased
 
+### Partner programme
+- Companies and associations get a link (/go/code), a code members can type at sign-up, and a private stats
+  page. Members through it get extra Pro days; the partner earns a share of what those accounts pay in their
+  first year, recorded from each Polar order and reversed on refund. Admin has a Partners tab to create
+  partners, see sign-ups, paying accounts, earned, paid out and owed, and record payouts. The programme
+  and its rules are public at /partners. Extra days go to at most three accounts from one address a month.
+
 ### Search and AI assistants
 - IndexNow: every public page is submitted to Bing (and the assistants that search through it) once a day
   when the list changes, and on demand from Admin, Settings. The key file is served from the site itself.

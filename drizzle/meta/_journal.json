@@ -176,6 +176,13 @@
       "when": 1789842589758,
       "tag": "0024_attribution_referrals",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1789917441393,
+      "tag": "0025_partners",
+      "breakpoints": true
     }
   ]
 }

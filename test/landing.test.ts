@@ -51,7 +51,7 @@ describe("what crawlers are told", () => {
     const sitemap = await app.request("http://localhost:5173/sitemap.xml", {}, env);
     expect(sitemap.headers.get("content-type")).toContain("application/xml");
     const x = await sitemap.text();
-    expect((x.match(/<url>/g) ?? []).length).toBe(86);
+    expect((x.match(/<url>/g) ?? []).length).toBe(87);
     expect(x).toContain("/rates/logo-design");
     expect(x).not.toContain("/login");
     const idx = await (await app.request("http://localhost:5173/compare", {}, env)).text();
@@ -137,7 +137,7 @@ describe("template landing pages", () => {
 
 describe("search metadata on the shared pages", () => {
   it("gives every server-rendered page one real description, a canonical link and share tags", async () => {
-    for (const path of ["/templates", "/templates/consulting-proposal-template", "/rates", "/rates/consulting", "/compare", "/compare/qwilr", "/privacy", "/terms", "/contact"]) {
+    for (const path of ["/templates", "/templates/consulting-proposal-template", "/rates", "/rates/consulting", "/compare", "/compare/qwilr", "/partners", "/privacy", "/terms", "/contact"]) {
       const html = await (await app.request(`http://localhost:5173${path}`, {}, env)).text();
       expect((html.match(/name="description"/g) ?? []).length).toBe(1);
       expect(html).not.toContain('for Quote and Sign."');

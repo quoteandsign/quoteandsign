@@ -12,6 +12,7 @@ import { audit } from "../lib/audit";
 
 import { PLANS, effectivePlan, type PlanId, type Interval } from "../lib/plan";
 import { rewardReferrerForPaidPlan, reverseReferralReward } from "../lib/referral";
+import { recordPartnerOrder, reversePartnerOrder } from "../lib/partners";
 export { PLANS, type PlanId };
 
 const polarBase = (env: Bindings) => (env.POLAR_SERVER === "production" ? "https://api.polar.sh" : "https://sandbox-api.polar.sh");
@@ -117,6 +118,12 @@ type PolarEvent = {
     product_id?: string;
     product?: { id?: string };
     metadata?: Record<string, string>;
+    // Orders: what was paid, in minor units. Polar sends net_amount (after discounts) and amount.
+    net_amount?: number;
+    amount?: number;
+    total_amount?: number;
+    currency?: string;
+    order_id?: string;
   };
 };
 
@@ -162,6 +169,17 @@ export async function applyPolarEvent(env: Bindings, ev: PolarEvent): Promise<{ 
   const now = new Date();
   if (plan && plan !== "free" && user.plan === "free") await rewardReferrerForPaidPlan(db, user, now);
   if ((ev.type === "subscription.revoked" || ev.type === "order.refunded" || ev.type === "refund.created") && user.referralRewardedAt) await reverseReferralReward(db, user, now);
+  // Partner share: on each paid order in the account's first year; reversed on refund.
+  if (ev.type === "order.paid" && d.id && user.partnerId) {
+    const paid = d.net_amount ?? d.amount ?? d.total_amount ?? 0;
+    await recordPartnerOrder(db, user, { id: d.id, amount: paid, currency: d.currency ?? "usd" }, now);
+  }
+  if (ev.type === "order.refunded" || ev.type === "refund.created") {
+    // order.refunded carries the order; refund.created carries the refund with order_id and its amount.
+    const orderId = ev.type === "refund.created" ? d.order_id : d.id;
+    const refunded = ev.type === "refund.created" ? d.amount : undefined;
+    if (orderId && !(await reversePartnerOrder(db, orderId, now, refunded))) await audit(db, { userId: user.id, event: "partner.refund_unmatched", meta: { event: ev.type, order: orderId } });
+  }
   return { userId: user.id, plan: (plan ?? user.plan) as PlanId };
 }
 

@@ -27,12 +27,13 @@ export const PUBLIC_PAGES: { path: string; changefreq: "weekly" | "monthly"; leg
   { path: "/templates", changefreq: "monthly" },
   ...TEMPLATE_PAGES.map((p) => ({ path: `/templates/${p.slug}`, changefreq: "monthly" as const })),
   { path: "/pricing.md", changefreq: "monthly", sitemap: false },
+  { path: "/partners", changefreq: "monthly" },
   { path: "/rates", changefreq: "monthly" },
   ...RATE_PAGES.map((r) => ({ path: `/rates/${r.slug}`, changefreq: "monthly" as const })),
 ];
 
 /** Paths that exist for one person and must never be crawled. */
-export const PRIVATE_PREFIXES = ["/p/", "/app", "/api/", "/auth/", "/files/", "/t/", "/admin", "/billing/", "/r/", "/try"];
+export const PRIVATE_PREFIXES = ["/p/", "/app", "/api/", "/auth/", "/files/", "/t/", "/admin", "/billing/", "/r/", "/try", "/go/", "/partner/"];
 
 /** Crawlers that answer questions with citations. Named so the welcome is explicit, same rules as everyone. */
 export const CITING_BOTS = ["GPTBot", "OAI-SearchBot", "ChatGPT-User", "PerplexityBot", "Perplexity-User", "ClaudeBot", "Claude-SearchBot", "Claude-User", "anthropic-ai", "Google-Extended", "Bingbot", "Applebot", "DuckAssistBot", "Amazonbot", "meta-externalagent"];

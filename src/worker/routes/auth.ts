@@ -15,6 +15,7 @@ import { analyticsId } from "../lib/analytics";
 import { STYLE_IDS } from "../../shared/styles";
 import { effectivePlan, capsOf, trialEnd } from "../lib/plan";
 import { readAttribution, referrerFor, isSelfReferral, ensureReferralCode, referralCount, REFERRED_TRIAL_BONUS_DAYS } from "../lib/referral";
+import { isPartnerCode, partnerByCode, readPartnerCookie } from "../lib/partners";
 import { isAdmin } from "./support";
 import { workspaceOwner } from "../lib/session";
 import { businessName } from "../../shared/names";
@@ -38,7 +39,7 @@ export function trialIdentity(email: string): string {
 
 export const authRoutes = new Hono<AppEnv>();
 
-const requestSchema = z.object({ email: z.string().trim().toLowerCase().email().max(254), turnstile: z.string().max(4096).optional(), marketing: z.boolean().optional() });
+const requestSchema = z.object({ email: z.string().trim().toLowerCase().email().max(254), turnstile: z.string().max(4096).optional(), marketing: z.boolean().optional(), partner: z.string().trim().toLowerCase().max(24).optional() });
 
 /** The public sign-in configuration: whether a Turnstile challenge is expected, and its site key. */
 authRoutes.get("/config", async (c) => c.json({ turnstileSiteKey: c.env.TURNSTILE_SECRET ? (c.env.TURNSTILE_SITE_KEY ?? null) : null, analyticsId: await analyticsId(c.env.DB) }));
@@ -86,6 +87,8 @@ authRoutes.post("/request", async (c) => {
     marketing: parsed.data.marketing === true, // the box on the form; becomes consent only once the link is used
     ipHash: ip,
     ...readAttribution(c),
+    // A typed partner code beats the cookie; either is checked against the partner list when the link is used.
+    partner: isPartnerCode(parsed.data.partner) ? parsed.data.partner : readPartnerCookie(c),
   });
 
   const link = `${appUrl(c)}/auth/verify?token=${raw}`;
@@ -145,7 +148,7 @@ authRoutes.post("/verify", async (c) => {
     .update(schema.magicTokens)
     .set({ usedAt: now })
     .where(and(eq(schema.magicTokens.tokenHash, tokenHash), isNull(schema.magicTokens.usedAt), gt(schema.magicTokens.expiresAt, now)))
-    .returning({ email: schema.magicTokens.email, marketing: schema.magicTokens.marketing, ipHash: schema.magicTokens.ipHash, source: schema.magicTokens.source, referral: schema.magicTokens.referral })
+    .returning({ email: schema.magicTokens.email, marketing: schema.magicTokens.marketing, ipHash: schema.magicTokens.ipHash, source: schema.magicTokens.source, referral: schema.magicTokens.referral, partner: schema.magicTokens.partner })
     .get();
   if (!token) return c.redirect("/login?error=expired");
 
@@ -165,10 +168,19 @@ authRoutes.post("/verify", async (c) => {
     // a genuinely new person earns it; a returning trial key or deleted address does not.
     const candidate = before ? null : await referrerFor(db, token.referral);
     const referrer = candidate && !(await isSelfReferral(db, candidate.id, token.ipHash ?? null, now)) ? candidate : null;
-    const ends = before ? before.trialEndsAt : referrer ? new Date(trialEnd(now).getTime() + REFERRED_TRIAL_BONUS_DAYS * 86_400_000) : trialEnd(now);
-    await db.insert(schema.users).values({ id, email: token.email, createdAt: now, plan: "free", trialKey: key, trialEndsAt: ends, source: token.source ?? null, referredBy: referrer?.id ?? null });
+    // A partner code (a company or association) adds its own days; the larger of the two bonuses applies, not both.
+    // Extra days are worth farming with many inboxes, so one address gets them three times a month at most;
+    // the fourth account from it is created normally, without the bonus or the partner tie.
+    const candidatePartner = before ? null : await partnerByCode(db, token.partner);
+    const wantsBonus = Boolean(referrer) || Boolean(candidatePartner);
+    const bonusAllowed = !wantsBonus || !token.ipHash || (await rateLimit(db, `bonus:ip:${token.ipHash}`, 3, 30 * 86_400_000)).allowed;
+    const partner = candidatePartner;
+    const bonusDays = bonusAllowed ? Math.max(referrer ? REFERRED_TRIAL_BONUS_DAYS : 0, partner ? partner.bonusDays : 0) : 0;
+    const ends = before ? before.trialEndsAt : new Date(trialEnd(now).getTime() + bonusDays * 86_400_000);
+    // A partner account is the partner's; a friend's referral does not pay on top of it.
+    await db.insert(schema.users).values({ id, email: token.email, createdAt: now, plan: "free", trialKey: key, trialEndsAt: ends, source: partner ? `partner-${partner.code}` : (token.source ?? null), referredBy: partner ? null : (referrer?.id ?? null), partnerId: partner?.id ?? null });
     user = (await db.select().from(schema.users).where(eq(schema.users.id, id)).get())!;
-    await audit(db, { userId: id, event: "user.created", ipHash: token.ipHash ?? undefined, meta: { source: token.source ?? "direct", referred: Boolean(referrer) } });
+    await audit(db, { userId: id, event: "user.created", ipHash: token.ipHash ?? undefined, meta: { source: partner ? `partner-${partner.code}` : (token.source ?? "direct"), referred: Boolean(referrer && !partner), bonusRefused: wantsBonus && !bonusAllowed } });
 
     await sendWelcome(c.env, user);
   } else if (user.deletedAt) {

@@ -75,6 +75,9 @@ export function Login() {
   const wantedPlan = search.get("plan") === "pro" ? "Pro" : search.get("plan") === "business" ? "Business" : null;
   const wantedTemplate = /^[a-z-]{1,40}$/.test(search.get("template") ?? "") ? search.get("template") : null;
   const guestSend = search.get("guest") === "1"; // a proposal made without an account is waiting to be sent
+  // A partner code (from a perks page): typed here, or carried in the link as ?partner=code.
+  const [partner, setPartner] = useState(() => (/^[a-z0-9][a-z0-9-]{1,23}$/.test(search.get("partner") ?? "") ? search.get("partner")! : ""));
+  const [partnerOpen, setPartnerOpen] = useState(() => Boolean(search.get("partner")));
   useEffect(() => {
     if (guestSend) { try { localStorage.setItem("qs-after-login", "/app/templates?guest=1"); } catch { /* private mode */ } return; }
     if (!wantedPlan && !wantedTemplate) return;
@@ -86,7 +89,8 @@ export function Login() {
     setBusy(true);
     setError(null);
     try {
-      const r = await api<{ ok: true; devLink?: string }>("/auth/request", { method: "POST", json: { email, marketing, ...(challenge ? { turnstile: challenge } : {}) } });
+      const code = partner.trim().toLowerCase();
+      const r = await api<{ ok: true; devLink?: string }>("/auth/request", { method: "POST", json: { email, marketing, ...(challenge ? { turnstile: challenge } : {}), ...(/^[a-z0-9][a-z0-9-]{1,23}$/.test(code) ? { partner: code } : {}) } });
       (window as unknown as { gtag?: (...a: unknown[]) => void }).gtag?.("event", "sign_in_requested");
       setChallenge(null);
       setDevLink(r.devLink ?? null);
@@ -197,6 +201,13 @@ export function Login() {
                     <input type="checkbox" className="mt-0.5 h-4 w-4 accent-brand" checked={marketing} onChange={(e) => setMarketing(e.target.checked)} data-test="marketing" />
                     <span>Send me product news and tips by email. A few a year, unsubscribe any time.</span>
                   </label>
+                  {partnerOpen ? (
+                    <Field label="Partner code" htmlFor="partner" hint="From a perks page or a member benefit. Adds extra Pro days to a new account.">
+                      <Input id="partner" value={partner} maxLength={24} spellCheck={false} autoCapitalize="off" onChange={(e) => setPartner(e.target.value)} placeholder="yourassociation" data-test="partner-code" />
+                    </Field>
+                  ) : (
+                    <button type="button" onClick={() => setPartnerOpen(true)} className="w-fit text-[12.5px] text-stone-500 underline underline-offset-4 hover:text-ink dark:hover:text-stone-200">Have a partner code?</button>
+                  )}
                   <p className="text-[12.5px] leading-relaxed text-stone-500">By continuing you agree to the <a href="/terms" className="underline underline-offset-4 hover:text-ink dark:hover:text-stone-200">Terms</a> and acknowledge the <a href="/privacy" className="underline underline-offset-4 hover:text-ink dark:hover:text-stone-200">Privacy Policy</a>.</p>
                   <p className="text-[13px] text-graphite dark:text-stone-500">New here? The same link creates your account.</p>
                 </form>

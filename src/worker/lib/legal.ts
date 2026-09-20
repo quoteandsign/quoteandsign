@@ -268,6 +268,7 @@ export function renderPrivacy(nonce: string, analytics: string | null = null): s
 
 <h2>Cookies</h2>
 <p><b>Strictly necessary:</b> one cookie keeps you signed in, and one remembers a proposal password you entered. Neither tracks you across sites. Your theme choice is stored in your browser only.</p>
+<p><b>Attribution:</b> if you arrive through a referral or partner link, a cookie remembers that code for 30 days so that, if you create an account, the account can be credited to the person or organisation that referred you and any extra trial days can be applied. It holds only the code, is not shared with anyone, and is read only when you request a sign-in link. Partners see counts and amounts, never your name or email.</p>
 <p><b>Analytics, only with your consent:</b> if you click Allow in the cookie notice, Google Analytics sets its cookies (names beginning with <code>_ga</code>) for up to two years. Click Decline and none are set. You can change your mind at any time using the "Cookie settings" link at the bottom of any public page, or by clearing cookies for this site.</p>
 
 <h2>Legal bases (GDPR)</h2>

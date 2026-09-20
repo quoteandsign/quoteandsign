@@ -34,6 +34,7 @@ import { sendExpiryReminders, sendTrialNotices, pruneOldRows, warnOnStorage } fr
 import { sendDay3Nudges } from "./lib/onboarding";
 import { sendSuspiciousActivityAlert } from "./lib/alerts";
 import { indexNowIfChanged, indexNowKey, orgJsonLd, pricingMd } from "./lib/geo";
+import { isPartnerCode, partnerByCode, partnerStats, rememberPartner, renderPartnerStatsPage, renderPartnersPage } from "./lib/partners";
 import { PUBLIC_PAGES } from "./lib/seo";
 
 import type { Bindings } from "./env";
@@ -125,6 +126,44 @@ app.get("/r/:code", async (c) => {
   const ref = c.req.query("ref");
   c.header("cache-control", "private, no-store");
   return c.redirect(ref && /^[a-z0-9_-]{1,32}$/.test(ref) ? `/?ref=${ref}` : "/?ref=friend", 302);
+});
+
+// A partner's link: remembers the code for thirty days, then shows the homepage.
+app.get("/go/:code", async (c) => {
+  const code = c.req.param("code").toLowerCase();
+  const db = getDb(c.env.DB);
+  const ok = (await rateLimit(db, `go:visit:${await ipHash(c.env.SESSION_SECRET, clientIp(c.req.raw))}`, 30, 60_000)).allowed;
+  const partner = ok && isPartnerCode(code) ? await partnerByCode(db, code) : null;
+  if (partner) await rememberPartner(c, db, partner.code);
+  c.header("cache-control", "private, no-store");
+  return c.redirect(partner ? `/?ref=partner-${partner.code}` : "/", 302);
+});
+
+// The programme, in the open.
+app.get("/partners", async (c) => {
+  const nonce = crypto.randomUUID().replace(/-/g, "");
+  const ga = await analyticsId(c.env.DB);
+  const csp = analyticsCsp(ga);
+  c.header("content-security-policy", `default-src 'none'; script-src 'nonce-${nonce}'${csp.script}; style-src 'nonce-${nonce}'; img-src 'self'${csp.img}; connect-src 'self'${csp.connect}; font-src 'self'; base-uri 'none'; frame-ancestors 'none'`);
+  c.header("cache-control", "public, max-age=3600");
+  return c.html(renderPartnersPage(nonce, ga));
+});
+
+// A partner's private stats page. The token is the only key; nothing personal is on the page.
+app.get("/partner/:token", async (c) => {
+  const token = c.req.param("token");
+  if (!/^[A-Za-z0-9_-]{20,64}$/.test(token)) return c.html(renderSimplePage("Not found", "There is no page at this address."), 404);
+  const db = getDb(c.env.DB);
+  if (!(await rateLimit(db, `partner:view:${await ipHash(c.env.SESSION_SECRET, clientIp(c.req.raw))}`, 30, 60_000)).allowed) return c.text("Too many requests", 429);
+  const partner = await db.select().from(schema.partners).where(eq(schema.partners.viewToken, token)).get();
+  if (!partner) return c.html(renderSimplePage("Not found", "There is no page at this address."), 404);
+  const stats = await partnerStats(db, partner.id);
+  const payouts = await db.select({ amount: schema.partnerPayouts.amount, paidAt: schema.partnerPayouts.paidAt, note: schema.partnerPayouts.note }).from(schema.partnerPayouts).where(eq(schema.partnerPayouts.partnerId, partner.id)).orderBy(schema.partnerPayouts.paidAt).all();
+  const nonce = crypto.randomUUID().replace(/-/g, "");
+  c.header("content-security-policy", `default-src 'none'; style-src 'nonce-${nonce}'; img-src 'self'; font-src 'self'; base-uri 'none'; frame-ancestors 'none'`);
+  c.header("cache-control", "private, no-store");
+  c.header("referrer-policy", "no-referrer");
+  return c.html(renderPartnerStatsPage(nonce, partner, stats, appUrl(c), payouts));
 });
 
 // What crawlers and AI assistants may read: the public pages only, described once.

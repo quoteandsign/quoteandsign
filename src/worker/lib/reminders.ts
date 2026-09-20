@@ -82,7 +82,9 @@ export async function warnOnStorage(env: Bindings): Promise<boolean> {
 
 export async function pruneOldRows(env: Bindings, now = new Date()): Promise<void> {
   const db = getDb(env.DB);
-  await db.delete(schema.rateLimits).where(lt(schema.rateLimits.windowStart, new Date(now.getTime() - DAY)));
+  // Day-window counters go after a day; the bonus counters (30-day windows) after 30 days.
+  await db.delete(schema.rateLimits).where(and(lt(schema.rateLimits.windowStart, new Date(now.getTime() - DAY)), sql`key not like 'bonus:%'`));
+  await db.delete(schema.rateLimits).where(and(lt(schema.rateLimits.windowStart, new Date(now.getTime() - 30 * DAY)), sql`key like 'bonus:%'`));
   await db.delete(schema.webhookEvents).where(lt(schema.webhookEvents.seenAt, new Date(now.getTime() - 7 * DAY)));
   await db.delete(schema.magicTokens).where(lt(schema.magicTokens.expiresAt, new Date(now.getTime() - DAY)));
   await db.delete(schema.sessions).where(lt(schema.sessions.expiresAt, new Date(now.getTime() - DAY)));

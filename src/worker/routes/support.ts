@@ -12,6 +12,8 @@ import { getSetting, setSetting, ANALYTICS_KEY, ANALYTICS_ID } from "../lib/anal
 import { ONBOARDING_KEY, sendOnboardingTest } from "../lib/onboarding";
 import { SAMPLE_KINDS, sendSampleEmail } from "../lib/samples";
 import { indexNowIfChanged } from "../lib/geo";
+import { createPartner, partnerStats, isPartnerCode } from "../lib/partners";
+const newId = uuid;
 import { PUBLIC_PAGES } from "../lib/seo";
 import { getSessionUser, requireAuth } from "../lib/session";
 import { effectivePlan } from "../lib/plan";
@@ -116,6 +118,57 @@ adminRoutes.post("/onboarding/test", async (c) => {
   await audit(getDb(c.env.DB), { userId: me.id, event: "admin.onboarding_test", meta: { kind: parsed.data.kind } });
   return c.json({ ok: true, to: me.email });
 });
+
+// Partner programme: create partners, see what each brought, record payouts.
+adminRoutes.get("/partners", async (c) => {
+  const db = getDb(c.env.DB);
+  const rows = await db.select().from(schema.partners).orderBy(desc(schema.partners.createdAt)).all();
+  const partners = [];
+  for (const p of rows) partners.push({ ...p, createdAt: p.createdAt.getTime(), stats: await partnerStats(db, p.id) });
+  return c.json({ partners, appUrl: c.env.APP_URL });
+});
+adminRoutes.post("/partners", async (c) => {
+  const parsed = z.object({
+    name: z.string().trim().min(1).max(120),
+    code: z.string().trim().toLowerCase().regex(/^[a-z0-9][a-z0-9-]{1,23}$/, "Code: letters, digits and dashes, 2 to 24 characters."),
+    contactEmail: z.string().trim().toLowerCase().email().max(254).or(z.literal("")).optional(),
+    sharePct: z.number().int().min(0).max(50).default(25),
+    bonusDays: z.number().int().min(0).max(90).default(30),
+  }).safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ error: parsed.error.issues[0]?.message ?? "Invalid data." }, 400);
+  const db = getDb(c.env.DB);
+  if (await db.select({ id: schema.partners.id }).from(schema.partners).where(eq(schema.partners.code, parsed.data.code)).get()) return c.json({ error: "That code is taken." }, 409);
+  const p = await createPartner(db, { name: parsed.data.name, code: parsed.data.code, contactEmail: parsed.data.contactEmail || null, sharePct: parsed.data.sharePct, bonusDays: parsed.data.bonusDays });
+  await audit(db, { userId: c.get("user").id, event: "admin.partner_created", meta: { partner: p.code } });
+  return c.json({ partner: { ...p, createdAt: p.createdAt.getTime() } }, 201);
+});
+adminRoutes.post("/partners/:id/payout", async (c) => {
+  const parsed = z.object({ amount: z.number().int().min(1).max(100_000_000), note: z.string().trim().max(200).optional(), force: z.boolean().optional() }).safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ error: "Enter the amount in cents." }, 400);
+  const db = getDb(c.env.DB);
+  const id = c.req.param("id");
+  if (!/^[0-9a-f-]{36}$/.test(id)) return c.json({ error: "not found" }, 404);
+  const p = await db.select({ id: schema.partners.id }).from(schema.partners).where(eq(schema.partners.id, id)).get();
+  if (!p) return c.json({ error: "not found" }, 404);
+  const before = await partnerStats(db, id);
+  // Paying more than is owed is almost always a typo; it takes an explicit second confirmation.
+  if (parsed.data.amount > before.owed && !parsed.data.force) return c.json({ error: `Only ${(before.owed / 100).toFixed(2)} ${before.currency} is owed. Confirm to record more than that.`, code: "over" }, 409);
+  await db.insert(schema.partnerPayouts).values({ id: newId(), partnerId: id, amount: parsed.data.amount, currency: before.currency, note: parsed.data.note || null, paidAt: new Date() });
+  await audit(db, { userId: c.get("user").id, event: "admin.partner_payout", meta: { partner: id, amount: parsed.data.amount } });
+  return c.json({ ok: true, stats: await partnerStats(db, id) });
+});
+adminRoutes.post("/partners/:id/active", async (c) => {
+  const parsed = z.object({ active: z.boolean() }).safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ error: "Invalid data." }, 400);
+  const id = c.req.param("id");
+  if (!/^[0-9a-f-]{36}$/.test(id)) return c.json({ error: "not found" }, 404);
+  const db = getDb(c.env.DB);
+  const r = await db.update(schema.partners).set({ active: parsed.data.active }).where(eq(schema.partners.id, id)).returning({ id: schema.partners.id }).get();
+  if (!r) return c.json({ error: "not found" }, 404);
+  await audit(db, { userId: c.get("user").id, event: parsed.data.active ? "admin.partner_resumed" : "admin.partner_paused", meta: { partner: id } });
+  return c.json({ ok: true });
+});
+void isPartnerCode;
 
 // Tell Bing (and the assistants that search through it) about every public page, now.
 adminRoutes.post("/indexnow", async (c) => {

@@ -38,7 +38,7 @@ function onboardingLabel(p: Person): string {
 export function Admin() {
   const { user } = useAuth();
   const { navigate } = useRouter();
-  const [tab, setTab] = useState<"overview" | "tickets" | "people" | "settings">(() => (new URLSearchParams(location.search).get("ticket") ? "tickets" : "overview"));
+  const [tab, setTab] = useState<"overview" | "tickets" | "people" | "partners" | "settings">(() => (new URLSearchParams(location.search).get("ticket") ? "tickets" : "overview"));
   const [gaId, setGaId] = useState("");
   const [gaState, setGaState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [gaError, setGaError] = useState<string | null>(null);
@@ -100,6 +100,41 @@ export function Admin() {
     }
     setTimeout(() => setIndexNow("idle"), 4000);
   };
+  type PartnerRow = { id: string; name: string; code: string; contactEmail: string | null; sharePct: number; bonusDays: number; viewToken: string; active: boolean; createdAt: number; stats: { signups: number; paid: number; earned: number; reversed: number; paidOut: number; owed: number; currency: string } };
+  const [partners, setPartners] = useState<PartnerRow[] | null>(null);
+  const [appUrl, setAppUrl] = useState(location.origin);
+  const [pForm, setPForm] = useState({ name: "", code: "", contactEmail: "", sharePct: 25, bonusDays: 30 });
+  const [pError, setPError] = useState<string | null>(null);
+  const [payout, setPayout] = useState<{ id: string; amount: string; note: string } | null>(null);
+  const loadPartners = () => api<{ partners: PartnerRow[]; appUrl: string }>("/api/admin/partners").then((r) => { setPartners(r.partners); setAppUrl(r.appUrl); }, () => {});
+  useEffect(() => { if (tab === "partners" && partners === null) void loadPartners(); }, [tab, partners]);
+  const createPartner = async () => {
+    setPError(null);
+    try {
+      await api("/api/admin/partners", { method: "POST", json: { ...pForm, sharePct: Number(pForm.sharePct), bonusDays: Number(pForm.bonusDays) } });
+      setPForm({ name: "", code: "", contactEmail: "", sharePct: 25, bonusDays: 30 });
+      await loadPartners();
+    } catch (e) {
+      setPError((e as Error).message);
+    }
+  };
+  const recordPayout = async () => {
+    if (!payout) return;
+    const cents = Math.round(Number(payout.amount) * 100);
+    if (!(cents > 0)) { setPError("Enter the amount paid, in dollars."); return; }
+    try {
+      await api(`/api/admin/partners/${payout.id}/payout`, { method: "POST", json: { amount: cents, note: payout.note || undefined } });
+      setPayout(null);
+      await loadPartners();
+    } catch (e) {
+      const err = e as Error & { code?: string };
+      if (err.code === "over" && window.confirm(`${err.message}\n\nRecord it anyway?`)) {
+        try { await api(`/api/admin/partners/${payout.id}/payout`, { method: "POST", json: { amount: cents, note: payout.note || undefined, force: true } }); setPayout(null); await loadPartners(); return; } catch (e2) { setPError((e2 as Error).message); return; }
+      }
+      setPError(err.message);
+    }
+  };
+  const fmtMoney = (cents: number, cur: string) => new Intl.NumberFormat("en", { style: "currency", currency: cur }).format(cents / 100);
   const saveGa = async () => {
     setGaState("saving");
     setGaError(null);
@@ -199,7 +234,7 @@ export function Admin() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <h1 className="text-[40px] font-[650] leading-none tracking-[-0.035em]">Admin</h1>
           <div role="tablist" className="grid grid-cols-4 gap-1 rounded-full bg-stone-900/[.06] p-1 dark:bg-white/[.08]">
-            {(["overview", "tickets", "people", "settings"] as const).map((t) => (
+            {(["overview", "tickets", "people", "partners", "settings"] as const).map((t) => (
               <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={cn("h-9 rounded-full px-4 text-[13px] font-medium capitalize transition-colors", tab === t ? "bg-white text-ink shadow-[0_1px_2px_rgba(25,24,22,.12)] dark:bg-stone-800 dark:text-stone-50" : "text-graphite hover:text-ink dark:text-stone-400")}>
                 {t}{t === "tickets" && overview && overview.openTickets > 0 ? ` · ${overview.openTickets}` : ""}
               </button>
@@ -336,6 +371,59 @@ export function Admin() {
               {indexNowNote && <span className="text-[13px] text-stone-500" role="status">{indexNowNote}</span>}
             </div>
           </section>
+        )}
+
+        {tab === "partners" && (
+          <div className="mt-8">
+            <section className="max-w-3xl rounded-[1.25rem] bg-white p-6 shadow-[0_1px_1px_rgba(25,24,22,.04),0_12px_32px_-20px_rgba(25,24,22,.35)] ring-1 ring-inset ring-stone-900/[.035] dark:bg-stone-900 dark:shadow-none dark:ring-white/[.08]" data-test="partner-create">
+              <div className="text-[15px] font-semibold">New partner</div>
+              <p className="mt-1 text-[13.5px] leading-relaxed text-stone-500">A company or association. They get a link ({appUrl}/go/code), a code members can type at sign-up, and a private stats page. Members get the extra days; the partner gets the share of first-year payments, recorded from Polar orders.</p>
+              <form className="mt-4 grid gap-3 sm:grid-cols-2" onSubmit={(e) => { e.preventDefault(); void createPartner(); }}>
+                <Input aria-label="Partner name" placeholder="Name, e.g. Ownr" value={pForm.name} onChange={(e) => setPForm({ ...pForm, name: e.target.value })} />
+                <Input aria-label="Code" placeholder="code, e.g. ownr" value={pForm.code} spellCheck={false} onChange={(e) => setPForm({ ...pForm, code: e.target.value.toLowerCase() })} />
+                <Input aria-label="Contact email" type="email" placeholder="contact@partner.example (optional)" value={pForm.contactEmail} onChange={(e) => setPForm({ ...pForm, contactEmail: e.target.value })} />
+                <div className="flex gap-3">
+                  <label className="flex items-center gap-2 text-[13px] text-stone-600 dark:text-stone-300">Share %<Input aria-label="Share percent" type="number" min={0} max={50} value={pForm.sharePct} onChange={(e) => setPForm({ ...pForm, sharePct: Number(e.target.value) })} className="w-20" /></label>
+                  <label className="flex items-center gap-2 text-[13px] text-stone-600 dark:text-stone-300">Extra days<Input aria-label="Extra Pro days" type="number" min={0} max={90} value={pForm.bonusDays} onChange={(e) => setPForm({ ...pForm, bonusDays: Number(e.target.value) })} className="w-20" /></label>
+                </div>
+                <div className="sm:col-span-2 flex items-center gap-3"><Button type="submit" size="md" disabled={!pForm.name.trim() || !pForm.code.trim()}>Create partner</Button>{pError && <span className="text-[13px] text-red-700 dark:text-red-400" role="alert">{pError}</span>}</div>
+              </form>
+            </section>
+            <div className="mt-4 overflow-x-auto rounded-[1.25rem] bg-white ring-1 ring-inset ring-stone-900/[.035] dark:bg-stone-900 dark:ring-white/[.08]">
+              <table className="w-full text-[13.5px]">
+                <thead className="text-left text-[12px] text-stone-500"><tr><th className="px-4 py-3 font-medium">Partner</th><th className="px-3 py-3 font-medium">Link and code</th><th className="px-3 py-3 font-medium">Sign-ups</th><th className="px-3 py-3 font-medium">Paying</th><th className="px-3 py-3 font-medium">Earned</th><th className="px-3 py-3 font-medium">Paid out</th><th className="px-3 py-3 font-medium">Owed</th><th className="px-3 py-3 font-medium"><span className="sr-only">Actions</span></th></tr></thead>
+                <tbody className="divide-y divide-hairline dark:divide-white/[.08]">
+                  {(partners ?? []).map((p) => (
+                    <tr key={p.id} className={p.active ? "" : "opacity-50"}>
+                      <td className="px-4 py-2.5"><div className="font-medium">{p.name}</div><div className="text-[12.5px] text-stone-500">{p.contactEmail ?? "no contact"} · {p.sharePct}% · +{p.bonusDays} days</div></td>
+                      <td className="px-3 py-2.5 font-mono text-[12px]"><div>{appUrl}/go/{p.code}</div><a href={`/partner/${p.viewToken}`} target="_blank" rel="noopener" className="text-brand underline underline-offset-4 dark:text-indigo-300">Stats page to send them</a></td>
+                      <td className="px-3 py-2.5 tabular-nums">{p.stats.signups}</td>
+                      <td className="px-3 py-2.5 tabular-nums">{p.stats.paid}</td>
+                      <td className="px-3 py-2.5 tabular-nums">{fmtMoney(p.stats.earned, p.stats.currency)}</td>
+                      <td className="px-3 py-2.5 tabular-nums">{fmtMoney(p.stats.paidOut, p.stats.currency)}</td>
+                      <td className={"px-3 py-2.5 tabular-nums font-semibold" + (p.stats.owed < 0 ? " text-amber-700 dark:text-amber-300" : "")} title={p.stats.owed < 0 ? "Paid more than earned, usually after a refund" : undefined}>{fmtMoney(p.stats.owed, p.stats.currency)}{p.stats.owed < 0 ? " overpaid" : ""}</td>
+                      <td className="px-3 py-2.5 whitespace-nowrap">
+                        {payout?.id === p.id ? (
+                          <form className="flex items-center gap-1.5" onSubmit={(e) => { e.preventDefault(); void recordPayout(); }}>
+                            <Input aria-label="Amount paid" placeholder="0.00" value={payout.amount} onChange={(e) => setPayout({ ...payout, amount: e.target.value })} className="w-24" />
+                            <Input aria-label="Note" placeholder="Wise ref" value={payout.note} onChange={(e) => setPayout({ ...payout, note: e.target.value })} className="w-28" />
+                            <Button type="submit" size="sm">Save</Button>
+                            <Button type="button" size="sm" variant="ghost" onClick={() => setPayout(null)}>Cancel</Button>
+                          </form>
+                        ) : (
+                          <>
+                            <button type="button" onClick={() => setPayout({ id: p.id, amount: (p.stats.owed / 100).toFixed(2), note: "" })} className="rounded-full px-2.5 py-1 text-[12.5px] font-medium text-brand hover:bg-stone-900/[.05] dark:text-indigo-300">Record payout</button>
+                            <button type="button" onClick={() => void api(`/api/admin/partners/${p.id}/active`, { method: "POST", json: { active: !p.active } }).then(loadPartners)} className="rounded-full px-2.5 py-1 text-[12.5px] font-medium text-stone-500 hover:bg-stone-900/[.05]">{p.active ? "Pause" : "Resume"}</button>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                  {partners && partners.length === 0 && <tr><td colSpan={8} className="px-4 py-6 text-center text-stone-500">No partners yet.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </div>
         )}
 
         {tab === "people" && (

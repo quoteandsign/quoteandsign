@@ -30,7 +30,8 @@ export const users = sqliteTable(
     source: text("source"), // the ?ref= the account arrived with (proposal footer, signed page, email, guide, ad); null = direct
     referralCode: text("referral_code"), // this account's give-a-month link, /r/<code>
     referredBy: text("referred_by"), // user id of the account whose link brought this one in
-    referralRewardedAt: integer("referral_rewarded_at", { mode: "timestamp_ms" }), // set once this account sent its first proposal and the referrer was paid
+    referralRewardedAt: integer("referral_rewarded_at", { mode: "timestamp_ms" }), // set once the referred account's first paid plan paid the referrer
+    partnerId: text("partner_id"), // the partner (company, association) whose link or code brought this account in
   },
   (t) => [uniqueIndex("users_email_uq").on(t.email), index("users_deleted_email_idx").on(t.deletedEmailHash), index("users_trial_key_idx").on(t.trialKey), uniqueIndex("users_referral_code_uq").on(t.referralCode), index("users_referred_by_idx").on(t.referredBy)],
 );
@@ -48,6 +49,7 @@ export const magicTokens = sqliteTable(
     ipHash: text("ip_hash"),
     source: text("source"), // attribution cookies at the time the link was asked for; applied if the link creates an account
     referral: text("referral"),
+    partner: text("partner"), // a partner code, from the cookie or typed on the sign-in form
   },
   (t) => [index("magic_tokens_email_idx").on(t.email)],
 );
@@ -354,6 +356,54 @@ export const webhookDeliveries = sqliteTable(
 );
 
 // Site-wide settings the admin can change without a deploy (the analytics id, for now).
+// ---- Partner programme ---------------------------------------------------------------------
+// A company or association with a link and a code. Members get extra Pro days; the partner gets a
+// share of what those accounts pay in their first year, recorded per Polar order.
+export const partners = sqliteTable(
+  "partners",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    code: text("code").notNull(), // short, lower-case: the link is /go/<code>
+    contactEmail: text("contact_email"),
+    sharePct: integer("share_pct").notNull().default(25),
+    bonusDays: integer("bonus_days").notNull().default(30),
+    viewToken: text("view_token").notNull(), // the private stats page, /partner/<token>
+    active: integer("active", { mode: "boolean" }).notNull().default(true),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [uniqueIndex("partners_code_uq").on(t.code), uniqueIndex("partners_token_uq").on(t.viewToken)],
+);
+
+export const partnerConversions = sqliteTable(
+  "partner_conversions",
+  {
+    id: text("id").primaryKey(),
+    partnerId: text("partner_id").notNull().references(() => partners.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    orderId: text("order_id").notNull(), // Polar order id: a replayed webhook cannot count twice
+    amount: integer("amount").notNull(), // what the account paid, minor units
+    currency: text("currency").notNull(),
+    commission: integer("commission").notNull(), // the partner's share, minor units
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    reversedAt: integer("reversed_at", { mode: "timestamp_ms" }), // set on refund or chargeback
+  },
+  (t) => [uniqueIndex("partner_conversions_order_uq").on(t.orderId), index("partner_conversions_partner_idx").on(t.partnerId)],
+);
+
+export const partnerPayouts = sqliteTable(
+  "partner_payouts",
+  {
+    id: text("id").primaryKey(),
+    partnerId: text("partner_id").notNull().references(() => partners.id, { onDelete: "cascade" }),
+    amount: integer("amount").notNull(), // minor units
+    currency: text("currency").notNull().default("USD"),
+    note: text("note"),
+    paidAt: integer("paid_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [index("partner_payouts_partner_idx").on(t.partnerId)],
+);
+
 export const settings = sqliteTable("settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
