@@ -24,7 +24,9 @@
     "types": "wrangler types",
     "e2e": "node scripts/e2e.mjs",
     "shots": "node scripts/shots.mjs .shots",
-    "brand": "node scripts/brand.mjs"
+    "brand": "node scripts/brand.mjs",
+    "indexnow": "node scripts/indexnow.mjs",
+    "postdeploy": "node scripts/indexnow.mjs"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.54.4",

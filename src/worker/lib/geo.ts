@@ -70,11 +70,10 @@ export async function submitIndexNow(env: Bindings, urls: string[]): Promise<{ o
   if (!urls.length) return { ok: true, status: 200, count: 0 };
   const host = new URL(env.APP_URL).host;
   const key = await indexNowKey(env.SESSION_SECRET);
-  const res = await fetch("https://api.indexnow.org/indexnow", {
-    method: "POST",
-    headers: { "content-type": "application/json; charset=utf-8" },
-    body: JSON.stringify({ host, key, keyLocation: `${env.APP_URL}/indexnow.txt`, urlList: urls.slice(0, 10_000) }),
-  });
+  const body = JSON.stringify({ host, key, keyLocation: `${env.APP_URL}/indexnow.txt`, urlList: urls.slice(0, 10_000) });
+  // IndexNow throttles Cloudflare's shared outbound addresses now and then; Bing's own endpoint is a second try.
+  let res = await fetch("https://api.indexnow.org/indexnow", { method: "POST", headers: { "content-type": "application/json; charset=utf-8" }, body });
+  if (res.status === 429) res = await fetch("https://www.bing.com/indexnow", { method: "POST", headers: { "content-type": "application/json; charset=utf-8" }, body });
   return { ok: res.ok || res.status === 202, status: res.status, count: urls.length };
 }
 
